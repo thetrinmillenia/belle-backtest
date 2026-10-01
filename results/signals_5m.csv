@@ -1,0 +1,43 @@
+date,window,direction,sweep_time,entry_time,pool_swept,pool_level,cisd_level,entry_es,stop_es,spx_entry,strike,spx_close,points_past_strike,reached_itm,itm_at_close,stop_hit,failed_2,smt,h1,h4
+2026-07-24,W1,puts,14:35,14:45,9:30 open,7444.0,7440.5,7437.5,7445.25,7402.13,7375,7412.88,-21.53,False,False,True,False,False,red,red
+2026-07-24,W2,calls,15:20,15:35,swing low,7432.75,7437.25,7440.0,7432.0,7404.4,7430,7412.88,-15.96,False,False,False,False,False,red,red
+2026-07-27,W1,puts,14:05,14:20,13:30 candle high,7436.5,7434.0,7430.0,7437.5,7396.05,7370,7413.43,-20.28,False,False,True,False,False,red,red
+2026-07-27,W2,puts,15:20,15:40,swing high,7455.25,7448.75,7448.25,7455.75,7413.1,7385,7413.43,-22.89,False,False,False,False,False,red,green
+2026-07-28,W1,calls,14:25,14:35,13:30 candle low,7462.75,7465.5,7467.25,7462.0,7432.48,7460,7427.26,-16.54,False,False,False,True,False,red,red
+2026-07-30,W1,puts,14:20,14:40,13:30 candle high,7457.75,7455.25,7454.75,7458.0,7424.93,7395,7437.53,-29.65,False,False,True,False,True,green,green
+2026-08-03,W1,puts,14:30,14:35,13:30 candle high,7629.75,7627.5,7626.5,7630.0,7599.33,7570,7599.97,-28.72,False,False,True,False,False,red,red
+2026-08-05,W1,puts,14:10,14:15,13:30 candle high,7771.75,7771.0,7769.5,7773.0,7741.65,7715,7722.12,-5.17,False,False,False,False,False,green,green
+2026-08-10,W1,puts,14:20,14:25,9:30 open,7773.0,7772.25,7772.0,7774.0,7749.03,7720,7753.15,-25.85,False,False,True,False,False,red,red
+2026-08-10,W2,puts,15:35,15:55,13:30 candle high,7779.25,7775.25,7771.25,7779.5,7746.66,7720,7753.15,-25.85,False,False,False,False,False,red,red
+2026-08-12,W1,calls,13:55,14:05,swing low,7771.25,7773.25,7773.5,7770.75,7751.72,7780,7748.71,-21.05,False,False,True,True,False,green,green
+2026-08-12,W2,puts,15:35,15:55,13:30 candle high,7774.5,7773.25,7767.0,7774.75,7745.75,7720,7748.71,-22.92,False,False,False,False,False,red,red
+2026-08-13,W1,puts,14:05,14:25,swing high,7813.75,7811.75,7811.5,7815.0,7789.98,7760,7798.86,-30.02,False,False,True,True,False,red,red
+2026-08-14,W1,puts,14:30,14:35,13:30 candle high,7802.0,7801.75,7801.5,7803.75,7780.35,7755,7786.01,-24.9,False,False,True,False,False,green,green
+2026-08-14,W2,calls,15:15,15:35,swing low,7801.5,7804.25,7805.25,7800.75,7783.91,7810,7786.01,-23.82,False,False,False,False,False,green,green
+2026-08-18,W1,calls,14:00,14:15,13:30 candle low,7715.75,7720.5,7720.75,7715.0,7700.38,7730,7693.26,-24.58,False,False,True,True,False,green,green
+2026-08-19,W1,puts,14:00,14:10,9:30 open,7743.5,7734.5,7729.25,7745.0,7709.87,7680,7708.03,-21.25,False,False,False,False,False,red,red
+2026-08-21,W1,calls,14:20,14:25,13:30 candle low,7689.5,7689.75,7690.0,7689.25,7673.72,7700,7674.1,-13.72,False,False,True,False,False,green,green
+2026-08-21,W2,calls,15:40,15:45,9:30 open,7695.75,7697.5,7699.5,7695.5,7683.09,7710,7674.1,-23.72,False,False,True,False,False,green,green
+2026-08-24,W2,puts,15:30,15:35,swing high,7676.75,7674.25,7671.75,7677.0,7656.27,7630,7652.82,-20.93,False,False,False,False,False,red,green
+2026-08-25,W1,calls,14:15,14:30,13:30 candle low,7680.25,7682.25,7682.75,7680.0,7667.84,7695,7675.73,-14.46,False,False,False,True,False,red,red
+2026-08-26,W1,puts,13:55,14:15,swing high,7690.75,7686.75,7686.5,7691.0,7672.28,7645,7676.29,-26.61,False,False,True,True,False,red,red
+2026-08-28,W1,puts,14:00,14:15,13:30 candle high,7726.5,7723.75,7721.0,7727.25,7710.26,7685,7709.9,-15.91,False,False,True,True,False,red,red
+2026-08-28,W2,puts,15:40,15:50,13:30 candle high,7726.5,7723.0,7721.75,7727.25,7710.08,7685,7709.9,-23.98,False,False,True,False,False,green,red
+2026-08-31,W1,calls,14:05,14:10,midnight open,7693.0,7693.75,7694.5,7692.25,7684.16,7710,7684.37,-13.67,False,False,True,False,False,green,green
+2026-09-02,W1,puts,14:35,14:40,13:30 candle high,7679.5,7679.25,7674.5,7680.25,7664.66,7635,7667.45,-27.48,False,False,True,False,False,red,red
+2026-09-02,W2,puts,15:25,15:40,swing high,7681.5,7679.0,7677.25,7681.75,7667.76,7640,7667.45,-24.11,False,False,False,False,False,green,red
+2026-09-03,W1,puts,14:15,14:20,swing high,7765.5,7764.25,7763.0,7766.5,7753.69,7725,7747.8,-19.25,False,False,False,False,False,green,green
+2026-09-09,W2,puts,15:20,15:40,13:30 candle high,7653.25,7649.75,7648.0,7653.5,7642.52,7615,7637.7,-19.98,False,False,False,False,False,red,red
+2026-09-10,W1,puts,14:20,14:35,9:30 open,7599.0,7596.25,7595.25,7600.0,7589.02,7560,7592.3,-26.35,False,False,True,False,False,red,red
+2026-09-10,W2,calls,15:45,15:50,9:30 open,7599.0,7600.25,7600.75,7597.5,7594.38,7620,7592.3,-24.67,False,False,True,True,False,green,red
+2026-09-11,W2,puts,15:50,15:55,9:30 open,7665.0,7664.75,7664.0,7665.5,7660.32,7635,7655.5,-19.88,False,False,False,False,False,red,red
+2026-09-14,W1,calls,14:45,14:50,13:30 candle low,7707.5,7707.75,7709.5,7705.25,7637.47,7665,7620.37,-27.02,False,False,True,False,False,green,green
+2026-09-15,W1,puts,14:40,14:45,13:30 candle high,7656.25,7654.25,7654.0,7658.5,7583.1,7555,7585.51,-21.8,False,False,True,False,False,red,red
+2026-09-16,W1,calls,14:00,14:10,swing low,7669.0,7684.5,7688.5,7668.75,7617.78,7645,7553.33,-25.96,False,False,True,False,True,green,green
+2026-09-22,W1,puts,14:30,14:35,13:30 candle high,7839.0,7837.75,7837.0,7839.25,7770.61,7745,7764.27,-18.83,False,False,True,False,False,red,red
+2026-09-24,W1,puts,14:25,14:35,13:30 candle high,7770.5,7765.5,7764.5,7774.25,7701.45,7675,7703.83,-24.5,False,False,True,False,False,green,green
+2026-09-28,W1,puts,14:10,14:20,13:30 candle high,7766.0,7763.75,7761.0,7766.25,7699.83,7670,7684.5,-7.96,False,False,False,False,False,red,red
+2026-09-30,W1,calls,14:30,14:40,swing low,7749.5,7755.25,7755.5,7748.25,7697.33,7725,7653.56,-26.8,False,False,True,False,False,red,red
+2026-09-30,W2,puts,15:25,15:35,9:30 open,7751.75,7750.25,7748.25,7752.0,7690.71,7665,7653.56,12.1,True,True,False,False,False,red,red
+2026-10-01,W1,calls,14:20,14:25,13:30 candle low,7717.75,7720.0,7725.0,7715.0,7668.98,7695,7668.82,-10.25,False,False,False,False,False,green,green
+2026-10-01,W2,calls,15:35,15:40,swing low,7727.0,7729.75,7730.75,7726.5,7675.14,7705,7668.82,-20.25,False,False,True,True,False,red,green
