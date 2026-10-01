@@ -1,0 +1,27 @@
+name: Belle backtest
+
+on:
+  workflow_dispatch:        # "Run workflow" button on the Actions tab
+  schedule:
+    - cron: "15 21 * * 1-5" # weekdays after the close (21:15 UTC)
+
+permissions:
+  contents: write
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - run: python belle_backtest.py --save data
+      - name: Save results
+        run: |
+          git config user.name "belle-bot"
+          git config user.email "belle-bot@users.noreply.github.com"
+          git add results data
+          git commit -m "Backtest results $(date -u +%F)" || echo "No changes"
+          git push
