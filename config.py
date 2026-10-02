@@ -11,7 +11,7 @@ TIMEFRAMES = [5, 15]          # minutes; each is tested separately
 
 # Windows in Eastern time (HH, MM). Entries only inside these.
 WINDOWS = {
-    "W1": ((13, 55), (14, 50)),   # start is exclusive, so the 14:00 close counts
+    "W1": ((14, 0), (14, 50)),    # the 14:00 candle must close first (guide: 14:00 ES confirms)
     "W2": ((15, 25), (15, 55)),   # start is exclusive, so the 15:30 close counts
 }
 # Max 2 trades a day: one per window, only in the bias direction
