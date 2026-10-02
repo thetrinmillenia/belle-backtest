@@ -8,12 +8,12 @@ What it does, in order, for every day in the data:
  2. Inside Window 1 (14:00 to 14:50 ET) and Window 2 (closes 15:30 to 15:55 ET)
     it looks for a sweep: a candle trades through a live pool and closes
     back inside it.
- 3. Bias from the 10:00 4H candle: took the 6:00 high and closed back below,
-    or closed red, means puts only. The mirror means calls only.
- 4. No pool swept? A rejection of an order block opening or a rejection block
-    (the swing candle wick) also counts. The trigger candle must close in the
-    trade direction. Entry is its close, stop is its extreme.
-    Max 2 trades a day, 1 per window.
+ 3. BIAS is time frame continuity at the close: 1H and 4H candles both green
+    means calls, both red means puts. If they split, Window 1 uses the 15m
+    trend and Window 2 uses the 9:30 candle colour.
+ 4. Trigger in the bias direction, any one alone: a sweep, an equal highs or
+    lows tap, an order block opening, a rejection block or an FVG CE. The
+    CLOSE confirms (or the next candle's close). Max 2 a day, 1 per window.
  5. It measures how far SPX moved in the trade's favour before 15:59, and
     whether strikes 10, 15, 20 and 25 points out of the money went in the money.
 
@@ -114,7 +114,7 @@ def bias_for(es, d):
 
 
 def blocks(day, look, t):
-    """Live order block openings and rejection blocks known before time t."""
+    """Live order block openings, rejection blocks and FVG CEs known before time t."""
     before = day[day.index < t]
     out = {"puts": [], "calls": []}
     sw = [s for s in swings(before, look) if s[0] < t]
@@ -152,6 +152,16 @@ def blocks(day, look, t):
                     if before["Close"].iloc[j:].min() >= lo[k]:
                         out["calls"].append(("bullish order block opening", o[k]))
                     break
+    # fair value gaps: entry at the CE (50%) while the gap is still open
+    for j in range(2, len(before)):
+        if lo[j] > hi[j - 2]:                                   # bullish FVG
+            ce = (lo[j] + hi[j - 2]) / 2
+            if before["Close"].iloc[j + 1:].min() >= hi[j - 2] if j + 1 < len(before) else True:
+                out["calls"].append(("bullish FVG CE", ce))
+        if hi[j] < lo[j - 2]:                                   # bearish FVG
+            ce = (hi[j] + lo[j - 2]) / 2
+            if before["Close"].iloc[j + 1:].max() <= lo[j - 2] if j + 1 < len(before) else True:
+                out["puts"].append(("bearish FVG CE", ce))
     return out
 
 
@@ -185,99 +195,163 @@ def run_day(d, prev_d, es, nq, spx, tf):
     if spx_day.empty:
         return []
 
-    bias = bias_for(es, d)
-    if bias is None:
-        return []
+    bias = bias_for(es, d)          # 10:00 4H read: a note only
+    es15 = resample(es, 15)
+    o930 = between(es15, at(d, 9, 30), at(d, 9, 45))
+    open_colour = None if o930.empty else ("calls" if o930["Close"].iloc[0] > o930["Open"].iloc[0] else "puts")
     trades, used = [], set()
     bars = list(rth.index)
+    pending = None                  # a reaction whose candle closed the wrong colour
     for i, t in enumerate(bars):
-        if t < at(d, 13, 45):
+        if t < at(d, 13, 30) or len(trades) >= C.MAX_PER_DAY:
             continue
         bar = rth.loc[t]
         before = rth[rth.index < t]
         if before.empty:
             continue
-
-        if len(trades) >= C.MAX_PER_DAY:
-            break
         win = window_of(t + step)
-        if win is None or win in used:
-            continue
-        for direction in (bias,):
-            # live pools: not yet traded through since 9:30, known before t
-            pools = []
-            for name, lvl, side in fixed:
-                if name.startswith("13:30") and t < at(d, 14, 0):
-                    continue
-                prev_close = before["Close"].iloc[-1]
-                if side == "near_above":
-                    if direction == "puts" and prev_close < lvl:
-                        pools.append((name, lvl))
-                    continue
-                if side == "near_below":
-                    if direction == "calls" and prev_close > lvl:
-                        pools.append((name, lvl))
-                    continue
-                if side == "both":
-                    # opens act as pools from whichever side price sits on
-                    if direction == "puts" and prev_close < lvl:
-                        pools.append((name, lvl))
-                    if direction == "calls" and prev_close > lvl:
-                        pools.append((name, lvl))
-                    continue
-                if direction == "puts" and side == "above" and lvl > before["High"].max():
-                    pools.append((name, lvl))
-                if direction == "calls" and side == "below" and lvl < before["Low"].min():
-                    pools.append((name, lvl))
-            for conf_t, lvl, kind in sw:
-                if conf_t > t - step:
-                    continue
-                after = before[before.index > conf_t]
-                if direction == "puts" and kind == "swing high" and (after.empty or after["High"].max() <= lvl):
-                    pools.append((kind, lvl))
-                if direction == "calls" and kind == "swing low" and (after.empty or after["Low"].min() >= lvl):
-                    pools.append((kind, lvl))
+        tf_bias, why_bias = window_bias(es, es15, d, t + step, bar["Close"], win, open_colour)
 
-            # sweep: trade through, close back inside
+        # 1. a pending reaction confirmed by THIS candle's close
+        if pending is not None:
+            p, pending = pending, None
+            if (win and win not in used and _closes_with(bar, p["direction"])
+                    and p["direction"] == tf_bias):
+                p["bias_why"] = why_bias
+                _add(trades, used, p, d, win, t, bar, rth, nq_rth, es, spx_day, step, bias, i, bars)
+                continue
+
+        # 2. look for a new reaction on this candle (both sides; bias is checked at entry)
+        found = []
+        for direction in ("puts", "calls"):
+            pools = _pools(direction, fixed, sw, before, t, d, step)
             if direction == "puts":
-                hit = [(n, l) for n, l in pools if bar["High"] > l and bar["Close"] < l]
+                hit = [(n, l) for n, l in pools if
+                       (bar["High"] > l or (n == "equal highs" and bar["High"] >= l - C.EQ_TOL)) and bar["Close"] < l]
             else:
-                hit = [(n, l) for n, l in pools if bar["Low"] < l and bar["Close"] > l]
-            if hit:
-                pool_name, pool_lvl = (max if direction == "puts" else min)(hit, key=lambda x: x[1])
-            else:
+                hit = [(n, l) for n, l in pools if
+                       (bar["Low"] < l or (n == "equal lows" and bar["Low"] <= l + C.EQ_TOL)) and bar["Close"] > l]
+            if not hit:
+                # PD arrays alone also count: order block opening, rejection block, FVG CE
                 hit = [(n, l) for n, l in blocks(rth, C.SWING_LOOKBACK, t)[direction]
                        if ((bar["High"] >= l and bar["Close"] < l) if direction == "puts"
                            else (bar["Low"] <= l and bar["Close"] > l))]
-                if not hit:
-                    continue
-                pool_name, pool_lvl = hit[-1]
-            # the trigger candle must close in the trade direction
-            if (bar["Close"] < bar["Open"]) != (direction == "puts"):
-                continue
-
-            # CISD level: open of the first candle in the run into the sweep
-            k = i if (bar["Close"] > bar["Open"]) == (direction == "puts") else i - 1
-            want_up = direction == "puts"
-            while k > 0 and (rth.iloc[k]["Close"] > rth.iloc[k]["Open"]) == want_up:
-                k -= 1
-            cisd_lvl = rth.iloc[min(k + 1, i)]["Open"]
-            cisd_bar = None
-            for j in range(i, min(i + C.CISD_MAX_BARS + 1, len(bars))):
-                cb = rth.iloc[j]
-                if (cb["Close"] < cisd_lvl) if direction == "puts" else (cb["Close"] > cisd_lvl):
-                    cisd_bar = j - i
-                    break
-
-            # entry: the sweep candle's close (the sweep is the signal)
-            entry_t = t + step
-            trades.append(score_trade(d, direction, win, t, t, entry_t, bar, bar,
-                                      pool_name, pool_lvl, cisd_lvl, rth, nq_rth, es, spx_day, step))
-            trades[-1]["cisd_within_bars"] = cisd_bar
-            trades[-1]["nth_of_day"] = len(trades)
-            trades[-1]["bias"] = bias
-            used.add(win)
+            if hit:
+                rank = lambda x: (x[0] in C.TOP_POOLS, x[1] if direction == "puts" else -x[1])
+                found.append((direction, max(hit, key=rank)))
+        if not found:
+            continue
+        found.sort(key=lambda f: f[0] != tf_bias)       # prefer the side that matches the bias
+        direction, (pool_name, pool_lvl) = found[0]
+        p = {"direction": direction, "pool": pool_name, "level": pool_lvl, "t": t, "bar": bar, "bias_why": why_bias}
+        if win and win not in used and _closes_with(bar, direction) and direction == tf_bias:
+            _add(trades, used, p, d, win, t, bar, rth, nq_rth, es, spx_day, step, bias, i, bars)
+        else:
+            pending = p           # wait one candle: its close must confirm, in the bias direction
     return trades
+
+
+def _colour(df, start, now, price):
+    seg = df[(df.index >= start) & (df.index < now)]
+    if seg.empty:
+        return None
+    o = seg["Open"].iloc[0]
+    return "calls" if price > o else "puts" if price < o else None
+
+
+def trend_15m(es15, now, look=2):
+    """15m structure before now: higher highs and higher lows = calls, lower highs and lower lows = puts."""
+    seg = es15[(es15.index < now - timedelta(minutes=15)) & (es15.index >= now - timedelta(days=2))]
+    sw = swings(seg, look)
+    hs = [l for _, l, k in sw if k == "swing high"][-2:]
+    ls = [l for _, l, k in sw if k == "swing low"][-2:]
+    if len(hs) < 2 or len(ls) < 2:
+        return None
+    if hs[1] > hs[0] and ls[1] > ls[0]:
+        return "calls"
+    if hs[1] < hs[0] and ls[1] < ls[0]:
+        return "puts"
+    return None
+
+
+def window_bias(es, es15, d, now, price, win, open_colour):
+    """Time frame continuity: the 1H and 4H candles in force at the close.
+    If they disagree: Window 1 uses the 15m trend, Window 2 uses the 9:30 candle colour."""
+    h1 = _colour(es, now.floor("h") if now.minute else now - timedelta(hours=1), now, price)
+    start4 = max(h for h in (2, 6, 10, 14) if h < now.hour + (1 if now.minute else 0))
+    h4 = _colour(es, at(d, start4, 0), now, price)
+    if h1 and h1 == h4:
+        return h1, f"1H and 4H both {'green' if h1 == 'calls' else 'red'}"
+    if win == "W2":
+        return open_colour, "1H and 4H split, 9:30 candle " + ("green" if open_colour == "calls" else "red")
+    tr = trend_15m(es15, now)
+    return tr, "1H and 4H split, 15m trend " + ({"calls": "up", "puts": "down"}.get(tr, "unclear"))
+
+
+def _closes_with(bar, direction):
+    return bar["Close"] < bar["Open"] if direction == "puts" else bar["Close"] > bar["Open"]
+
+
+def _pools(direction, fixed, sw, before, t, d, step):
+    """Live liquidity pools for one direction, known before candle t."""
+    pools = []
+    prev_close = before["Close"].iloc[-1]
+    for name, lvl, side in fixed:
+        if name.startswith("13:30") and t < at(d, 14, 0):
+            continue
+        if side == "near_above":
+            if direction == "puts" and prev_close < lvl:
+                pools.append((name, lvl))
+        elif side == "near_below":
+            if direction == "calls" and prev_close > lvl:
+                pools.append((name, lvl))
+        elif side == "both":
+            if direction == "puts" and prev_close < lvl:
+                pools.append((name, lvl))
+            if direction == "calls" and prev_close > lvl:
+                pools.append((name, lvl))
+        elif direction == "puts" and side == "above" and lvl > before["High"].max():
+            pools.append((name, lvl))
+        elif direction == "calls" and side == "below" and lvl < before["Low"].min():
+            pools.append((name, lvl))
+    live_h, live_l = [], []
+    for conf_t, lvl, kind in sw:
+        if conf_t > t - step:
+            continue
+        after = before[before.index > conf_t]
+        if kind == "swing high" and (after.empty or after["High"].max() <= lvl):
+            live_h.append(lvl)
+        if kind == "swing low" and (after.empty or after["Low"].min() >= lvl):
+            live_l.append(lvl)
+    if direction == "puts":
+        pools += [("swing high", l) for l in live_h]
+        for a_i, a in enumerate(live_h):        # equal highs: two untaken swing highs within EQ_TOL
+            for b in live_h[a_i + 1:]:
+                if abs(a - b) <= C.EQ_TOL:
+                    pools.append(("equal highs", max(a, b)))
+    else:
+        pools += [("swing low", l) for l in live_l]
+        for a_i, a in enumerate(live_l):
+            for b in live_l[a_i + 1:]:
+                if abs(a - b) <= C.EQ_TOL:
+                    pools.append(("equal lows", min(a, b)))
+    return pools
+
+
+def _add(trades, used, p, d, win, t, bar, rth, nq_rth, es, spx_day, step, bias, i, bars):
+    direction = p["direction"]
+    entry_t = t + step
+    tr = score_trade(d, direction, win, p["t"], t, entry_t, p["bar"], bar,
+                     p["pool"], p["level"], bar["Open"], rth, nq_rth, es, spx_day, step)
+    tr["bias_4h"] = bias
+    tr["bias_why"] = p.get("bias_why")
+    tr["prime"] = entry_t.time() >= time(14, 40) and win == "W1"
+    tr["with_4h_bias"] = bias == direction
+    tr["confirmed_next_candle"] = p["t"] != t
+    tr["nth_of_day"] = len(trades) + 1
+    tr["cisd_within_bars"] = None
+    trades.append(tr)
+    used.add(win)
 
 
 def score_trade(d, direction, win, sweep_t, cisd_t, entry_t, sbar, cbar,
@@ -323,7 +397,7 @@ def score_trade(d, direction, win, sweep_t, cisd_t, entry_t, sbar, cbar,
         by_dist[f"strike_{dist}"] = strike
         by_dist[f"itm_{dist}"] = bool(max_move > gap)
         by_dist[f"itm_close_{dist}"] = bool(close_move > gap)
-    stop = sbar["High"] if direction == "puts" else sbar["Low"]
+    stop = max(sbar["High"], cbar["High"]) if direction == "puts" else min(sbar["Low"], cbar["Low"])
     es_after = rth[rth.index >= entry_t]
     stopped = bool((es_after["High"] > stop).any() if direction == "puts" else (es_after["Low"] < stop).any())
 
@@ -378,14 +452,16 @@ def summarize(df, tf, key):
         lines.append(f"| {name} | " + " | ".join(pct(g[f"itm_{d}"]) for d in C.OTM_LIST) + " |")
     lines += ["", "**Score notes (never block a trade): share reaching ITM at 15 pts**", "",
               "| Note | Signals | ITM at 15 pts |", "| --- | --- | --- |"]
-    df = df.assign(cisd_followed=df["cisd_within_bars"].notna())
-    for col in ("cisd_followed", "failed_2", "smt", "h1", "h4"):
+    for col in ("pool_swept", "with_4h_bias", "confirmed_next_candle", "failed_2", "smt", "h1", "h4"):
         for val, g in df.groupby(col, dropna=False):
             lines.append(f"| {col} = {val} | {len(g)} | {pct(g['itm_15'])} |")
     lines += ["", "**Answer key check**", ""]
     for _, r in key.iterrows():
         m = df[(df["date"] == r["date"]) & (df["direction"] == r["direction"])]
-        found = ", ".join(f"{x.window} entry {x.entry_time} after sweeping {x.pool_swept}, moved {x.max_move_pts} pts" for x in m.itertuples()) or "not flagged"
+        found = ", ".join(f"{x.window} entry {x.entry_time} at {x.pool_swept}, moved {x.max_move_pts} pts" for x in m.itertuples()) or "NOT FLAGGED"
+        other = df[(df["date"] == r["date"]) & (df["direction"] != r["direction"])]
+        if len(other):
+            found += " | WRONG WAY: " + ", ".join(f"{x.direction} {x.entry_time}" for x in other.itertuples())
         lines.append(f"- {r['date']} {r['contract']}: {found}")
     return lines + [""]
 
