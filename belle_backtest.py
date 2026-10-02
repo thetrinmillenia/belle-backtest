@@ -10,7 +10,8 @@ What it does, in order, for every day in the data:
     back inside it.
  3. BIAS is time frame continuity at the close: 1H and 4H candles both green
     means calls, both red means puts. If they split, Window 1 uses the 15m
-    trend and Window 2 uses the 9:30 candle colour.
+    trend and Window 2 uses the 9:30 candle colour. The daily trend (rising
+    daily lows = up) is checked first when they split.
  4. Trigger, any one alone: a sweep, an equal highs or lows tap, an order
     block opening, a rejection block or an FVG CE. A sweep of a key pool
     (equal highs/lows, PDH/PDL) trades the reversal on its own and Window 2
@@ -202,6 +203,7 @@ def run_day(d, prev_d, es, nq, spx, tf):
     bias = bias_for(es, d)          # 10:00 4H read: a note only
     es15 = resample(es, 15)
     o930 = between(es15, at(d, 9, 30), at(d, 9, 45))
+    day_trend = daily_trend(es, d)
     open_colour = None if o930.empty else ("calls" if o930["Close"].iloc[0] > o930["Open"].iloc[0] else "puts")
     trades, used = [], set()
     bars = list(rth.index)
@@ -215,7 +217,7 @@ def run_day(d, prev_d, es, nq, spx, tf):
             continue
         win = window_of(t + step)
         carry = next((x["direction"] for x in trades if x["window"] == "W1" and x["pool_swept"] in C.KEY_SWEEPS), None)
-        tf_bias, why_bias = window_bias(es, es15, d, t + step, bar["Close"], win, open_colour, carry)
+        tf_bias, why_bias = window_bias(es, es15, d, t + step, bar["Close"], win, open_colour, carry, day_trend)
 
         # 1. a pending reaction confirmed by THIS candle's close
         if pending is not None:
@@ -279,7 +281,28 @@ def trend_15m(es15, now, look=2):
     return None
 
 
-def window_bias(es, es15, d, now, price, win, open_colour, carry=None):
+def daily_trend(es, d, look=1):
+    """Trend on completed daily candles before day d (ES day = 18:00 to 17:00 ET).
+    Higher high and higher low = calls, lower high and lower low = puts."""
+    seg = es[es.index < at(d, 0, 0) - timedelta(hours=6)]
+    if seg.empty:
+        return None
+    dd = (seg.shift(freq="6h").resample("1D")
+             .agg({"Open": "first", "High": "max", "Low": "min", "Close": "last"}).dropna())
+    sw = swings(dd, look)
+    hs = [l for _, l, k in sw if k == "swing high"][-2:]
+    ls = [l for _, l, k in sw if k == "swing low"][-2:]
+    if len(hs) < 2 or len(ls) < 2:
+        return None
+    last_close = dd["Close"].iloc[-1]
+    if ls[1] > ls[0] and last_close > ls[1]:
+        return "calls"            # rising lows and price still above the last one
+    if hs[1] < hs[0] and last_close < hs[1]:
+        return "puts"
+    return None
+
+
+def window_bias(es, es15, d, now, price, win, open_colour, carry=None, day_trend=None):
     """Time frame continuity: the 1H and 4H candles in force at the close.
     If they disagree: Window 1 uses the 15m trend, Window 2 uses the 9:30 candle colour."""
     h1_start = now.floor("h") if now.minute else now - timedelta(hours=1)
@@ -295,6 +318,8 @@ def window_bias(es, es15, d, now, price, win, open_colour, carry=None):
         return h1, f"1H and 4H both {'green' if h1 == 'calls' else 'red'}"
     if win == "W2" and carry:
         return carry, "1H and 4H split, continuing away from the Window 1 key sweep"
+    if day_trend:
+        return day_trend, "1H and 4H split, daily trend " + ("up" if day_trend == "calls" else "down")
     if win == "W2":
         return open_colour, "1H and 4H split, 9:30 candle " + ("green" if open_colour == "calls" else "red")
     tr = trend_15m(es15, now)
@@ -358,6 +383,7 @@ def _add(trades, used, p, d, win, t, bar, rth, nq_rth, es, spx_day, step, bias, 
                      p["pool"], p["level"], bar["Open"], rth, nq_rth, es, spx_day, step)
     tr["bias_4h"] = bias
     tr["bias_why"] = p.get("bias_why")
+    tr["daily_trend"] = daily_trend(es, d)
     tr["prime"] = entry_t.time() >= time(14, 40) and win == "W1"
     tr["with_4h_bias"] = bias == direction
     tr["confirmed_next_candle"] = p["t"] != t
