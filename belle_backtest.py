@@ -8,14 +8,13 @@ What it does, in order, for every day in the data:
  2. Inside Window 1 (14:00 to 14:50 ET) and Window 2 (15:30 to 15:55 ET)
     it looks for a sweep: a candle trades through a live pool and closes
     back inside it.
- 3. It then needs a CISD: a body close through the open of the first
-    candle in the run that led into the sweep (wicks ignored).
- 4. Entry is that CISD candle's close. Stop is the sweep candle's extreme.
- 5. Option proxy: a strike OTM_POINTS out of the money (rounded to 5).
-    Did SPX go in the money by the close, and how far past the strike?
+ 3. Entry is the sweep candle's close. Stop is the sweep candle's extreme.
+    A second trade in the same window is allowed if it points the other way.
+ 4. It measures how far SPX moved in the trade's favour before 15:59, and
+    whether strikes 10, 15, 20 and 25 points out of the money went in the money.
 
-Score fields (they never block a trade): failed 2 (Strat shooter or hammer),
-ES versus NQ SMT, and 1H and 4H candle colour at entry.
+Score notes (they never block a trade): CISD within 3 bars, failed 2
+(Strat shooter or hammer), ES versus NQ SMT, 1H and 4H candle colour.
 
 Run:  python belle_backtest.py              (downloads free Yahoo data)
       python belle_backtest.py --csv data/   (uses saved CSVs instead)
@@ -80,10 +79,10 @@ def swings(day, look):
     return out
 
 
-def strike_for(spx_price, direction):
+def strike_for(spx_price, direction, dist):
     if direction == "puts":
-        return math.floor((spx_price - C.OTM_POINTS) / C.STRIKE_STEP) * C.STRIKE_STEP
-    return math.ceil((spx_price + C.OTM_POINTS) / C.STRIKE_STEP) * C.STRIKE_STEP
+        return math.floor((spx_price - dist) / C.STRIKE_STEP) * C.STRIKE_STEP
+    return math.ceil((spx_price + dist) / C.STRIKE_STEP) * C.STRIKE_STEP
 
 
 def window_of(t_close):
@@ -123,10 +122,10 @@ def run_day(d, prev_d, es, nq, spx, tf):
     if spx_day.empty:
         return []
 
-    trades, used_windows = [], set()
+    trades, used = [], set()
     bars = list(rth.index)
     for i, t in enumerate(bars):
-        if t < at(d, 13, 45) or len(trades) >= C.MAX_TRADES_PER_DAY:
+        if t < at(d, 13, 45):
             continue
         bar = rth.loc[t]
         before = rth[rth.index < t]
@@ -183,22 +182,23 @@ def run_day(d, prev_d, es, nq, spx, tf):
             while k > 0 and (rth.iloc[k]["Close"] > rth.iloc[k]["Open"]) == want_up:
                 k -= 1
             cisd_lvl = rth.iloc[min(k + 1, i)]["Open"]
-
+            cisd_bar = None
             for j in range(i, min(i + C.CISD_MAX_BARS + 1, len(bars))):
                 cb = rth.iloc[j]
-                ok = cb["Close"] < cisd_lvl if direction == "puts" else cb["Close"] > cisd_lvl
-                if not ok:
-                    continue
-                entry_t = bars[j] + step
-                win = window_of(entry_t)
-                if win is None or win in used_windows:
+                if (cb["Close"] < cisd_lvl) if direction == "puts" else (cb["Close"] > cisd_lvl):
+                    cisd_bar = j - i
                     break
-                trades.append(score_trade(d, direction, win, t, bars[j], entry_t, bar, cb,
-                                          pool_name, pool_lvl, cisd_lvl, rth, nq_rth, es, spx_day, step))
-                used_windows.add(win)
-                break
-            if trades and trades[-1]["sweep_time"] == t.strftime("%H:%M"):
-                break
+
+            # entry: the sweep candle's close (the sweep is the signal)
+            entry_t = t + step
+            win = window_of(entry_t)
+            if win is None or (win, direction) in used:
+                continue
+            trades.append(score_trade(d, direction, win, t, t, entry_t, bar, bar,
+                                      pool_name, pool_lvl, cisd_lvl, rth, nq_rth, es, spx_day, step))
+            trades[-1]["cisd_within_bars"] = cisd_bar
+            trades[-1]["nth_of_day"] = len(trades)
+            used.add((win, direction))
     return trades
 
 
@@ -228,17 +228,23 @@ def score_trade(d, direction, win, sweep_t, cisd_t, entry_t, sbar, cbar,
     else:
         last = spx_at.index[-1]
         spx_entry = entry_es - (es.loc[last, "Close"] - spx_day.loc[last, "Close"]) if last in es.index else spx_at["Close"].iloc[-1]
-    strike = strike_for(spx_entry, direction)
     path = spx_day[spx_day.index >= entry_t]
     close = spx_day["Close"].iloc[-1]
     if direction == "puts":
         best = path["Low"].min() if not path.empty else close
-        past = strike - best
-        itm_close = close < strike
+        max_move = spx_entry - best
+        close_move = spx_entry - close
     else:
         best = path["High"].max() if not path.empty else close
-        past = best - strike
-        itm_close = close > strike
+        max_move = best - spx_entry
+        close_move = close - spx_entry
+    by_dist = {}
+    for dist in C.OTM_LIST:
+        strike = strike_for(spx_entry, direction, dist)
+        gap = abs(strike - spx_entry)
+        by_dist[f"strike_{dist}"] = strike
+        by_dist[f"itm_{dist}"] = bool(max_move > gap)
+        by_dist[f"itm_close_{dist}"] = bool(close_move > gap)
     stop = sbar["High"] if direction == "puts" else sbar["Low"]
     es_after = rth[rth.index >= entry_t]
     stopped = bool((es_after["High"] > stop).any() if direction == "puts" else (es_after["Low"] < stop).any())
@@ -254,8 +260,9 @@ def score_trade(d, direction, win, sweep_t, cisd_t, entry_t, sbar, cbar,
         "sweep_time": sweep_t.strftime("%H:%M"), "entry_time": entry_t.strftime("%H:%M"),
         "pool_swept": pool_name, "pool_level": round(pool_lvl, 2),
         "cisd_level": round(cisd_lvl, 2), "entry_es": round(entry_es, 2), "stop_es": round(stop, 2),
-        "spx_entry": round(spx_entry, 2), "strike": strike, "spx_close": round(close, 2),
-        "points_past_strike": round(past, 2), "reached_itm": bool(past > 0), "itm_at_close": bool(itm_close),
+        "spx_entry": round(spx_entry, 2), "spx_close": round(close, 2),
+        "max_move_pts": round(max_move, 2), "close_move_pts": round(close_move, 2),
+        **by_dist,
         "stop_hit": stopped, "failed_2": bool(failed2), "smt": smt,
         "h1": colour(h1_open), "h4": colour(h4_open),
     }
@@ -266,27 +273,60 @@ def pct(s):
     return f"{100 * s.mean():.0f}%" if len(s) else "n/a"
 
 
+def move_stats(g):
+    q = g["max_move_pts"].quantile([0.25, 0.5, 0.75])
+    return f"{q[0.25]:.0f} / {q[0.5]:.0f} / {q[0.75]:.0f}"
+
+
 def summarize(df, tf, key):
     lines = [f"## {tf} minute signals", ""]
     if df.empty:
         return lines + ["No signals.", ""]
     weeks = max(1, df["date"].nunique() / 5)
-    lines += [f"| Measure | Value |", "| --- | --- |",
-              f"| Signals | {len(df)} ({len(df) / weeks:.1f} per week) |",
-              f"| Reached ITM by 15:59 | {pct(df['reached_itm'])} |",
-              f"| ITM at the close | {pct(df['itm_at_close'])} |",
-              f"| Average points past strike | {df['points_past_strike'].mean():.1f} |",
-              f"| Underlying stop hit | {pct(df['stop_hit'])} |", ""]
-    lines += ["| Split | Signals | Reached ITM |", "| --- | --- | --- |"]
-    for col in ("window", "direction", "failed_2", "smt", "h1", "h4"):
+    lines += [f"Signals: {len(df)} ({len(df) / weeks:.1f} per week). Entry = the sweep candle's close.", "",
+              "**How far SPX moved after the signal (best point before 15:59), in SPX points: 25th / median / 75th percentile**", "",
+              "| Group | Signals | Move |", "| --- | --- | --- |",
+              f"| All | {len(df)} | {move_stats(df)} |"]
+    for col in ("window", "direction"):
+        for val, g in df.groupby(col):
+            lines.append(f"| {col} = {val} | {len(g)} | {move_stats(g)} |")
+    for val, g in df.groupby(["window", "direction"]):
+        lines.append(f"| {val[0]} {val[1]} | {len(g)} | {move_stats(g)} |")
+    lines += ["", "**Strike went in the money by 15:59, by distance out of the money**", "",
+              "| Group | " + " | ".join(f"{d} pts" for d in C.OTM_LIST) + " |",
+              "| --- |" + " --- |" * len(C.OTM_LIST)]
+    groups = [("All", df)] + [(f"{w} {dr}", g) for (w, dr), g in df.groupby(["window", "direction"])]
+    for name, g in groups:
+        lines.append(f"| {name} | " + " | ".join(pct(g[f"itm_{d}"]) for d in C.OTM_LIST) + " |")
+    lines += ["", "**Score notes (never block a trade): share reaching ITM at 15 pts**", "",
+              "| Note | Signals | ITM at 15 pts |", "| --- | --- | --- |"]
+    df = df.assign(cisd_followed=df["cisd_within_bars"].notna())
+    for col in ("cisd_followed", "failed_2", "smt", "h1", "h4"):
         for val, g in df.groupby(col, dropna=False):
-            lines.append(f"| {col} = {val} | {len(g)} | {pct(g['reached_itm'])} |")
+            lines.append(f"| {col} = {val} | {len(g)} | {pct(g['itm_15'])} |")
     lines += ["", "**Answer key check**", ""]
     for _, r in key.iterrows():
         m = df[(df["date"] == r["date"]) & (df["direction"] == r["direction"])]
-        found = ", ".join(f"{x.window} {x.entry_time} ({x.pool_swept})" for x in m.itertuples()) or "not flagged"
+        found = ", ".join(f"{x.window} entry {x.entry_time} after sweeping {x.pool_swept}, moved {x.max_move_pts} pts" for x in m.itertuples()) or "not flagged"
         lines.append(f"- {r['date']} {r['contract']}: {found}")
     return lines + [""]
+
+
+def log_history(df, tf, run_date):
+    """One row per run day and timeframe, kept forever in results/history.csv."""
+    path = "results/history.csv"
+    row = {"run_date": run_date, "timeframe": f"{tf}m", "signals": len(df)}
+    if not df.empty:
+        row["median_move_pts"] = round(df["max_move_pts"].median(), 1)
+        for w in C.WINDOWS:
+            g = df[df["window"] == w]
+            row[f"{w}_median_move_pts"] = round(g["max_move_pts"].median(), 1) if len(g) else None
+        for d in C.OTM_LIST:
+            row[f"itm_{d}_pct"] = round(100 * df[f"itm_{d}"].mean())
+    hist = pd.read_csv(path) if os.path.exists(path) else pd.DataFrame()
+    if not hist.empty:
+        hist = hist[~((hist["run_date"] == run_date) & (hist["timeframe"] == f"{tf}m"))]
+    pd.concat([hist, pd.DataFrame([row])], ignore_index=True).to_csv(path, index=False)
 
 
 def main():
@@ -304,8 +344,9 @@ def main():
 
     key = pd.read_csv("answer_key.csv", dtype=str)
     os.makedirs("results", exist_ok=True)
+    run_date = pd.Timestamp.now(tz=TZ).strftime("%Y-%m-%d")
     report = ["# Belle backtest results", "",
-              f"Data: Yahoo Finance, last {C.PERIOD}. Strike = {C.OTM_POINTS} SPX points OTM.", ""]
+              f"Data: Yahoo Finance, last {C.PERIOD}. Run {run_date}.", ""]
     for tf in C.TIMEFRAMES:
         es, nq, spx = (resample(raw[s], tf) for s in (C.ES, C.NQ, C.SPX))
         days = sorted(set(spx.index.date))
@@ -315,6 +356,7 @@ def main():
         df = pd.DataFrame(rows)
         df.to_csv(f"results/signals_{tf}m.csv", index=False)
         report += summarize(df, tf, key)
+        log_history(df, tf, run_date)
         print(f"{tf}m: {len(df)} signals")
     with open("results/summary.md", "w") as f:
         f.write("\n".join(report))
