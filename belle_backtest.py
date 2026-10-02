@@ -13,8 +13,9 @@ What it does, in order, for every day in the data:
     trend and Window 2 uses the 9:30 candle colour.
  4. Trigger, any one alone: a sweep, an equal highs or lows tap, an order
     block opening, a rejection block or an FVG CE. A sweep of a key pool
-    (equal highs/lows, PDH/PDL, swing, 13:30 candle) trades the reversal on
-    its own; every other trigger must match the bias. The CLOSE confirms (or
+    (equal highs/lows, PDH/PDL) trades the reversal on its own and Window 2
+    keeps that direction when the 1H and 4H split; every other trigger must
+    match the bias. The CLOSE confirms (or
     the next candle's close). Max 2 a day, 1 per window.
     In the first hour of a 4H candle the 4H vote is the 4H that just closed.
  5. It measures how far SPX moved in the trade's favour before 15:59, and
@@ -213,13 +214,14 @@ def run_day(d, prev_d, es, nq, spx, tf):
         if before.empty:
             continue
         win = window_of(t + step)
-        tf_bias, why_bias = window_bias(es, es15, d, t + step, bar["Close"], win, open_colour)
+        carry = next((x["direction"] for x in trades if x["window"] == "W1" and x["pool_swept"] in C.KEY_SWEEPS), None)
+        tf_bias, why_bias = window_bias(es, es15, d, t + step, bar["Close"], win, open_colour, carry)
 
         # 1. a pending reaction confirmed by THIS candle's close
         if pending is not None:
             p, pending = pending, None
             if (win and win not in used and _closes_with(bar, p["direction"])
-                    and (p["direction"] == tf_bias or p["pool"] in C.TOP_POOLS)):
+                    and (p["direction"] == tf_bias or p["pool"] in C.KEY_SWEEPS)):
                 p["bias_why"] = why_bias
                 _add(trades, used, p, d, win, t, bar, rth, nq_rth, es, spx_day, step, bias, i, bars)
                 continue
@@ -247,7 +249,7 @@ def run_day(d, prev_d, es, nq, spx, tf):
         found.sort(key=lambda f: f[0] != tf_bias)       # prefer the side that matches the bias
         direction, (pool_name, pool_lvl) = found[0]
         p = {"direction": direction, "pool": pool_name, "level": pool_lvl, "t": t, "bar": bar, "bias_why": why_bias}
-        if win and win not in used and _closes_with(bar, direction) and (direction == tf_bias or pool_name in C.TOP_POOLS):
+        if win and win not in used and _closes_with(bar, direction) and (direction == tf_bias or pool_name in C.KEY_SWEEPS):
             _add(trades, used, p, d, win, t, bar, rth, nq_rth, es, spx_day, step, bias, i, bars)
         else:
             pending = p           # wait one candle: its close must confirm, in the bias direction
@@ -277,7 +279,7 @@ def trend_15m(es15, now, look=2):
     return None
 
 
-def window_bias(es, es15, d, now, price, win, open_colour):
+def window_bias(es, es15, d, now, price, win, open_colour, carry=None):
     """Time frame continuity: the 1H and 4H candles in force at the close.
     If they disagree: Window 1 uses the 15m trend, Window 2 uses the 9:30 candle colour."""
     h1_start = now.floor("h") if now.minute else now - timedelta(hours=1)
@@ -291,6 +293,8 @@ def window_bias(es, es15, d, now, price, win, open_colour):
         h4 = _colour(es, at(d, start4, 0), now, price)
     if h1 and h1 == h4:
         return h1, f"1H and 4H both {'green' if h1 == 'calls' else 'red'}"
+    if win == "W2" and carry:
+        return carry, "1H and 4H split, continuing away from the Window 1 key sweep"
     if win == "W2":
         return open_colour, "1H and 4H split, 9:30 candle " + ("green" if open_colour == "calls" else "red")
     tr = trend_15m(es15, now)
