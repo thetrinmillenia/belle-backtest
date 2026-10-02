@@ -28,4 +28,5 @@ SWING_LOOKBACK = 3            # bars on each side to call a swing high or low
 EQ_TOL = 1.0                  # ES points: two swing highs or lows this close are equal
 TOP_POOLS = {"equal highs", "equal lows", "PDH", "PDL", "swing high", "swing low",
              "13:30 candle high", "13:30 candle low"}   # preferred over opens and blocks
+KEY_SWEEPS = {"equal highs", "equal lows", "PDH", "PDL"}   # these trade the reversal even against the bias
 CISD_MAX_BARS = 3             # CISD is a score note only: did it follow within 3 bars?
