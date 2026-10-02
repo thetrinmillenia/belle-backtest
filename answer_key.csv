@@ -3,3 +3,4 @@ date,direction,contract,entry_time_et,note
 2026-10-01,puts,SPX 7675p,15:54,5m 15:50 candle took 13:45 swing high; failed 2 shooter; +542%
 2026-09-26,puts,SPX puts,,Titi confirmed puts was correct
 2026-09-18,calls,SPX calls,,Trend was up; calls not puts
+2026-09-29,calls,SPX calls,14:05,Equal lows tapped on the 13:55 candle; 14:00 closed green; continued up
