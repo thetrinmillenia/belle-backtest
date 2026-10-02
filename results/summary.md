@@ -1,62 +1,99 @@
 # Belle backtest results
 
-Data: Yahoo Finance, last 60d. Strike = 25 SPX points OTM.
+Data: Yahoo Finance, last 60d. Run 2026-10-01.
 
 ## 5 minute signals
 
-| Measure | Value |
-| --- | --- |
-| Signals | 42 (6.8 per week) |
-| Reached ITM by 15:59 | 2% |
-| ITM at the close | 2% |
-| Average points past strike | -20.6 |
-| Underlying stop hit | 60% |
+Signals: 92 (10.2 per week). Entry = the sweep candle's close.
 
-| Split | Signals | Reached ITM |
+**How far SPX moved after the signal (best point before 15:59), in SPX points: 25th / median / 75th percentile**
+
+| Group | Signals | Move |
 | --- | --- | --- |
-| window = W1 | 28 | 0% |
-| window = W2 | 14 | 7% |
-| direction = calls | 15 | 0% |
-| direction = puts | 27 | 4% |
-| failed_2 = False | 33 | 3% |
-| failed_2 = True | 9 | 0% |
-| smt = False | 40 | 2% |
-| smt = True | 2 | 0% |
-| h1 = green | 17 | 0% |
-| h1 = red | 25 | 4% |
-| h4 = green | 17 | 0% |
-| h4 = red | 25 | 4% |
+| All | 92 | 2 / 5 / 10 |
+| window = W1 | 54 | 3 / 8 / 13 |
+| window = W2 | 38 | 1 / 3 / 5 |
+| direction = calls | 49 | 1 / 4 / 9 |
+| direction = puts | 43 | 3 / 6 / 11 |
+| W1 calls | 27 | 4 / 8 / 12 |
+| W1 puts | 27 | 3 / 9 / 15 |
+| W2 calls | 22 | 1 / 2 / 3 |
+| W2 puts | 16 | 4 / 6 / 8 |
 
-**Answer key check**
+**Strike went in the money by 15:59, by distance out of the money**
 
-- 2026-09-30 SPX 7670p: W2 15:35 (9:30 open)
-- 2026-10-01 SPX 7675p: not flagged
+| Group | 10 pts | 15 pts | 20 pts | 25 pts |
+| --- | --- | --- | --- | --- |
+| All | 18% | 9% | 4% | 2% |
+| W1 calls | 26% | 7% | 0% | 0% |
+| W1 puts | 30% | 22% | 15% | 7% |
+| W2 calls | 0% | 0% | 0% | 0% |
+| W2 puts | 12% | 0% | 0% | 0% |
 
-## 15 minute signals
+**Score notes (never block a trade): share reaching ITM at 15 pts**
 
-| Measure | Value |
-| --- | --- |
-| Signals | 14 (5.8 per week) |
-| Reached ITM by 15:59 | 7% |
-| ITM at the close | 7% |
-| Average points past strike | -13.5 |
-| Underlying stop hit | 29% |
-
-| Split | Signals | Reached ITM |
+| Note | Signals | ITM at 15 pts |
 | --- | --- | --- |
-| window = W1 | 9 | 11% |
-| window = W2 | 5 | 0% |
-| direction = calls | 6 | 0% |
-| direction = puts | 8 | 12% |
-| failed_2 = False | 12 | 8% |
-| failed_2 = True | 2 | 0% |
-| smt = False | 14 | 7% |
-| h1 = green | 6 | 0% |
-| h1 = red | 8 | 12% |
-| h4 = green | 7 | 0% |
-| h4 = red | 7 | 14% |
+| cisd_followed = False | 55 | 11% |
+| cisd_followed = True | 37 | 5% |
+| failed_2 = False | 74 | 8% |
+| failed_2 = True | 18 | 11% |
+| smt = False | 83 | 10% |
+| smt = True | 9 | 0% |
+| h1 = green | 36 | 14% |
+| h1 = red | 56 | 5% |
+| h4 = green | 43 | 12% |
+| h4 = red | 49 | 6% |
 
 **Answer key check**
 
 - 2026-09-30 SPX 7670p: not flagged
-- 2026-10-01 SPX 7675p: not flagged
+- 2026-10-01 SPX 7675p: W1 entry 14:45 after sweeping 9:30 open, moved 9.06 pts, W2 entry 15:45 after sweeping swing high, moved 11.93 pts
+
+## 15 minute signals
+
+Signals: 45 (6.8 per week). Entry = the sweep candle's close.
+
+**How far SPX moved after the signal (best point before 15:59), in SPX points: 25th / median / 75th percentile**
+
+| Group | Signals | Move |
+| --- | --- | --- |
+| All | 45 | 5 / 8 / 13 |
+| window = W1 | 36 | 5 / 9 / 14 |
+| window = W2 | 9 | 6 / 7 / 8 |
+| direction = calls | 20 | 3 / 8 / 13 |
+| direction = puts | 25 | 6 / 8 / 13 |
+| W1 calls | 17 | 3 / 8 / 13 |
+| W1 puts | 19 | 6 / 9 / 15 |
+| W2 calls | 3 | 5 / 7 / 8 |
+| W2 puts | 6 | 6 / 7 / 8 |
+
+**Strike went in the money by 15:59, by distance out of the money**
+
+| Group | 10 pts | 15 pts | 20 pts | 25 pts |
+| --- | --- | --- | --- | --- |
+| All | 27% | 16% | 9% | 4% |
+| W1 calls | 35% | 18% | 6% | 0% |
+| W1 puts | 32% | 21% | 16% | 11% |
+| W2 calls | 0% | 0% | 0% | 0% |
+| W2 puts | 0% | 0% | 0% | 0% |
+
+**Score notes (never block a trade): share reaching ITM at 15 pts**
+
+| Note | Signals | ITM at 15 pts |
+| --- | --- | --- |
+| cisd_followed = False | 27 | 15% |
+| cisd_followed = True | 18 | 17% |
+| failed_2 = False | 38 | 18% |
+| failed_2 = True | 7 | 0% |
+| smt = False | 41 | 17% |
+| smt = True | 4 | 0% |
+| h1 = green | 19 | 16% |
+| h1 = red | 26 | 15% |
+| h4 = green | 22 | 14% |
+| h4 = red | 23 | 17% |
+
+**Answer key check**
+
+- 2026-09-30 SPX 7670p: not flagged
+- 2026-10-01 SPX 7675p: W1 entry 14:45 after sweeping 9:30 open, moved 9.06 pts
