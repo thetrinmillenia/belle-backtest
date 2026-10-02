@@ -1,3 +1,5 @@
 date,direction,contract,entry_time_et,note
 2026-09-30,puts,SPX 7670p,,Entry $1.05; Window 2; peaked near $18.00; out by 15:59
 2026-10-01,puts,SPX 7675p,15:54,5m 15:50 candle took 13:45 swing high; failed 2 shooter; +542%
+2026-09-26,puts,SPX puts,,Titi confirmed puts was correct
+2026-09-18,calls,SPX calls,,Trend was up; calls not puts
