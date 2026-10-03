@@ -1,0 +1,27 @@
+name: Belle afternoon
+
+on:
+  schedule:
+    - cron: "25 17,18 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Post now, even if it is not the scheduled time"
+        default: "1"
+
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install yfinance pandas numpy requests
+      - run: python bots/belle.py afternoon
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          FORCE_POST: ${{ github.event.inputs.force }}
+
