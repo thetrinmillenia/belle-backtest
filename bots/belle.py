@@ -19,7 +19,7 @@ import pandas as pd
 import numpy as np
 
 ET, CT = ZoneInfo("America/New_York"), ZoneInfo("America/Chicago")
-WEBHOOK = os.environ.get("DISCORD_WEBHOOK_URL", "")
+WEBHOOK = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
 FRED_KEY = os.environ.get("FRED_API_KEY", "")
 CAL_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
 SYMS = {"ES": "ES=F", "NQ": "NQ=F"}
@@ -330,7 +330,7 @@ def eod(now):
 JOBS = {"morning": morning, "release": release, "afternoon": afternoon, "eod": eod}
 # allowed ET minutes after midnight for each job. Cron fires twice (summer and winter time);
 # only the run inside its window posts, so there are never duplicates.
-ALLOWED = {"morning": (475, 530), "release": (510, 560), "afternoon": (800, 850), "eod": (960, 1015)}
+ALLOWED = {"morning": (475, 530), "release": (510, 560), "afternoon": (800, 860), "eod": (960, 1015)}
 
 if __name__ == "__main__":
     mode = sys.argv[1] if len(sys.argv) > 1 else ""
