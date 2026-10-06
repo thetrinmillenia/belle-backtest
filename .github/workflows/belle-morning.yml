@@ -1,27 +1,53 @@
 name: Belle morning
 
+# Runs early so the read is in Discord before 7:00 AM ET.
+# GitHub often starts scheduled jobs late, so there are several tries.
+# The first try that posts wins; the later tries see it and stop.
 on:
   schedule:
-    - cron: "0 12,13 * * 1-5"
+    - cron: "0 10 * * 1-5"
+    - cron: "20 10 * * 1-5"
+    - cron: "40 10 * * 1-5"
+    - cron: "0 11 * * 1-5"
+    - cron: "30 11 * * 1-5"
+    - cron: "15 12 * * 1-5"
   workflow_dispatch:
     inputs:
       force:
         description: "Post now, even if it is not the scheduled time"
         default: "1"
 
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: belle-morning
+  cancel-in-progress: false
 
 jobs:
   run:
     runs-on: ubuntu-latest
     steps:
+      - name: Already posted today?
+        id: dup
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          n=$(gh run list -R "$GITHUB_REPOSITORY" -w belle-morning.yml -s success --created ">=$(date -u +%F)" --json databaseId -q 'length')
+          echo "Successful morning runs today: $n"
+          echo "n=$n" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
+        if: steps.dup.outputs.n == '0' || github.event_name == 'workflow_dispatch'
       - uses: actions/setup-python@v5
+        if: steps.dup.outputs.n == '0' || github.event_name == 'workflow_dispatch'
         with:
           python-version: "3.11"
       - run: pip install yfinance pandas numpy requests
+        if: steps.dup.outputs.n == '0' || github.event_name == 'workflow_dispatch'
       - run: python bots/belle.py morning
+        if: steps.dup.outputs.n == '0' || github.event_name == 'workflow_dispatch'
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           FORCE_POST: ${{ github.event.inputs.force }}
-
