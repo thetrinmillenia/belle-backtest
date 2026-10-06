@@ -330,7 +330,7 @@ def eod(now):
 JOBS = {"morning": morning, "release": release, "afternoon": afternoon, "eod": eod}
 # allowed ET minutes after midnight for each job. Cron fires twice (summer and winter time);
 # only the run inside its window posts, so there are never duplicates.
-ALLOWED = {"morning": (475, 530), "release": (510, 560), "afternoon": (800, 860), "eod": (960, 1015)}
+ALLOWED = {"morning": (300, 565), "release": (510, 560), "afternoon": (800, 860), "eod": (960, 1015)}
 
 if __name__ == "__main__":
     mode = sys.argv[1] if len(sys.argv) > 1 else ""
