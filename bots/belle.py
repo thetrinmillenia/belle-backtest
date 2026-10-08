@@ -1,6 +1,6 @@
 """Belle bots for Titi. One script, four jobs, one Discord channel.
 
-  morning    8:00 AM ET  ES/NQ overnight read, 4H read, today's USD news
+  morning    6:00 AM ET  ES/NQ higher timeframe bias, True DOL, overnight levels, 4H read, news, Belle's read
   release    8:36 AM ET  8:30 news follow up: forecast vs previous (and actual when FRED key is set) + ES/NQ reaction
   afternoon  1:25 PM ET  setup before Window 1: bias, levels, pools, EMAs, news still ahead
   eod        4:05 PM ET  recap: ranges, windows, power hour stats; saves the day's 1m bars to the repo
@@ -179,8 +179,23 @@ def post(text):
 
 
 # ---------------- jobs ----------------
+def htf_bias(df, now):
+    """Bias from the higher timeframes: daily, 4H and 1H (last closed candles). 4H and 1H agree: that side. Split: the daily decides."""
+    g = four_hour(df)
+    c4 = g[g.index + pd.Timedelta(hours=4) <= now].iloc[-1]
+    h1 = df[df.index + pd.Timedelta(hours=1) <= now].iloc[-1]
+    p = prev_rth(df, now.date())
+    d_col = color(p.open.iloc[0], p.close.iloc[-1])
+    col4, col1 = color(c4.open, c4.close), color(h1.open, h1.close)
+    if col4 == col1:
+        side, why = col4, f"4H and 1H both {col4}, daily {d_col}"
+    else:
+        side, why = d_col, f"4H {col4} and 1H {col1} split, daily {d_col} decides"
+    return ("BULLISH" if side == "green" else "BEARISH"), why
+
 def morning(now):
-    parts = [f"**BELLE MORNING BRIEF** {now.strftime('%A %b %d')} | {both(now)}"]
+    parts = [f"**BELLE MORNING READ** {now.strftime('%A %b %d')} | {both(now)}"]
+    reads = {}
     for name, sym in SYMS.items():
         try:
             df = bars(sym, "1h", "7d")
@@ -190,32 +205,58 @@ def morning(now):
             last = df.close.iloc[-1]
             pdh, pdl = p.high.max(), p.low.min()
             mid = df[(df.index.date == now.date()) & (df.index.time == dt.time(0, 0))]
-            s = [f"**{name}** last {last:,.2f}"]
+            bias, why = htf_bias(df, now)
+            s = [f"**{name}** {last:,.2f} | Bias: **{bias}** ({why})"]
+            dol_side = None
+            if len(mid):
+                dol = mid.open.iloc[0]
+                dol_side = "above" if last > dol else "below"
+                s.append(f"True DOL (midnight open) {dol:,.2f}, price is {dol_side} it ({'premium' if dol_side == 'above' else 'discount'})")
             if len(on):
                 s.append(f"Overnight high {on.high.max():,.2f} at {both(on.high.idxmax())} | low {on.low.min():,.2f} at {both(on.low.idxmin())} | range {on.high.max() - on.low.min():,.2f} pts")
                 took = [w for w, c in (("took the PDH (buy side)", on.high.max() > pdh), ("took the PDL (sell side)", on.low.min() < pdl)) if c]
                 s.append("Overnight " + (" and ".join(took) if took else "stayed inside the prior day range"))
             s.append(f"PDH {pdh:,.2f} | PDL {pdl:,.2f} | prior close {p.close.iloc[-1]:,.2f}")
-            if len(mid):
-                s.append(f"Midnight open {mid.open.iloc[0]:,.2f}, price is {'above' if last > mid.open.iloc[0] else 'below'} it")
             s.append("4H read: " + four_h_read(df, now))
+            reads[name] = (bias, dol_side)
             parts.append("\n".join(s))
         except Exception as e:
             parts.append(f"**{name}**: data not available ({type(e).__name__})")
     ev = events(now)
+    high_today = []
     if ev is None:
         parts.append("Economic calendar not available right now.")
     else:
         today = [ev_line(e) for e in ev if e["t"].date() == now.date()]
+        high_today = [e for e in ev if e["t"].date() == now.date() and e["impact"] == "High"]
         ahead = [f"{e['t'].strftime('%a')} " + ev_line(e) for e in ev if e["t"].date() > now.date() and e["impact"] == "High"]
         parts.append("**Today (USD news):**\n" + ("\n".join(today) if today else "No medium or high impact USD news today."))
         if ahead:
             parts.append("**Still ahead this week (high impact):**\n" + "\n".join(ahead))
     parts.append(f"**Day ATR for a {now.strftime('%A')}:** about {ATR.get(now.weekday(), 80)} SPX pts (1 year average).")
-    parts.append("**Windows:** " + WINDOWS)
+    parts.append("**Belle's read:** " + belle_summary(reads, high_today))
     parts.append(FOOT)
     return "\n\n".join(parts)
 
+def belle_summary(reads, high_today):
+    if not reads:
+        return "No data this morning, read the chart at the open."
+    biases = {b for b, _ in reads.values()}
+    if len(biases) > 1:
+        s = "ES and NQ disagree on the higher timeframes (SMT). No clean bias yet, let the 9:30 open and the afternoon read decide."
+    else:
+        b = biases.pop()
+        want = "puts" if b == "BEARISH" else "calls"
+        good = "above" if b == "BEARISH" else "below"
+        sides = {d for _, d in reads.values() if d}
+        s = f"ES and NQ both {b.lower()} on the higher timeframes, so look for {want}."
+        if sides == {good}:
+            s += f" Price is {good} True DOL ({'premium' if good == 'above' else 'discount'}), which lines up with the bias."
+        elif sides:
+            s += f" Price is {'/'.join(sorted(sides))} True DOL, so wait for price to get {'above' if b == 'BEARISH' else 'below'} it before looking for {want}."
+    if high_today:
+        s += " High impact news today: " + ", ".join(f"{e['title']} at {both(e['t'])}" for e in high_today) + ". Be careful around that time."
+    return s
 
 def release(now):
     ev = events(now) or []
