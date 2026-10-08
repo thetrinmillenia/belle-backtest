@@ -324,7 +324,6 @@ def afternoon(now):
                  "Mark the 2 PM to 3 PM range at 3 PM: power hour breaks it 88% of days.")
     parts.append("**Targets:** W1 about 12 pts doubles a 10 to 40 OTM contract (typically 25 to 30 min). "
                  "W2 about 8 pts doubles a 10 to 30 OTM contract (about 5 min).")
-    parts.append("**Windows:** " + WINDOWS)
     parts.append(FOOT)
     return "\n\n".join(parts)
 
