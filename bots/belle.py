@@ -362,6 +362,15 @@ def eod(now):
             row.to_csv(log, mode="a", header=not os.path.exists(log), index=False)
         except Exception as e:
             parts.append(f"**{name}**: data not available ({type(e).__name__})")
+    # free SPX 1m archive from Yahoo (^GSPC), next to the ES and NQ files (Titi, Oct 14)
+    try:
+        g = bars("^GSPC", "1m", "1d")
+        g = g[g.index.date == d]
+        if len(g):
+            os.makedirs(ARCHIVE, exist_ok=True)
+            g.to_csv(f"{ARCHIVE}/SPX_{d}_1m.csv")
+    except Exception as e:
+        parts.append(f"SPX archive not saved ({type(e).__name__})")
     parts.append("Alerts from the indicator today: log them in live_tracker.csv with the SPX strike and the SPY mirror.")
     parts.append(FOOT)
     return "\n\n".join(parts)
