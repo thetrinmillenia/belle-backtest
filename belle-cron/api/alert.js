@@ -7,7 +7,8 @@ const TRADE = 'https://paper-api.alpaca.markets';
 const DATA = 'https://data.alpaca.markets';
 const TZ = 'America/New_York';
 const REPO = 'thetrinmillenia/belle-backtest';
-const MIN_COST = 150; // dollars per contract
+const MIN_COST = 75; // dollars per contract
+const TARGET_COST = 100; // Titi, Oct 16: loves premiums around $100
 const MAX_COST = 300;
 
 function et(d = new Date()) {
@@ -36,7 +37,7 @@ function readAlert(body) {
   return { side: m[1], time: (t.match(/at (\d\d:\d\d) ET/) || [])[1], spx, spy: spx ? spx / ratio : null, spxStop, spyStop: spxStop ? spxStop / ratio : null, spxT1, spyT1: spxT1 ? spxT1 / ratio : null, spxStrike: Number(m[2]), spyStrike: Number(m[4]), why: (t.split('|')[4] || '').trim() };
 }
 
-// pick the strike closest to the money that costs $150 to $300 (Titi, Oct 16: her 7700P about 12 pts OTM ran +619%, the cheaper 7670P far less)
+// pick the contract that costs closest to $100, between $75 and $300 (Titi, Oct 16)
 async function pick(root, cp, price, ymd) {
   const step = root === 'SPY' ? 1 : 5;
   const atm = Math.round(price / step) * step;
@@ -51,7 +52,7 @@ async function pick(root, cp, price, ymd) {
     if (!x || !x.ap) return;
     const cost = x.ap * 100;
     if (cost < MIN_COST || cost > MAX_COST) return;
-    const score = Math.abs(strikes[i] - price);
+    const score = Math.abs(cost - TARGET_COST);
     if (!best || score < best.score) best = { sym: s, strike: strikes[i], ask: x.ap, cost, score };
   });
   return best;
@@ -89,7 +90,7 @@ export default async function handler(req, res) {
         const label = root === 'SPY' ? 'SPY' : 'SPX';
         if (!price) { notes.push(`${label} skipped, no price`); continue; }
         const c = await pick(root, cp, price, ymd);
-        if (!c) { notes.push(`${label} skipped, no contract between $150 and $300`); continue; }
+        if (!c) { notes.push(`${label} skipped, no contract between $75 and $300`); continue; }
         const lim = tick(c.ask, root);
         if (lim * 100 > bp) { notes.push(`${label} skipped, not enough buying power`); continue; }
         const o = await (await fetch(`${TRADE}/v2/orders`, { method: 'POST', headers: H(), body: JSON.stringify({ symbol: c.sym, qty: '1', side: 'buy', type: 'limit', limit_price: lim.toFixed(2), time_in_force: 'day', client_order_id: `penny-${t.y}-${t.m}-${t.d}-${label}-${Date.now()}` }) })).json();
