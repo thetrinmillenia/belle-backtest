@@ -82,7 +82,20 @@ export default async function handler(req, res) {
     // morning: SPY first; afternoon: SPX first. Penny buys both when the cash allows.
     const order = mins < 760 ? ['SPY', 'SPXW'] : ['SPXW', 'SPY'];
     const picked = {}, notes = [];
+    // Penny rule (Titi, Oct 16): holding one side and Belle fires the other side -> no new trade.
+    // Discord still gets the alert; Penny tightens the open trade's stop (signal = empty watchlist penny-flip-C/P-time).
+    let holding = null;
     if (inWin) {
+      try {
+        const pos = await (await fetch(`${TRADE}/v2/positions`, { headers: H() })).json();
+        holding = (Array.isArray(pos) ? pos : []).find(p => /^(SPY|SPXW)\d{6}[CP]\d{8}$/.test(p.symbol) && p.symbol.slice(-9, -8) !== cp && Number(p.qty) > 0) || null;
+      } catch (e) { holding = null; }
+      if (holding) {
+        await fetch(`${TRADE}/v2/watchlists`, { method: 'POST', headers: H(), body: JSON.stringify({ name: `penny-flip-${cp}-${Date.now()}`, symbols: [] }) }).catch(() => null);
+        notes.push(`holding ${holding.symbol.startsWith('SPXW') ? 'SPX' : 'SPY'} ${holding.symbol.slice(-9, -8) === 'C' ? 'calls' : 'puts'}, no new trade, stop tightened to 10% under the current price`);
+      }
+    }
+    if (inWin && !holding) {
       const acct = await (await fetch(`${TRADE}/v2/account`, { headers: H() })).json();
       let bp = Number(acct.options_buying_power || acct.buying_power || 0);
       for (const root of order) {
@@ -105,7 +118,7 @@ export default async function handler(req, res) {
           });
         }
       }
-    } else notes.push('no trade, outside the windows');
+    } else if (!inWin) notes.push('no trade, outside the windows');
 
     const spyK = picked.SPY ? picked.SPY.strike : a.spyStrike;
     const spxK = picked.SPX ? picked.SPX.strike : a.spxStrike;
