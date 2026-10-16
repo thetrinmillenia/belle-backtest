@@ -59,7 +59,11 @@ async function pick(root, cp, price, ymd) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'POST only' });
-  if (!process.env.RELAY_KEY || req.query.key !== process.env.RELAY_KEY) return res.status(401).json({ ok: false, error: 'not authorized' });
+  // the key may hold & or + so read everything after key= from the raw URL
+  const want = (process.env.RELAY_KEY || '').trim();
+  const raw = String(req.url || '').split('key=').slice(1).join('key=');
+  let dec = raw; try { dec = decodeURIComponent(raw); } catch (e) { }
+  if (!want || ![raw, dec, req.query.key].includes(want)) return res.status(401).json({ ok: false, error: 'not authorized' });
   try {
     let body = req.body;
     if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = { content: body }; } }
