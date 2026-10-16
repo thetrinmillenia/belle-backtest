@@ -36,12 +36,12 @@ function readAlert(body) {
   return { side: m[1], time: (t.match(/at (\d\d:\d\d) ET/) || [])[1], spx, spy: spx ? spx / ratio : null, spxStop, spyStop: spxStop ? spxStop / ratio : null, spxT1, spyT1: spxT1 ? spxT1 / ratio : null, spxStrike: Number(m[2]), spyStrike: Number(m[4]), why: (t.split('|')[4] || '').trim() };
 }
 
-// pick the contract that costs closest to $150, never under $150 or over $300
+// pick the strike closest to the money that costs $150 to $300 (Titi, Oct 16: her 7700P about 12 pts OTM ran +619%, the cheaper 7670P far less)
 async function pick(root, cp, price, ymd) {
   const step = root === 'SPY' ? 1 : 5;
   const atm = Math.round(price / step) * step;
   const dir = cp === 'C' ? 1 : -1; // moving OTM
-  const strikes = []; for (let i = -2; i <= 14; i++) strikes.push(atm + dir * i * step);
+  const strikes = []; for (let i = 0; i <= 14; i++) strikes.push(atm + dir * i * step);
   const syms = strikes.map(s => occ(root, ymd, cp, s));
   const r = await fetch(`${DATA}/v1beta1/options/quotes/latest?symbols=${syms.join(',')}&feed=indicative`, { headers: H() });
   const q = await r.json();
@@ -51,7 +51,7 @@ async function pick(root, cp, price, ymd) {
     if (!x || !x.ap) return;
     const cost = x.ap * 100;
     if (cost < MIN_COST || cost > MAX_COST) return;
-    const score = cost - MIN_COST;
+    const score = Math.abs(strikes[i] - price);
     if (!best || score < best.score) best = { sym: s, strike: strikes[i], ask: x.ap, cost, score };
   });
   return best;
