@@ -54,13 +54,22 @@ def now():
 
 
 def opposite_alert_since(t0):
-    """Belle fired the other side after this entry: Penny bought an opposite contract (client id penny-...)."""
+    """Belle fired the other side after this entry (relay flip watchlist, or an opposite penny- order)."""
     try:
         r = requests.get(f"{TRADE}/v2/orders", headers=H, timeout=10,
                          params={"status": "all", "after": t0, "limit": 50, "direction": "desc"}).json()
     except Exception:
         return False
     my_cp = SYM[-9]
+    # the relay skips the new trade and leaves an empty watchlist named penny-flip-<C|P>-<ms>
+    try:
+        wl = requests.get(f"{TRADE}/v2/watchlists", headers=H, timeout=10).json()
+        for w in wl if isinstance(wl, list) else []:
+            nm = w.get("name") or ""
+            if nm.startswith("penny-flip-") and len(nm) > 11 and nm[11] != my_cp and (w.get("created_at") or "") > t0:
+                return True
+    except Exception:
+        pass
     for o in r if isinstance(r, list) else []:
         cid = o.get("client_order_id") or ""
         sym = o.get("symbol") or ""
@@ -165,7 +174,7 @@ while True:
             stop = max(stop, peak * 0.80, entry * 1.5)   # trail 20% below the best, lock at least +50%
         if peak >= entry * 3.0:
             stop = max(stop, peak * 0.85, entry * 2.0)   # trail 15% below the best, lock at least +100%
-        # opposite Belle alert while this trade is open (Titi, Oct 16): keep the new trade, tighten this one
+        # opposite Belle alert while this trade is open (Titi, Oct 16): no new trade, tighten this one
         if not warned and time.time() - last_chk > 30:
             last_chk = time.time()
             if opposite_alert_since(FILL_AT):
