@@ -6,6 +6,7 @@ Started by the Penny relay after each entry (one run per contract). It waits for
   - trail after +50%: 30% below the best price, never giving back more than $50
   - after +100%: trail 20% below the best price, never below +50%
   - after +200%: trail 15% below the best price, never below +100%
+  - if Belle fires the other side while this is open: stop tightens to 10% under the current price
 Every message is short. The trade is saved to results/paper_trades.csv for Nora.
 """
 import os
@@ -50,6 +51,22 @@ def post(text):
 
 def now():
     return dt.datetime.now(ET)
+
+
+def opposite_alert_since(t0):
+    """Belle fired the other side after this entry: Penny bought an opposite contract (client id penny-...)."""
+    try:
+        r = requests.get(f"{TRADE}/v2/orders", headers=H, timeout=10,
+                         params={"status": "all", "after": t0, "limit": 50, "direction": "desc"}).json()
+    except Exception:
+        return False
+    my_cp = SYM[-9]
+    for o in r if isinstance(r, list) else []:
+        cid = o.get("client_order_id") or ""
+        sym = o.get("symbol") or ""
+        if cid.startswith("penny-") and len(sym) > 9 and sym[-9] in "CP" and sym[-9] != my_cp:
+            return True
+    return False
 
 
 def get_order(oid):
@@ -108,6 +125,10 @@ while True:
         sys.exit(0)
     time.sleep(5)
 T_IN = f"{now():%H:%M}"
+FILL_AT = o.get("filled_at") or dt.datetime.now(dt.timezone.utc).isoformat()
+warned = False
+last_chk = 0.0
+warn_stop = 0.0
 
 # 2) manage
 peak = entry
@@ -132,7 +153,7 @@ while True:
     if bid:
         peak = max(peak, bid)
         gain = bid / entry - 1
-        for lvl, msg in ((0.20, "+20%"), (0.50, "+50%, take partial"), (1.00, "+100%, stop to entry")):
+        for lvl, msg in ((0.20, "+20%"), (0.50, "+50%, take partial"), (1.00, "+100%, trail tightened, at least +50% locked")):
             if gain >= lvl and lvl not in said:
                 said.add(lvl)
                 post(f"{LABEL} {msg}")
@@ -144,8 +165,17 @@ while True:
             stop = max(stop, peak * 0.80, entry * 1.5)   # trail 20% below the best, lock at least +50%
         if peak >= entry * 3.0:
             stop = max(stop, peak * 0.85, entry * 2.0)   # trail 15% below the best, lock at least +100%
+        # opposite Belle alert while this trade is open (Titi, Oct 16): keep the new trade, tighten this one
+        if not warned and time.time() - last_chk > 30:
+            last_chk = time.time()
+            if opposite_alert_since(FILL_AT):
+                warned = True
+                post(f"{LABEL}: Belle flipped sides, stop tightened to 10% under the current price")
+        if warned:
+            warn_stop = max(warn_stop, bid * 0.90)   # ratchets up only
+            stop = max(stop, warn_stop)
         if bid <= stop:
-            reason = "trail" if peak >= entry * 1.5 else "50% stop"
+            reason = "flip" if warned and stop == warn_stop else ("trail" if peak >= entry * 1.5 else "50% stop")
             break
     time.sleep(10)
 
