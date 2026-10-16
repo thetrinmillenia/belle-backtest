@@ -1,6 +1,7 @@
 """PENNY trade manager (Alpaca PAPER account only).
 
 Started by the Penny relay after each entry (one run per contract). It waits for the fill, then:
+  - stop to breakeven at +20% (+15% from 13:30 ET)
   - posts +20%, +50% (take partial), +100% (stop to entry), Target 1 hit
   - exits on: Belle's stop (SPY level), a 50% loss of premium, the trail, or 15:59 ET
   - trail after +50%: 30% below the best price, never giving back more than $50
@@ -167,6 +168,13 @@ while True:
                 said.add(lvl)
                 post(f"{LABEL} {msg}")
         stop = entry * 0.5
+        # breakeven fast (Titi, Oct 16): +20% moves the stop to entry; from 13:30 ET (theta) it takes only +15%
+        be_at = 1.15 if n.hour * 60 + n.minute >= 810 else 1.20
+        if peak >= entry * be_at:
+            stop = max(stop, entry)
+            if "be" not in said:
+                said.add("be")
+                post(f"{LABEL} stop moved to breakeven {entry:.2f}")
         if peak >= entry * 1.5:
             stop = max(stop, peak - min(peak * 0.30, 0.50))
         # tighter trail once the trade doubles (Titi, Oct 16): keep the winner running toward the target
@@ -184,7 +192,7 @@ while True:
             warn_stop = max(warn_stop, bid * 0.90)   # ratchets up only
             stop = max(stop, warn_stop)
         if bid <= stop:
-            reason = "flip" if warned and stop == warn_stop else ("trail" if peak >= entry * 1.5 else "50% stop")
+            reason = "flip" if warned and stop == warn_stop else ("trail" if peak >= entry * 1.5 else ("breakeven" if stop >= entry else "50% stop"))
             break
     time.sleep(10)
 
