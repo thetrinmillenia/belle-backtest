@@ -4,7 +4,8 @@ Started by the Penny relay after each entry (one run per contract). It waits for
   - posts +20%, +50% (take partial), +100% (stop to entry), Target 1 hit
   - exits on: Belle's stop (SPY level), a 50% loss of premium, the trail, or 15:59 ET
   - trail after +50%: 30% below the best price, never giving back more than $50
-  - after +100%: the stop never goes below the entry
+  - after +100%: trail 20% below the best price, never below +50%
+  - after +200%: trail 15% below the best price, never below +100%
 Every message is short. The trade is saved to results/paper_trades.csv for Nora.
 """
 import os
@@ -138,8 +139,11 @@ while True:
         stop = entry * 0.5
         if peak >= entry * 1.5:
             stop = max(stop, peak - min(peak * 0.30, 0.50))
+        # tighter trail once the trade doubles (Titi, Oct 16): keep the winner running toward the target
         if peak >= entry * 2.0:
-            stop = max(stop, entry)
+            stop = max(stop, peak * 0.80, entry * 1.5)   # trail 20% below the best, lock at least +50%
+        if peak >= entry * 3.0:
+            stop = max(stop, peak * 0.85, entry * 2.0)   # trail 15% below the best, lock at least +100%
         if bid <= stop:
             reason = "trail" if peak >= entry * 1.5 else "50% stop"
             break
