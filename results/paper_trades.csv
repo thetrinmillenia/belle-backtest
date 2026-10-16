@@ -1,3 +1,4 @@
 date,time_in,time_out,contract,side,entry,exit,best,pct,reason
 2026-10-16,11:45,12:01,SPX 7670P,PUTS,1.50,,4.78,,trail
 2026-10-16,12:15,12:30,SPX 7730C,CALLS,2.85,1.40,3.48,-51,50% stop
+2026-10-16,13:45,13:49,SPX 7725C,CALLS,1.00,0.50,1.00,-50,50% stop
