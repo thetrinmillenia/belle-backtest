@@ -17,8 +17,8 @@ function et(d = new Date()) {
 }
 const H = () => ({ 'APCA-API-KEY-ID': process.env.ALPACA_KEY_ID.trim(), 'APCA-API-SECRET-KEY': process.env.ALPACA_SECRET_KEY.trim(), 'Content-Type': 'application/json' });
 async function discord(text) {
-  if (!process.env.DISCORD_WEBHOOK_URL) return;
-  try { await fetch(process.env.DISCORD_WEBHOOK_URL.trim(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: text.slice(0, 1900) }) }); } catch (e) { }
+  if (!process.env.DISCORD_WEBHOOK_URL) return 'no DISCORD_WEBHOOK_URL';
+  try { const r = await fetch(process.env.DISCORD_WEBHOOK_URL.trim(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: text.slice(0, 1900) }) }); return r.status; } catch (e) { return 'discord error ' + String(e).slice(0, 80); }
 }
 const n2 = x => (x == null || isNaN(x) ? 'n/a' : Number(x).toFixed(2));
 function occ(root, ymd, cp, strike) { return `${root}${ymd}${cp}${String(Math.round(strike * 1000)).padStart(8, '0')}`; }
@@ -58,12 +58,13 @@ async function pick(root, cp, price, ymd) {
 }
 
 export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'POST only' });
   // the key may hold & or + so read everything after key= from the raw URL
   const want = (process.env.RELAY_KEY || '').trim();
   const raw = String(req.url || '').split('key=').slice(1).join('key=');
   let dec = raw; try { dec = decodeURIComponent(raw); } catch (e) { }
-  if (!want || ![raw, dec, req.query.key].includes(want)) return res.status(401).json({ ok: false, error: 'not authorized' });
+  if (!want || ![raw, dec, req.query.key].includes(want)) return res.status(401).json({ ok: false, error: 'not authorized', keyLen: want.length, gotLen: raw.length });
   try {
     let body = req.body;
     if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = { content: body }; } }
@@ -116,8 +117,8 @@ export default async function handler(req, res) {
       a.why ? `Why: ${a.why}` : null,
       `PENNY: ${[bought, ...notes].filter(Boolean).join(' | ') || 'no trade'}`
     ].filter(Boolean);
-    await discord(lines.join('\n'));
-    return res.status(200).json({ ok: true, picked, notes });
+    const posted = await discord(lines.join('\n'));
+    return res.status(200).json({ ok: true, picked, notes, discord: posted });
   } catch (e) {
     await discord('PENNY error: ' + String(e).slice(0, 300));
     return res.status(500).json({ ok: false, error: String(e) });
