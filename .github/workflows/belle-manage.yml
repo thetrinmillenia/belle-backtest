@@ -1,0 +1,60 @@
+name: Penny manage
+
+# Started by the Penny relay (Vercel) right after each paper entry. Posts updates and manages the exit.
+on:
+  workflow_dispatch:
+    inputs:
+      order_id:
+        description: "Alpaca paper order id"
+        required: true
+      symbol:
+        description: "Option contract (SPY or SPXW)"
+        required: true
+      label:
+        description: "Short name, like SPY 772C"
+        required: false
+      side:
+        description: "CALLS or PUTS"
+        required: false
+      spy_stop:
+        description: "Belle stop as a SPY level"
+        required: false
+      spy_t1:
+        description: "Target 1 as a SPY level"
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: penny-${{ github.event.inputs.order_id }}
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests
+      - run: python bots/belle_manage.py
+        env:
+          ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          ORDER_ID: ${{ github.event.inputs.order_id }}
+          SYMBOL: ${{ github.event.inputs.symbol }}
+          LABEL: ${{ github.event.inputs.label }}
+          SIDE: ${{ github.event.inputs.side }}
+          SPY_STOP: ${{ github.event.inputs.spy_stop }}
+          SPY_T1: ${{ github.event.inputs.spy_t1 }}
+      - name: Save the trade log
+        if: always()
+        run: |
+          git config user.name penny-bot
+          git config user.email penny-bot@users.noreply.github.com
+          git add results/paper_trades.csv || true
+          git commit -m "Penny trade log" || true
+          for i in 1 2 3; do git pull --rebase && git push && break; sleep 5; done || true
