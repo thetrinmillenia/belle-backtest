@@ -69,8 +69,6 @@ export default async function handler(req, res) {
   try {
     let body = req.body;
     if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = { content: body }; } }
-    // 15m Strat scanner (Titi, Oct 17): Discord only, no contract, Penny ignores it
-    if (body && body.scan === '15m') { const posted = await discord(body.content || '15m Strat setup'); return res.status(200).json({ ok: true, traded: false, why: '15m scan, Discord only', discord: posted }); }
     const a = readAlert(body);
     if (!a) { if (body && body.content) await discord(body.content); return res.status(200).json({ ok: true, traded: false, why: 'not an entry alert' }); }
 
@@ -107,7 +105,7 @@ export default async function handler(req, res) {
         const maxCost = mins >= 900 ? 250 : MAX_COST; // Window 3 strikes $150 to $250 (Titi, Oct 17)
         const c = await pick(root, cp, price, ymd, root === 'SPY' ? a.spyStrike : a.spxStrike, maxCost);
         if (!c) { notes.push(`${label} skipped, nothing under $${maxCost} within 10 strikes of the chart strike`); continue; }
-        if (c.moved > 0) notes.push(`${label} chart strike ${c.chart ? c.chart.strike : ''}${cp} was $${c.chart ? Math.round(c.chart.cost) : '?'}, over $${maxCost}, so Penny went ${c.moved} strike${c.moved > 1 ? 's' : ''} further out`);
+        if (c.moved > 0) notes.push(`${label}: Belle's ${c.chart ? c.chart.strike : ''}${cp} was $${c.chart ? Math.round(c.chart.cost) : '?'}, over $${maxCost}, so Penny went ${c.moved} strike${c.moved > 1 ? 's' : ''} further out`);
         const lim = tick(c.ask, root);
         if (lim * 100 > bp) { notes.push(`${label} skipped, not enough buying power`); continue; }
         const o = await (await fetch(`${TRADE}/v2/orders`, { method: 'POST', headers: H(), body: JSON.stringify({ symbol: c.sym, qty: '1', side: 'buy', type: 'limit', limit_price: lim.toFixed(2), time_in_force: 'day', client_order_id: `penny-${t.y}-${t.m}-${t.d}-${label}-${Date.now()}` }) })).json();
@@ -126,17 +124,20 @@ export default async function handler(req, res) {
 
     const spyK = picked.SPY ? picked.SPY.strike : a.spyStrike;
     const spxK = picked.SPX ? picked.SPX.strike : a.spxStrike;
-    const bought = Object.entries(picked).map(([k, v]) => `${k} ${v.strike}${cp} at ${v.lim.toFixed(2)}`).join(' | ');
+    const bought = Object.entries(picked).map(([k, v]) => `bought ${k} ${v.strike}${cp} at ${v.lim.toFixed(2)} ($${Math.round(v.lim * 100)})`).join('\n');
+    // spaced out for easy reading (Titi, Oct 17): one idea per line, a blank line between each
+    const hm = a.time || `${String(t.h).padStart(2, '0')}:${String(t.min).padStart(2, '0')}`;
+    const ct = (() => { const [h, m] = hm.split(':').map(Number); return `${String((h + 23) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`; })();
     const lines = [
-      `${a.side} ${a.time || `${String(t.h).padStart(2, '0')}:${String(t.min).padStart(2, '0')}`} ET`,
-      `SPY ${spyK ?? 'n/a'}${cp} | stop SPY ${n2(a.spyStop)}`,
-      `SPX ${spxK ?? 'n/a'}${cp} | stop SPX ${n2(a.spxStop)}`,
-      `Target 1: SPX ${n2(a.spxT1)} | SPY ${n2(a.spyT1)}`,
-      a.spxAlt ? `Strike choices: SPX ${a.spxAlt} | SPY ${a.spyAlt}` : null,
-      a.why ? `Why: ${a.why}` : null,
-      `PENNY: ${[bought, ...notes].filter(Boolean).join(' | ') || 'no trade'}`
+      `**${a.side}  ${hm} ET (${ct} CT)**`,
+      `Belle's strike:  SPX ${a.spxStrike || 'n/a'}${cp}  |  SPY ${a.spyStrike || 'n/a'}${cp}`,
+      a.spxAlt ? `Strike choices:  SPX ${a.spxAlt}  |  SPY ${a.spyAlt}` : null,
+      `Stop:  SPX ${n2(a.spxStop)}  |  SPY ${n2(a.spyStop)}`,
+      `Target 1:  SPX ${n2(a.spxT1)}  |  SPY ${n2(a.spyT1)}`,
+      a.why ? `Why:  ${a.why}` : null,
+      `PENNY:  ${[bought, ...notes].filter(Boolean).join('\n') || 'no trade'}`
     ].filter(Boolean);
-    const posted = await discord(lines.join('\n'));
+    const posted = await discord(lines.join('\n\n'));
     return res.status(200).json({ ok: true, picked, notes, discord: posted });
   } catch (e) {
     await discord('PENNY error: ' + String(e).slice(0, 300));
