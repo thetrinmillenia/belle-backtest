@@ -37,25 +37,25 @@ function readAlert(body) {
   return { side: m[1], time: (t.match(/at (\d\d:\d\d) ET/) || [])[1], spx, spy: spx ? spx / ratio : null, spxStop, spyStop: spxStop ? spxStop / ratio : null, spxT1, spyT1: spxT1 ? spxT1 / ratio : null, spxStrike: Number(m[2]), spyStrike: Number(m[4]), why: (t.split('|')[4] || '').trim() };
 }
 
-// pick the contract that costs closest to $100, between $75 and $300 (Titi, Oct 16)
-async function pick(root, cp, price, ymd) {
+// one strike source (Titi, Oct 17): start at the strike the chart shows. If it costs more than the max,
+// walk further out of the money one strike at a time until it fits. Never skip just because the chart strike is pricey.
+async function pick(root, cp, price, ymd, chartK, maxCost) {
   const step = root === 'SPY' ? 1 : 5;
-  const atm = Math.round(price / step) * step;
   const dir = cp === 'C' ? 1 : -1; // moving OTM
-  const strikes = []; for (let i = 0; i <= 14; i++) strikes.push(atm + dir * i * step);
+  const start = chartK ? Math.round(chartK / step) * step : Math.round(price / step) * step;
+  const strikes = []; for (let i = 0; i <= 10; i++) strikes.push(start + dir * i * step);
   const syms = strikes.map(s => occ(root, ymd, cp, s));
   const r = await fetch(`${DATA}/v1beta1/options/quotes/latest?symbols=${syms.join(',')}&feed=indicative`, { headers: H() });
   const q = await r.json();
-  let best = null;
-  syms.forEach((s, i) => {
-    const x = q.quotes && q.quotes[s];
-    if (!x || !x.ap) return;
+  let first = null;
+  for (let i = 0; i < syms.length; i++) {
+    const x = q.quotes && q.quotes[syms[i]];
+    if (!x || !x.ap) continue;
     const cost = x.ap * 100;
-    if (cost < MIN_COST || cost > MAX_COST) return;
-    const score = Math.abs(cost - TARGET_COST);
-    if (!best || score < best.score) best = { sym: s, strike: strikes[i], ask: x.ap, cost, score };
-  });
-  return best;
+    if (i === 0) first = { strike: strikes[0], cost };
+    if (cost <= maxCost) return { sym: syms[i], strike: strikes[i], ask: x.ap, cost, moved: i, chart: first };
+  }
+  return null;
 }
 
 export default async function handler(req, res) {
@@ -69,6 +69,8 @@ export default async function handler(req, res) {
   try {
     let body = req.body;
     if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = { content: body }; } }
+    // 15m Strat scanner (Titi, Oct 17): Discord only, no contract, Penny ignores it
+    if (body && body.scan === '15m') { const posted = await discord(body.content || '15m Strat setup'); return res.status(200).json({ ok: true, traded: false, why: '15m scan, Discord only', discord: posted }); }
     const a = readAlert(body);
     if (!a) { if (body && body.content) await discord(body.content); return res.status(200).json({ ok: true, traded: false, why: 'not an entry alert' }); }
 
@@ -102,8 +104,10 @@ export default async function handler(req, res) {
         const price = root === 'SPY' ? a.spy : a.spx;
         const label = root === 'SPY' ? 'SPY' : 'SPX';
         if (!price) { notes.push(`${label} skipped, no price`); continue; }
-        const c = await pick(root, cp, price, ymd);
-        if (!c) { notes.push(`${label} skipped, no contract between $75 and $300`); continue; }
+        const maxCost = mins >= 900 ? 250 : MAX_COST; // Window 3 strikes $150 to $250 (Titi, Oct 17)
+        const c = await pick(root, cp, price, ymd, root === 'SPY' ? a.spyStrike : a.spxStrike, maxCost);
+        if (!c) { notes.push(`${label} skipped, nothing under $${maxCost} within 10 strikes of the chart strike`); continue; }
+        if (c.moved > 0) notes.push(`${label} chart strike ${c.chart ? c.chart.strike : ''}${cp} was $${c.chart ? Math.round(c.chart.cost) : '?'}, over $${maxCost}, so Penny went ${c.moved} strike${c.moved > 1 ? 's' : ''} further out`);
         const lim = tick(c.ask, root);
         if (lim * 100 > bp) { notes.push(`${label} skipped, not enough buying power`); continue; }
         const o = await (await fetch(`${TRADE}/v2/orders`, { method: 'POST', headers: H(), body: JSON.stringify({ symbol: c.sym, qty: '1', side: 'buy', type: 'limit', limit_price: lim.toFixed(2), time_in_force: 'day', client_order_id: `penny-${t.y}-${t.m}-${t.d}-${label}-${Date.now()}` }) })).json();
@@ -128,6 +132,7 @@ export default async function handler(req, res) {
       `SPY ${spyK ?? 'n/a'}${cp} | stop SPY ${n2(a.spyStop)}`,
       `SPX ${spxK ?? 'n/a'}${cp} | stop SPX ${n2(a.spxStop)}`,
       `Target 1: SPX ${n2(a.spxT1)} | SPY ${n2(a.spyT1)}`,
+      a.spxAlt ? `Strike choices: SPX ${a.spxAlt} | SPY ${a.spyAlt}` : null,
       a.why ? `Why: ${a.why}` : null,
       `PENNY: ${[bought, ...notes].filter(Boolean).join(' | ') || 'no trade'}`
     ].filter(Boolean);
