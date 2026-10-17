@@ -9,7 +9,8 @@ const TZ = 'America/New_York';
 const REPO = 'thetrinmillenia/belle-backtest';
 const MIN_COST = 75; // dollars per contract
 const TARGET_COST = 100; // Titi, Oct 16: loves premiums around $100
-const MAX_COST = 300;
+const MAX_COST = 250; // Titi, Oct 17: anything over $250 is too much
+const SPY_QTY = 3;   // SPY: 3 contracts so Penny can scale out, all 3 together within the same $ limit
 
 function et(d = new Date()) {
   const f = new Intl.DateTimeFormat('en-US', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false, weekday: 'short' });
@@ -102,16 +103,17 @@ export default async function handler(req, res) {
         const price = root === 'SPY' ? a.spy : a.spx;
         const label = root === 'SPY' ? 'SPY' : 'SPX';
         if (!price) { notes.push(`${label} skipped, no price`); continue; }
-        const maxCost = mins >= 900 ? 250 : MAX_COST; // Window 3 strikes $150 to $250 (Titi, Oct 17)
+        const qty = root === 'SPY' ? SPY_QTY : 1;
+        const maxCost = MAX_COST / qty; // per contract: SPX 1 x $250, SPY 3 x about $0.83 (usually $0.40 to $0.60)
         const c = await pick(root, cp, price, ymd, root === 'SPY' ? a.spyStrike : a.spxStrike, maxCost);
-        if (!c) { notes.push(`${label} skipped, nothing under $${maxCost} within 10 strikes of the chart strike`); continue; }
-        if (c.moved > 0) notes.push(`${label}: Belle's ${c.chart ? c.chart.strike : ''}${cp} was $${c.chart ? Math.round(c.chart.cost) : '?'}, over $${maxCost}, so Penny went ${c.moved} strike${c.moved > 1 ? 's' : ''} further out`);
+        if (!c) { notes.push(`${label} skipped, nothing under $${MAX_COST} for ${qty} within 10 strikes of Belle's strike`); continue; }
+        if (c.moved > 0) notes.push(`${label}: Belle's ${c.chart ? c.chart.strike : ''}${cp} was $${c.chart ? Math.round(c.chart.cost * qty) : '?'}${qty > 1 ? ` for ${qty}` : ''}, over $${MAX_COST}, so Penny went ${c.moved} strike${c.moved > 1 ? 's' : ''} further out`);
         const lim = tick(c.ask, root);
-        if (lim * 100 > bp) { notes.push(`${label} skipped, not enough buying power`); continue; }
-        const o = await (await fetch(`${TRADE}/v2/orders`, { method: 'POST', headers: H(), body: JSON.stringify({ symbol: c.sym, qty: '1', side: 'buy', type: 'limit', limit_price: lim.toFixed(2), time_in_force: 'day', client_order_id: `penny-${t.y}-${t.m}-${t.d}-${label}-${Date.now()}` }) })).json();
+        if (lim * 100 * qty > bp) { notes.push(`${label} skipped, not enough buying power`); continue; }
+        const o = await (await fetch(`${TRADE}/v2/orders`, { method: 'POST', headers: H(), body: JSON.stringify({ symbol: c.sym, qty: String(qty), side: 'buy', type: 'limit', limit_price: lim.toFixed(2), time_in_force: 'day', client_order_id: `penny-${t.y}-${t.m}-${t.d}-${label}-${Date.now()}` }) })).json();
         if (!o.id) { notes.push(`${label} order rejected`); continue; }
-        bp -= lim * 100;
-        picked[label] = { ...c, lim, id: o.id };
+        bp -= lim * 100 * qty;
+        picked[label] = { ...c, lim, id: o.id, qty };
         if (process.env.GITHUB_TOKEN) {
           await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/belle-manage.yml/dispatches`, {
             method: 'POST',
@@ -124,7 +126,7 @@ export default async function handler(req, res) {
 
     const spyK = picked.SPY ? picked.SPY.strike : a.spyStrike;
     const spxK = picked.SPX ? picked.SPX.strike : a.spxStrike;
-    const bought = Object.entries(picked).map(([k, v]) => `bought ${k} ${v.strike}${cp} at ${v.lim.toFixed(2)} ($${Math.round(v.lim * 100)})`).join('\n');
+    const bought = Object.entries(picked).map(([k, v]) => `bought ${v.qty} ${k} ${v.strike}${cp} at ${v.lim.toFixed(2)} ($${Math.round(v.lim * 100 * v.qty)} total)`).join('\n');
     // spaced out for easy reading (Titi, Oct 17): one idea per line, a blank line between each
     const hm = a.time || `${String(t.h).padStart(2, '0')}:${String(t.min).padStart(2, '0')}`;
     const ct = (() => { const [h, m] = hm.split(':').map(Number); return `${String((h + 23) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`; })();
