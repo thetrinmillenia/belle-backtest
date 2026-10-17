@@ -163,7 +163,7 @@ while True:
     if bid:
         peak = max(peak, bid)
         gain = bid / entry - 1
-        for lvl, msg in ((0.20, "+20%"), (0.50, "+50%, take partial"), (1.00, "+100%, trail tightened, at least +50% locked")):
+        for lvl, msg in ((0.20, "+20%"), (0.50, "+50%, take partial"), (1.00, "+100%, stop locked at +70%. Watch the levels, it can chop at +100% before the next leg")):
             if gain >= lvl and lvl not in said:
                 said.add(lvl)
                 post(f"{LABEL} {msg}")
@@ -183,11 +183,12 @@ while True:
         if peak >= entry * 2.0:
             gain = int((peak / entry - 1) * 10 + 1e-9) / 10
             lock = entry * (1 + gain - 0.30)
-            if lock > stop + 1e-9:
-                stop = lock
-                if f"lock{gain:.1f}" not in said:
-                    said.add(f"lock{gain:.1f}")
-                    post(f"{LABEL} up {gain*100:.0f}%, stop locked at +{(gain-0.30)*100:.0f}% ({lock:.2f})")
+            stop = max(stop, lock)
+            # Discord only at +120%, +150% and +300% (Titi, Oct 17: no flood of messages)
+            for ms in (1.2, 1.5, 3.0):
+                if peak >= entry * (1 + ms) and f"ms{ms}" not in said:
+                    said.add(f"ms{ms}")
+                    post(f"{LABEL} +{ms*100:.0f}%, stop locked at +{(gain-0.30)*100:.0f}% ({lock:.2f})")
         # opposite Belle alert while this trade is open (Titi, Oct 16): no new trade, tighten this one
         if not warned and time.time() - last_chk > 30:
             last_chk = time.time()
