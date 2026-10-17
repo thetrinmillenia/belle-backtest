@@ -2,7 +2,7 @@
 
 Started by the Penny relay after each entry (one run per contract). It waits for the fill, then:
   - stop to breakeven at +20% (+15% from 13:30 ET)
-  - posts +20%, +50% (take partial), +100% (stop to entry), Target 1 hit
+  - posts +20%, +50% (take partial), +100% (stop locks +70%, then steps up every +10%), Target 1 hit
   - exits on: Belle's stop (SPY level), a 50% loss of premium, the trail, or 15:59 ET
   - trail after +50%: 30% below the best price, never giving back more than $50
   - after +100%: trail 20% below the best price, never below +50%
@@ -178,10 +178,16 @@ while True:
         if peak >= entry * 1.5:
             stop = max(stop, peak - min(peak * 0.30, 0.50))
         # tighter trail once the trade doubles (Titi, Oct 16): keep the winner running toward the target
+        # never give back a 100% winner (Titi, Oct 17): at +100% lock +70%, then step the lock up every +10%
+        # (+120% locks +90%, +150% locks +120%, and so on)
         if peak >= entry * 2.0:
-            stop = max(stop, peak * 0.80, entry * 1.5)   # trail 20% below the best, lock at least +50%
-        if peak >= entry * 3.0:
-            stop = max(stop, peak * 0.85, entry * 2.0)   # trail 15% below the best, lock at least +100%
+            gain = int((peak / entry - 1) * 10 + 1e-9) / 10
+            lock = entry * (1 + gain - 0.30)
+            if lock > stop + 1e-9:
+                stop = lock
+                if f"lock{gain:.1f}" not in said:
+                    said.add(f"lock{gain:.1f}")
+                    post(f"{LABEL} up {gain*100:.0f}%, stop locked at +{(gain-0.30)*100:.0f}% ({lock:.2f})")
         # opposite Belle alert while this trade is open (Titi, Oct 16): no new trade, tighten this one
         if not warned and time.time() - last_chk > 30:
             last_chk = time.time()
