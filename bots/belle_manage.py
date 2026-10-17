@@ -93,9 +93,9 @@ def spy_price():
     return (r.get("trade") or {}).get("p")
 
 
-def sell():
+def sell(q=1):
     o = requests.post(f"{TRADE}/v2/orders", headers=H, timeout=10,
-                      json={"symbol": SYM, "qty": "1", "side": "sell", "type": "market", "time_in_force": "day"}).json()
+                      json={"symbol": SYM, "qty": str(q), "side": "sell", "type": "market", "time_in_force": "day"}).json()
     if "id" not in o:
         post(f"PENNY {LABEL}: sell rejected, check Alpaca")
         return None
@@ -135,6 +135,10 @@ while True:
         sys.exit(0)
     time.sleep(5)
 T_IN = f"{now():%H:%M}"
+# scale out (Titi, Oct 17): SPY buys 3 contracts. Sell 1 at +50%, 1 at +100%, the last one rides the stop.
+QTY = max(1, int(float(o.get("filled_qty") or 1)))
+left = QTY
+banked = []   # (price, qty) already sold
 FILL_AT = o.get("filled_at") or dt.datetime.now(dt.timezone.utc).isoformat()
 warned = False
 last_chk = 0.0
@@ -166,6 +170,12 @@ while True:
         for lvl, msg in ((0.20, "+20%"), (0.50, "+50%, take partial"), (1.00, "+100%, stop locked at +70%. Watch the levels, it can chop at +100% before the next leg")):
             if gain >= lvl and lvl not in said:
                 said.add(lvl)
+                if lvl in (0.50, 1.00) and left >= 2:
+                    px = sell(1)
+                    if px:
+                        banked.append((px, 1))
+                        left -= 1
+                        msg += f", sold 1 of {QTY} at {px:.2f}, {left} left"
                 post(f"{LABEL} {msg}")
         stop = entry * 0.5
         # breakeven fast (Titi, Oct 16): +20% moves the stop to entry; from 13:30 ET (theta) it takes only +15%
@@ -204,7 +214,9 @@ while True:
     time.sleep(10)
 
 # 3) exit
-exitp = sell()
+exitp = sell(left)
+if exitp is not None and banked:
+    exitp = (sum(p * q for p, q in banked) + exitp * left) / QTY   # average exit over all contracts
 best = (peak / entry - 1) * 100
 if exitp is None:
     post(f"PENNY {LABEL}: exit not confirmed, check Alpaca ({reason})")
