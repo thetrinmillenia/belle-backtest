@@ -135,6 +135,7 @@ while True:
         sys.exit(0)
     time.sleep(5)
 T_IN = f"{now():%H:%M}"
+SCALP_T0 = time.time()
 # scale out (Titi, Oct 17): SPY buys 3 contracts. Sell 1 at +50%, 1 at +100%, the last one rides the stop.
 QTY = max(1, int(float(o.get("filled_qty") or 1)))
 left = QTY
@@ -152,6 +153,12 @@ while True:
     n = now()
     if n.hour * 60 + n.minute >= 959:
         reason = "15:59"
+        break
+    # SCALP (Titi, Oct 17): Window 3 trades go against the day move. Hold about 5 minutes for the pop, then out.
+    # Stays in up to 10 minutes only while it is up 50% or more.
+    held = time.time() - SCALP_T0
+    if "SCALP" in LABEL and held >= 300 and (held >= 600 or peak < entry * 1.5):
+        reason = "scalp time"
         break
     try:
         bid = opt_bid()
