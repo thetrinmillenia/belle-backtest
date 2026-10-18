@@ -92,10 +92,12 @@ export default async function handler(req, res) {
         holding = (Array.isArray(pos) ? pos : []).find(p => /^(SPY|SPXW)\d{6}[CP]\d{8}$/.test(p.symbol) && p.symbol.slice(-9, -8) !== cp && Number(p.qty) > 0) || null;
       } catch (e) { holding = null; }
       if (holding) {
-        await fetch(`${TRADE}/v2/watchlists`, { method: 'POST', headers: H(), body: JSON.stringify({ name: `penny-flip-${cp}-${Date.now()}`, symbols: [] }) }).catch(() => null);
-        notes.push(`holding ${holding.symbol.startsWith('SPXW') ? 'SPX' : 'SPY'} ${holding.symbol.slice(-9, -8) === 'C' ? 'calls' : 'puts'}, no new trade, stop tightened to 10% under the current price`);
+        notes.push(`holding ${holding.symbol.startsWith('SPXW') ? 'SPX' : 'SPY'} ${holding.symbol.slice(-9, -8) === 'C' ? 'calls' : 'puts'}, no new trade against her open trade, her stop stays the same`);
       }
     }
+    // Window 3 (Titi, Oct 17): these fade the high or low of day, against the day's move, so they are SCALPS.
+    // Penny still trades them, holds about 5 minutes for the pop, then gets out.
+    const scalp = mins >= 900;
     if (inWin && !holding) {
       const acct = await (await fetch(`${TRADE}/v2/account`, { headers: H() })).json();
       let bp = Number(acct.options_buying_power || acct.buying_power || 0);
@@ -118,7 +120,7 @@ export default async function handler(req, res) {
           await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/belle-manage.yml/dispatches`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN.trim()}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'penny' },
-            body: JSON.stringify({ ref: 'main', inputs: { order_id: o.id, symbol: c.sym, label: `${label} ${c.strike}${cp}`, side: a.side, spy_stop: n2(a.spyStop), spy_t1: n2(a.spyT1) } })
+            body: JSON.stringify({ ref: 'main', inputs: { order_id: o.id, symbol: c.sym, label: `${label} ${c.strike}${cp}${scalp ? ' SCALP' : ''}`, side: a.side, spy_stop: n2(a.spyStop), spy_t1: n2(a.spyT1) } })
           });
         }
       }
@@ -131,7 +133,8 @@ export default async function handler(req, res) {
     const hm = a.time || `${String(t.h).padStart(2, '0')}:${String(t.min).padStart(2, '0')}`;
     const ct = (() => { const [h, m] = hm.split(':').map(Number); return `${String((h + 23) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`; })();
     const lines = [
-      `**${a.side}  ${hm} ET (${ct} CT)**`,
+      `**${scalp ? 'SCALP ' : ''}${a.side}  ${hm} ET (${ct} CT)**`,
+      scalp ? 'Window 3 scalp off the high or low of day, against the day move. About 5 minutes in and out.' : null,
       `Belle's strike:  SPX ${a.spxStrike || 'n/a'}${cp}  |  SPY ${a.spyStrike || 'n/a'}${cp}`,
       a.spxAlt ? `Strike choices:  SPX ${a.spxAlt}  |  SPY ${a.spyAlt}` : null,
       `Stop:  SPX ${n2(a.spxStop)}  |  SPY ${n2(a.spyStop)}`,
