@@ -129,7 +129,7 @@ export default async function handler(req, res) {
           await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/belle-manage.yml/dispatches`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN.trim()}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'penny' },
-            body: JSON.stringify({ ref: 'main', inputs: { order_id: o.id, symbol: c.sym, label: `${label} ${c.strike}${cp}${scalp ? ' EOD' : ''}`, side: a.side, spy_stop: n2(a.spyStop), spy_t1: n2(a.spyT1) } })
+            body: JSON.stringify({ ref: 'main', inputs: { order_id: o.id, symbol: c.sym, label: `${label} ${c.strike}${cp}${scalp ? ' EOD' : ''}`, side: a.side, spy_stop: n2(a.spyStop), spy_t1: n2(a.spyT1), why: String(a.why || '').slice(0, 200) } })
           });
         }
       }
