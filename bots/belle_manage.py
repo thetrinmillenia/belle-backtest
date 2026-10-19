@@ -3,7 +3,13 @@
 Started by the Penny relay after each entry (one run per contract). It waits for the fill, then:
   - stop to breakeven at +20% (+15% from 13:30 ET)
   - posts +20%, +50% (take partial), +100% (stop locks +70%, then steps up every +10%), Target 1 hit
-  - exits on: Belle's stop (SPY level), a 50% loss of premium, the trail, or 15:59 ET
+  - exits on: Belle's stop (SPY level), a 50% loss of premium, the trail, or 15:58 ET (never later, Titi Oct 19)
+  - EOD trades (Window 3, label EOD): no 5 minute scalp timer, tight trail (20% below the best from +30%,
+    15% from +100%), sell 1 SPY at Target 1, hold the rest to 15:58 for the $100 to $1,000 run
+  - unfilled orders: the limit stays working (pullback to the entry price or better, never chase) up to 10 min,
+    canceled at once if SPY hits Belle's stop
+  - after a breakeven or 50% stop exit: if SPY breaks the move's high/low within 30 min with Belle's stop intact,
+    Window 1 re-enters once by itself; every other window posts a REENTER note (Titi, Oct 19)
   - trail after +50%: 30% below the best price, never giving back more than $50
   - after +100%: trail 20% below the best price, never below +50%
   - after +200%: trail 15% below the best price, never below +100%
@@ -79,6 +85,22 @@ def opposite_alert_since(t0):
     return False
 
 
+EXIT_MIN = 958   # out at 15:58 ET, never later, regardless of price (Titi, Oct 19)
+EOD = "EOD" in LABEL or "SCALP" in LABEL
+
+
+def opt_ask():
+    r = requests.get(f"{DATA}/v1beta1/options/quotes/latest", params={"symbols": SYM, "feed": "indicative"}, headers=H, timeout=10).json()
+    return ((r.get("quotes") or {}).get(SYM) or {}).get("ap")
+
+
+def buy(q, lim):
+    o = requests.post(f"{TRADE}/v2/orders", headers=H, timeout=10,
+                      json={"symbol": SYM, "qty": str(q), "side": "buy", "type": "limit", "limit_price": f"{lim:.2f}",
+                            "time_in_force": "day", "client_order_id": f"penny-re-{int(time.time()*1000)}"}).json()
+    return o.get("id")
+
+
 def get_order(oid):
     return requests.get(f"{TRADE}/v2/orders/{oid}", headers=H, timeout=10).json()
 
@@ -118,24 +140,40 @@ def save(entry, exitp, peak, reason):
         fh.write(f"{now().date()},{T_IN},{now():%H:%M},{LABEL},{SIDE},{entry:.2f},{'' if exitp is None else f'{exitp:.2f}'},{peak:.2f},{pct},{reason}\n")
 
 
-# 1) wait up to 3 minutes for the fill
-start = time.time()
-while True:
-    o = get_order(ORDER_ID)
-    st = o.get("status")
-    if st == "filled":
-        entry = float(o["filled_avg_price"])
-        break
-    if st in ("canceled", "expired", "rejected"):
-        post(f"PENNY {LABEL}: not filled ({st})")
-        sys.exit(0)
-    if time.time() - start > 180:
-        requests.delete(f"{TRADE}/v2/orders/{ORDER_ID}", headers=H, timeout=10)
-        post(f"PENNY {LABEL}: not filled in 3 min, canceled")
-        sys.exit(0)
-    time.sleep(5)
+def wait_fill(oid, quiet=False):
+    """Strict hold-open rule (Titi, Oct 19): the limit order stays at the entry price (a pullback fills it, never chase).
+    Up to 10 minutes, canceled at once if SPY hits Belle's stop or it is 15:53 or later."""
+    start = time.time()
+    while True:
+        o = get_order(oid)
+        st = o.get("status")
+        if st == "filled":
+            return o
+        if st in ("canceled", "expired", "rejected"):
+            if not quiet:
+                post(f"PENNY {LABEL}: not filled ({st})")
+            return None
+        try:
+            spy = spy_price()
+        except Exception:
+            spy = None
+        late = now().hour * 60 + now().minute >= 953
+        broke = spy and SPY_STOP and (spy - SPY_STOP) * DIR <= 0
+        if time.time() - start > 600 or broke or late:
+            requests.delete(f"{TRADE}/v2/orders/{oid}", headers=H, timeout=10)
+            why = "Belle's stop hit first" if broke else ("too late in the day" if late else "no pullback to the entry price in 10 min")
+            if not quiet:
+                post(f"PENNY {LABEL}: not filled, canceled ({why}). Penny does not chase")
+            return None
+        time.sleep(5)
+
+
+o = wait_fill(ORDER_ID)
+if not o:
+    sys.exit(0)
+entry = float(o["filled_avg_price"])
 T_IN = f"{now():%H:%M}"
-SCALP_T0 = time.time()
+WIN1 = now().hour * 60 + now().minute <= 750
 # scale out (Titi, Oct 17): SPY buys 3 contracts. Sell 1 at +50%, 1 at +100%, the last one rides the stop.
 QTY = max(1, int(float(o.get("filled_qty") or 1)))
 left = QTY
@@ -149,28 +187,32 @@ warn_stop = 0.0
 peak = entry
 said = set()
 reason = ""
+spy_best = None   # the move's high (calls) or low (puts) on SPY while in the trade, for the REENTER rule
 while True:
     n = now()
-    if n.hour * 60 + n.minute >= 959:
-        reason = "15:59"
-        break
-    # SCALP (Titi, Oct 17): Window 3 trades go against the day move. Hold about 5 minutes for the pop, then out.
-    # Stays in up to 10 minutes only while it is up 50% or more.
-    held = time.time() - SCALP_T0
-    if "SCALP" in LABEL and held >= 300 and (held >= 600 or peak < entry * 1.5):
-        reason = "scalp time"
+    if n.hour * 60 + n.minute >= EXIT_MIN:
+        reason = "15:58"
         break
     try:
         bid = opt_bid()
         spy = spy_price()
     except Exception:
         bid, spy = None, None
+    if spy:
+        spy_best = spy if spy_best is None else (max(spy_best, spy) if DIR == 1 else min(spy_best, spy))
     if spy and SPY_STOP and (spy - SPY_STOP) * DIR <= 0:
         reason = "stop"
         break
     if spy and SPY_T1 and "t1" not in said and (spy - SPY_T1) * DIR >= 0:
         said.add("t1")
-        post(f"{LABEL} Target 1 hit")
+        msg = f"{LABEL} Target 1 hit"
+        if EOD and left >= 2:   # EOD TP1 (Titi, Oct 19): bank 1 at the target, the rest trails
+            px = sell(1)
+            if px:
+                banked.append((px, 1))
+                left -= 1
+                msg += f", sold 1 of {QTY} at {px:.2f}, {left} left"
+        post(msg)
     if bid:
         peak = max(peak, bid)
         gain = bid / entry - 1
@@ -194,6 +236,9 @@ while True:
                 post(f"{LABEL} stop moved to breakeven {entry:.2f}")
         if peak >= entry * 1.5:
             stop = max(stop, peak - min(peak * 0.30, 0.50))
+        # EOD tight trail (Titi, Oct 19): 20% below the best from +30%, 15% below the best from +100%
+        if EOD and peak >= entry * 1.3:
+            stop = max(stop, peak * (0.85 if peak >= entry * 2.0 else 0.80), entry * 1.05)
         # tighter trail once the trade doubles (Titi, Oct 16): keep the winner running toward the target
         # never give back a 100% winner (Titi, Oct 17): at +100% lock +70%, then step the lock up every +10%
         # (+120% locks +90%, +150% locks +120%, and so on)
@@ -216,7 +261,7 @@ while True:
             warn_stop = max(warn_stop, bid * 0.90)   # ratchets up only
             stop = max(stop, warn_stop)
         if bid <= stop:
-            reason = "flip" if warned and stop == warn_stop else ("trail" if peak >= entry * 1.5 else ("breakeven" if stop >= entry else "50% stop"))
+            reason = "flip" if warned and stop == warn_stop else ("trail" if peak >= entry * 1.3 and stop > entry else ("breakeven" if stop >= entry else "50% stop"))
             break
     time.sleep(10)
 
@@ -229,10 +274,38 @@ if exitp is None:
     post(f"PENNY {LABEL}: exit not confirmed, check Alpaca ({reason})")
 else:
     pct = (exitp / entry - 1) * 100
-    if reason == "15:59":
-        post(f"{LABEL} out 15:59, best {best:+.0f}%, closed {pct:+.0f}%")
+    if reason == "15:58":
+        post(f"{LABEL} out 15:58, best {best:+.0f}%, closed {pct:+.0f}%")
     elif reason == "stop":
         post(f"{LABEL} stopped out, closed {pct:+.0f}%")
     else:
         post(f"{LABEL} out ({reason}), best {best:+.0f}%, closed {pct:+.0f}%")
 save(entry, exitp, peak, reason)
+
+# 4) re-entry after a breakeven or 50% stop exit (Titi, Oct 19). Example: Oct 19 12:25 puts, out at breakeven,
+# then SPY broke the low of the move and kept going. Window 1: Penny re-enters once by herself. Other windows: REENTER note.
+if reason in ("breakeven", "50% stop") and spy_best is not None and not os.environ.get("REENTERED"):
+    t_end = time.time() + 1800
+    while time.time() < t_end and now().hour * 60 + now().minute < 950:
+        try:
+            spy = spy_price()
+        except Exception:
+            spy = None
+        if spy and SPY_STOP and (spy - SPY_STOP) * DIR <= 0:
+            break   # Belle's stop broke, the idea is dead
+        if spy and (spy - spy_best) * DIR > 0.02:
+            side_w = "calls" if DIR == 1 else "puts"
+            if WIN1:
+                ask = opt_ask()
+                if ask and ask * 100 * QTY <= 250:
+                    oid = buy(QTY, round(ask, 2))
+                    if oid:
+                        post(f"PENNY {LABEL}: re-entering {QTY} at {ask:.2f}, SPY broke the move's {'high' if DIR == 1 else 'low'} {spy_best:.2f}. Same stop as Belle (SPY {SPY_STOP})")
+                        # hand the new order to a fresh run of this manager (same job), one re-entry only
+                        os.environ.update({"ORDER_ID": oid, "LABEL": LABEL + " RE", "REENTERED": "1"})
+                        os.execv(sys.executable, [sys.executable] + sys.argv)
+                post(f"REENTER {LABEL} {side_w}: SPY broke the move's {'high' if DIR == 1 else 'low'} {spy_best:.2f}, Belle's stop SPY {SPY_STOP} intact. Penny could not fill, your call")
+            else:
+                post(f"REENTER {LABEL} {side_w}: SPY broke the move's {'high' if DIR == 1 else 'low'} {spy_best:.2f}, Belle's stop SPY {SPY_STOP} intact. Your call, Penny does not re-enter outside Window 1")
+            break
+        time.sleep(15)
