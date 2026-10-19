@@ -145,6 +145,25 @@ if os.path.exists("results/penny_trades.csv"):
                                   "Entry": entry, "Exit": exitp, "Contracts": qty, "P/L": pl, "Followed Rules": "Y",
                                   "Note": note})
 
+# Alpaca history (Titi, Oct 19): every past Penny fill Nora saved from the paper account, for days not covered above
+covered = {t["date"] for t in trades if t["who"] == "Penny"}
+if os.path.exists("results/nora_trades.csv"):
+    with open("results/nora_trades.csv") as fh:
+        for r in csv.DictReader(fh):
+            if r["date"] in covered or not r.get("pl"):
+                continue
+            try:
+                pl = float(r["pl"])
+            except ValueError:
+                continue
+            hh, mm = (r["time"] or "0:0").split(":")
+            m = int(hh) * 60 + int(mm)
+            tk = "SPY" if r["contract"].startswith("SPY") else "SPX"
+            note = f"Alpaca fill. {r['contract']} x{r['qty']}, entry {r['time']} ET, {r['entry']} to {r['exit']} ({r['pct']}%)."
+            trades.append({"who": "Penny", "date": r["date"], "ticker": tk,
+                           "bias": "Bullish" if r["contract"].endswith("C") else "Bearish", "why": "", "note": note,
+                           "pl": pl, "best": None, "minute": m, "rules": "", "tags": tags_for("", note, m), "src": "alpaca"})
+
 # 2) the library
 losses = [t for t in trades if t["pl"] < 0]
 for t in losses:
