@@ -7,7 +7,8 @@ const TRADE = 'https://paper-api.alpaca.markets';
 const DATA = 'https://data.alpaca.markets';
 const TZ = 'America/New_York';
 const REPO = 'thetrinmillenia/belle-backtest';
-const MIN_COST = 75; // dollars per contract
+const MIN_COST = 100; // Titi, Oct 19: SPX never cheaper than $100, especially Window 3
+const SPY_MAX = 60; // Titi, Oct 19: SPY not much higher than $0.60 per contract
 const TARGET_COST = 100; // Titi, Oct 16: loves premiums around $100
 const MAX_COST = 250; // Titi, Oct 17: anything over $250 is too much
 const SPY_QTY = 3;   // SPY: 3 contracts so Penny can scale out, all 3 together within the same $ limit
@@ -40,7 +41,7 @@ function readAlert(body) {
 
 // one strike source (Titi, Oct 17): start at the strike the chart shows. If it costs more than the max,
 // walk further out of the money one strike at a time until it fits. Never skip just because the chart strike is pricey.
-async function pick(root, cp, price, ymd, chartK, maxCost) {
+async function pick(root, cp, price, ymd, chartK, maxCost, minCost = 0) {
   const step = root === 'SPY' ? 1 : 5;
   const dir = cp === 'C' ? 1 : -1; // moving OTM
   const start = chartK ? Math.round(chartK / step) * step : Math.round(price / step) * step;
@@ -54,7 +55,9 @@ async function pick(root, cp, price, ymd, chartK, maxCost) {
     if (!x || !x.ap) continue;
     const cost = x.ap * 100;
     if (i === 0) first = { strike: strikes[0], cost };
-    if (cost <= maxCost) return { sym: syms[i], strike: strikes[i], ask: x.ap, cost, moved: i, chart: first };
+    if (cost > maxCost) continue;
+    if (cost < minCost) return null; // walking further out only gets cheaper: never under the floor (Titi, Oct 19)
+    return { sym: syms[i], strike: strikes[i], ask: x.ap, cost, moved: i, chart: first };
   }
   return null;
 }
@@ -78,7 +81,7 @@ export default async function handler(req, res) {
     const mins = t.h * 60 + t.min;
     const ymd = `${t.y.slice(2)}${t.m}${t.d}`;
     // same windows as Belle v42 (by candle close): W1 10:00 to 12:30, W2 13:45 to 15:00, W3 15:00 to 15:50 ET
-    const inWin = t.wd !== 'Sat' && t.wd !== 'Sun' && ((mins >= 600 && mins <= 750) || (mins >= 825 && mins <= 950));
+    const inWin = t.wd !== 'Sat' && t.wd !== 'Sun' && ((mins >= 600 && mins <= 750) || (mins >= 825 && mins <= 953)); // Window 3 entries until 15:53 like Belle
 
     // morning: SPY first; afternoon: SPX first. Penny buys both when the cash allows.
     const order = mins < 760 ? ['SPY', 'SPXW'] : ['SPXW', 'SPY'];
@@ -95,10 +98,16 @@ export default async function handler(req, res) {
         notes.push(`holding ${holding.symbol.startsWith('SPXW') ? 'SPX' : 'SPY'} ${holding.symbol.slice(-9, -8) === 'C' ? 'calls' : 'puts'}, no new trade against her open trade, her stop stays the same`);
       }
     }
-    // Window 3 (Titi, Oct 17): these fade the high or low of day, against the day's move, so they are SCALPS.
-    // Penny still trades them, holds about 5 minutes for the pop, then gets out.
+    // Window 3 = the EOD trade (Titi, Oct 19): the most important trade of the day, never blocked.
+    // No 5 minute scalp timer: tight trail, Target 1, out by 15:58. A $100 contract can turn into $1,000.
     const scalp = mins >= 900;
-    if (inWin && !holding) {
+    // after +$200 on the day (Titi, Oct 19): no entries in any chop, especially lunch (11:30 to 13:45 ET). EOD is never blocked.
+  let chopSkip = false;
+  if (inWin && !holding && !scalp && mins >= 690 && mins < 825) {
+    try { const ac = await (await fetch(`${TRADE}/v2/account`, { headers: H() })).json(); chopSkip = Number(ac.equity) - Number(ac.last_equity) >= 200; } catch (e) { chopSkip = false; }
+    if (chopSkip) notes.push('up $200+ today, no lunch or chop entries. Saving it for the EOD trade');
+  }
+  if (inWin && !holding && !chopSkip) {
       const acct = await (await fetch(`${TRADE}/v2/account`, { headers: H() })).json();
       let bp = Number(acct.options_buying_power || acct.buying_power || 0);
       for (const root of order) {
@@ -106,9 +115,9 @@ export default async function handler(req, res) {
         const label = root === 'SPY' ? 'SPY' : 'SPX';
         if (!price) { notes.push(`${label} skipped, no price`); continue; }
         const qty = root === 'SPY' ? SPY_QTY : 1;
-        const maxCost = MAX_COST / qty; // per contract: SPX 1 x $250, SPY 3 x about $0.83 (usually $0.40 to $0.60)
-        const c = await pick(root, cp, price, ymd, root === 'SPY' ? a.spyStrike : a.spxStrike, maxCost);
-        if (!c) { notes.push(`${label} skipped, nothing under $${MAX_COST} for ${qty} within 10 strikes of Belle's strike`); continue; }
+        const maxCost = root === 'SPY' ? SPY_MAX : MAX_COST; // per contract: SPX $100 to $250, SPY up to $0.60 (Titi, Oct 19)
+        const c = await pick(root, cp, price, ymd, root === 'SPY' ? a.spyStrike : a.spxStrike, maxCost, root === 'SPY' ? 0 : MIN_COST);
+        if (!c) { notes.push(root === 'SPY' ? 'SPY skipped, nothing at $0.60 or less within 10 strikes' : `SPX skipped, nothing between ${MIN_COST} and ${MAX_COST} within 10 strikes`); continue; }
         if (c.moved > 0) notes.push(`${label}: Belle's ${c.chart ? c.chart.strike : ''}${cp} was $${c.chart ? Math.round(c.chart.cost * qty) : '?'}${qty > 1 ? ` for ${qty}` : ''}, over $${MAX_COST}, so Penny went ${c.moved} strike${c.moved > 1 ? 's' : ''} further out`);
         const lim = tick(c.ask, root);
         if (lim * 100 * qty > bp) { notes.push(`${label} skipped, not enough buying power`); continue; }
@@ -120,7 +129,7 @@ export default async function handler(req, res) {
           await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/belle-manage.yml/dispatches`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN.trim()}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'penny' },
-            body: JSON.stringify({ ref: 'main', inputs: { order_id: o.id, symbol: c.sym, label: `${label} ${c.strike}${cp}${scalp ? ' SCALP' : ''}`, side: a.side, spy_stop: n2(a.spyStop), spy_t1: n2(a.spyT1) } })
+            body: JSON.stringify({ ref: 'main', inputs: { order_id: o.id, symbol: c.sym, label: `${label} ${c.strike}${cp}${scalp ? ' EOD' : ''}`, side: a.side, spy_stop: n2(a.spyStop), spy_t1: n2(a.spyT1) } })
           });
         }
       }
@@ -133,8 +142,8 @@ export default async function handler(req, res) {
     const hm = a.time || `${String(t.h).padStart(2, '0')}:${String(t.min).padStart(2, '0')}`;
     const ct = (() => { const [h, m] = hm.split(':').map(Number); return `${String((h + 23) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`; })();
     const lines = [
-      `**${scalp ? 'SCALP ' : ''}${a.side}  ${hm} ET (${ct} CT)**`,
-      scalp ? 'Window 3 scalp off the high or low of day, against the day move. About 5 minutes in and out.' : null,
+      `**${scalp ? 'EOD ' : ''}${a.side}  ${hm} ET (${ct} CT)**`,
+      scalp ? 'Window 3 EOD trade: tight trail, Target 1, out by 15:58.' : null,
       `Belle's strike:  SPX ${a.spxStrike || 'n/a'}${cp}  |  SPY ${a.spyStrike || 'n/a'}${cp}`,
       a.spxAlt ? `Strike choices:  SPX ${a.spxAlt}  |  SPY ${a.spyAlt}` : null,
       `Stop:  SPX ${n2(a.spxStop)}  |  SPY ${n2(a.spyStop)}`,
