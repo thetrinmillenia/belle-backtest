@@ -6,8 +6,9 @@
 2) Tags each trade by setup (Strat, sweep, CISD, RB, OB, EOD fade), window, time of day (lunch chop),
    exit (50% stop, breakeven, trail) and "was up 20%+ then lost".
 3) Saves results/loss_library.csv (every loss with its tags and lesson) and results/pattern_stats.csv
-   (win rate and P/L by tag), sends both back to the sheet ("Loss Library" and "Pattern Stats" tabs),
-   adds today's Penny trades to the Penny tab, and posts the top lessons to Discord.
+   (win rate and P/L by tag), plus results/win_library.csv (every win and what worked). With the sheet link set,
+   sends them to the "Loss Library", "Win Library" and "Pattern Stats" tabs and adds today's Penny trades.
+   No Discord posts (Titi, Oct 19).
 Read only on Alpaca. Paper account only.
 """
 import csv
@@ -20,18 +21,12 @@ from zoneinfo import ZoneInfo
 import requests
 
 ET = ZoneInfo("America/New_York")
-HOOK = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
 SHEET = os.environ.get("NORA_SHEET_URL", "").strip()   # the sheet's Nora web app (GitHub secret, never in code)
 today = dt.datetime.now(ET).date()
 
 
 def post(text):
-    print(text)
-    if HOOK:
-        try:
-            requests.post(HOOK, json={"content": text[:1900]}, timeout=10)
-        except Exception:
-            pass
+    print(text)   # Titi, Oct 19: Nora does not post to Discord. The summary stays in the GitHub run log only.
 
 
 def money(x):
@@ -61,7 +56,7 @@ def tags_for(why, note, minute, reason=""):
                       ("against", "Counter trend"), ("counter", "Counter trend"), ("chas", "Chasing"), ("chop", "Chop")):
         if key in t and name not in out:
             out.append(name)
-    if "5m strat" in t:
+    if re.search(r"(?<!1)5m strat", t):
         out.append("5m Strat")
     if "15m strat" in t:
         out.append("15m Strat")
@@ -92,6 +87,21 @@ def lesson(tr):
     if "Exit: 50% stop" in tg:
         return "Full 50% stop: the level did not hold. Wait for the 1m confirmation before entry."
     return "Note what the higher timeframe said before entry."
+
+
+def win_lesson(tr):
+    tg = tr["tags"]
+    if tr["pl"] >= 300:
+        return "Big runner: same setup, same patience. Let the trail work."
+    if "Window 3 EOD" in tg:
+        return "EOD worked: key level failed, trail tight, out by 15:58."
+    if any(g.startswith("Strat") or g.endswith("Strat") for g in tg):
+        return "Strat entry on the close of the 2 worked: wait for the bar to close."
+    if "Sweep" in tg:
+        return "Sweep then reclaim worked: liquidity first, then entry."
+    if "Exit: breakeven" in tg:
+        return "Flat to small win at breakeven: the idea may have been right, watch for the REENTER."
+    return "Repeat it: same window, same setup."
 
 
 # 1) collect trades
@@ -168,6 +178,10 @@ if os.path.exists("results/nora_trades.csv"):
 losses = [t for t in trades if t["pl"] < 0]
 for t in losses:
     t["lesson"] = lesson(t)
+# win library (Titi, Oct 19): learn from the wins too
+wins = [t for t in trades if t["pl"] > 0]
+for t in wins:
+    t["lesson"] = win_lesson(t)
 stats = defaultdict(lambda: {"n": 0, "w": 0, "pl": 0.0})
 for t in trades:
     for g in t["tags"] + [f"{t['who']} {t['ticker']}"]:
@@ -182,7 +196,11 @@ lib_rows = [{"Date": t["date"], "Who": t["who"], "Ticker": t["ticker"], "Bias": 
             for t in sorted(losses, key=lambda x: x["date"], reverse=True)]
 stat_rows = [{"Pattern": g, "Trades": s["n"], "Wins": s["w"], "Win %": round(s["w"] / s["n"] * 100), "P/L": round(s["pl"], 2)}
              for g, s in sorted(stats.items(), key=lambda kv: kv[1]["pl"]) if s["n"] >= 2]
-for path, rows in (("results/loss_library.csv", lib_rows), ("results/pattern_stats.csv", stat_rows)):
+win_rows = [{"Date": t["date"], "Who": t["who"], "Ticker": t["ticker"], "Bias": t["bias"], "Setup": t["why"][:120],
+             "Tags": ", ".join(t["tags"]), "P/L": round(t["pl"], 2), "Lesson": t["lesson"], "Note": t["note"][:300]}
+            for t in sorted(wins, key=lambda x: (x["date"], x["pl"]), reverse=True)]
+for path, rows in (("results/loss_library.csv", lib_rows), ("results/win_library.csv", win_rows),
+                   ("results/pattern_stats.csv", stat_rows)):
     with open(path, "w", newline="") as fh:
         if rows:
             w = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
@@ -192,16 +210,16 @@ for path, rows in (("results/loss_library.csv", lib_rows), ("results/pattern_sta
 # 3) back to the sheet
 if SHEET:
     try:
-        r = requests.post(SHEET, json={"action": "write", "lossLibrary": lib_rows, "patternStats": stat_rows, "penny": penny_new},
+        r = requests.post(SHEET, json={"action": "write", "lossLibrary": lib_rows, "winLibrary": win_rows, "patternStats": stat_rows, "penny": penny_new},
                           timeout=60)
         print("sheet write", r.status_code, r.text[:200])
     except Exception as e:
         print("sheet write failed", e)
 
-# 4) Discord: the three costliest patterns and today's losses
+# 4) summary in the run log only (no Discord)
 worst = [s for s in stat_rows if s["P/L"] < 0][:3]
 best = sorted(stat_rows, key=lambda s: s["P/L"], reverse=True)[:2]
-lines = [f"NORA lessons {today:%b %d} | {len(trades)} trades studied, {len(losses)} losses in the library"]
+lines = [f"NORA lessons {today:%b %d} | {len(trades)} trades studied, {len(losses)} losses and {len(wins)} wins in the libraries"]
 if worst:
     lines.append("Costliest setups: " + " | ".join(f"{s['Pattern']} {s['Win %']}% wins, {s['P/L']:+,.0f}" for s in worst))
 if best:
