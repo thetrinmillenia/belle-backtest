@@ -16,6 +16,7 @@ Started by the Penny relay after each entry (one run per contract). It waits for
   - if Belle fires the other side while this is open: stop tightens to 10% under the current price
 Every message is short. The trade is saved to results/paper_trades.csv for Nora.
 """
+import csv
 import os
 import sys
 import time
@@ -138,6 +139,15 @@ def save(entry, exitp, peak, reason):
         if new:
             fh.write("date,time_in,time_out,contract,side,entry,exit,best,pct,reason\n")
         fh.write(f"{now().date()},{T_IN},{now():%H:%M},{LABEL},{SIDE},{entry:.2f},{'' if exitp is None else f'{exitp:.2f}'},{peak:.2f},{pct},{reason}\n")
+    # full log for Nora's loss library (Titi, Oct 19): adds the contract count and Belle's reason
+    path2 = "results/penny_trades.csv"
+    new2 = not os.path.exists(path2)
+    with open(path2, "a", newline="") as fh:
+        w = csv.writer(fh)
+        if new2:
+            w.writerow(["date", "time_in", "time_out", "contract", "side", "qty", "entry", "exit", "best", "reason", "why"])
+        w.writerow([str(now().date()), T_IN, f"{now():%H:%M}", LABEL, SIDE, QTY, f"{entry:.2f}",
+                    "" if exitp is None else f"{exitp:.2f}", f"{peak:.2f}", reason, os.environ.get("WHY", "")])
 
 
 def wait_fill(oid, quiet=False):
