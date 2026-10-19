@@ -8,3 +8,4 @@ date,time_in,time_out,contract,side,entry,exit,best,pct,reason
 2026-10-16,15:45,15:48,SPX 7635P,PUTS,1.05,0.40,1.28,-62,50% stop
 2026-10-19,10:15,10:19,SPY 770C,CALLS,0.71,0.72,0.90,1,breakeven
 2026-10-19,10:40,10:43,SPY 769C,CALLS,0.66,0.69,0.82,5,breakeven
+2026-10-19,10:55,11:01,SPX 7740C,CALLS,1.95,1.90,2.38,-3,breakeven
