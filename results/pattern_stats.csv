@@ -1,0 +1,17 @@
+Pattern,Trades,Wins,Win %,P/L
+Strat 2-1-2,2,1,50,-34.0
+Exit: breakeven,2,1,50,6.0
+Penny SPY,2,2,100,105.0
+Penny SPX,5,2,40,260.0
+5m Strat,2,2,100,361.0
+Exit: trail,4,3,75,424.0
+CISD,2,1,50,510.0
+OTE,2,2,100,965.0
+Window 2,2,1,50,980.0
+Late hour high/low,2,1,50,1050.0
+ORH/ORL,2,2,100,1082.0
+OB,3,3,100,1375.0
+Sweep,7,6,86,2699.0
+Window 1,6,5,83,3050.0
+Window 3 EOD,8,6,75,3501.0
+Titi SPX,10,9,90,7329.0

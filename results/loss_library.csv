@@ -1,0 +1,4 @@
+Date,Who,Ticker,Bias,Setup,Tags,P/L,Lesson,Note
+2026-10-20,Penny,SPX,Bullish,"late hour: low of the hour 7707.67 held, strong close back over","Late hour high/low, Window 2, Exit: full stop",-65.0,Full stop: the level did not hold. Wait for the 1m confirmation before entry.,"Penny auto log. SPX 7740C, entry 13:55 ET, out 13:57 ET (43% stop), best +0%."
+2026-10-20,Penny,SPX,Bearish,"15m Strat 2-1-2 down with the trend, closed under 7711.17","Strat 2-1-2, 15m Strat, Window 3 EOD, Exit: trail",-40.0,Was up 20% or more and still lost: take the partial or move the stop sooner.,"Penny auto log. SPX 7700P EOD, entry 15:30 ET, out 15:31 ET (trail), best +36%."
+2026-10-06,Titi,SPX,Bearish,Power hour EOD puts,Window 3 EOD,-45.0,Note what the higher timeframe said before entry.,"SPX 7815P, about 15:15 ET. Up +44% but not sold, exited 0.35. Lesson: at +50% sell half or set a limit sell right away."
