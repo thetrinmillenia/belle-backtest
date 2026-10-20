@@ -3,12 +3,12 @@
 Started by the Penny relay after each entry (one run per contract). It waits for the fill, then:
   - stop to breakeven at +20% (+15% from 13:30 ET)
   - posts +20%, +50% (take partial), +100% (stop locks +70%, then steps up every +10%), Target 1 hit
-  - exits on: Belle's stop (SPY level), a 50% loss of premium, the trail, or 15:58 ET (never later, Titi Oct 19)
+  - exits on: Belle's stop (SPY level), a 43% loss of premium (starting stop, Titi Oct 20), the trail, or 15:58 ET (never later, Titi Oct 19)
   - EOD trades (Window 3, label EOD): no 5 minute scalp timer, tight trail (20% below the best from +30%,
     15% from +100%), sell 1 SPY at Target 1, hold the rest to 15:58 for the $100 to $1,000 run
   - unfilled orders: the limit stays working (pullback to the entry price or better, never chase) up to 10 min,
     canceled at once if SPY hits Belle's stop
-  - after a breakeven or 50% stop exit: if SPY breaks the move's high/low within 30 min with Belle's stop intact,
+  - after a breakeven or 43% stop exit: if SPY breaks the move's high/low within 30 min with Belle's stop intact,
     Window 1 re-enters once by itself; every other window posts a REENTER note (Titi, Oct 19)
   - trail after +50%: 30% below the best price, never giving back more than $50
   - after +100%: trail 20% below the best price, never below +50%
@@ -236,7 +236,7 @@ while True:
                         left -= 1
                         msg += f", sold 1 of {QTY} at {px:.2f}, {left} left"
                 post(f"{LABEL} {msg}")
-        stop = entry * 0.5
+        stop = entry * 0.57   # starting stop 43% (Titi, Oct 20)
         # breakeven fast (Titi, Oct 16): +20% moves the stop to entry; from 13:30 ET (theta) it takes only +15%
         be_at = 1.15 if n.hour * 60 + n.minute >= 810 else 1.20
         if peak >= entry * be_at:
@@ -271,7 +271,7 @@ while True:
             warn_stop = max(warn_stop, bid * 0.90)   # ratchets up only
             stop = max(stop, warn_stop)
         if bid <= stop:
-            reason = "flip" if warned and stop == warn_stop else ("trail" if peak >= entry * 1.3 and stop > entry else ("breakeven" if stop >= entry else "50% stop"))
+            reason = "flip" if warned and stop == warn_stop else ("trail" if peak >= entry * 1.3 and stop > entry else ("breakeven" if stop >= entry else "43% stop"))
             break
     time.sleep(10)
 
@@ -292,9 +292,9 @@ else:
         post(f"{LABEL} out ({reason}), best {best:+.0f}%, closed {pct:+.0f}%")
 save(entry, exitp, peak, reason)
 
-# 4) re-entry after a breakeven or 50% stop exit (Titi, Oct 19). Example: Oct 19 12:25 puts, out at breakeven,
+# 4) re-entry after a breakeven or 43% stop exit (Titi, Oct 19). Example: Oct 19 12:25 puts, out at breakeven,
 # then SPY broke the low of the move and kept going. Window 1: Penny re-enters once by herself. Other windows: REENTER note.
-if reason in ("breakeven", "50% stop") and spy_best is not None and not os.environ.get("REENTERED"):
+if reason in ("breakeven", "43% stop") and spy_best is not None and not os.environ.get("REENTERED"):
     t_end = time.time() + 1800
     while time.time() < t_end and now().hour * 60 + now().minute < 950:
         try:
