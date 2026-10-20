@@ -17,6 +17,7 @@ Started by the Penny relay after each entry (one run per contract). It waits for
 Every message is short. The trade is saved to results/paper_trades.csv for Nora.
 """
 import csv
+import math
 import os
 import sys
 import time
@@ -116,7 +117,73 @@ def spy_price():
     return (r.get("trade") or {}).get("p")
 
 
+# REAL STOP ORDER at the broker (Titi, Oct 20, before going live): a stop order sits at Alpaca and triggers the instant
+# the contract trades at the floor, instead of Penny noticing it up to 10 seconds later. Penny moves it up as the floor rises.
+STOP_ID = None
+STOP_PX = None
+STOP_FILL = None   # price if the broker stop order filled
+
+
+def tick_dn(p):
+    if SYM.startswith("SPY"):
+        return math.floor(p * 100 + 1e-9) / 100
+    return math.floor(p * 10 + 1e-9) / 10 if p >= 3 else math.floor(p * 20 + 1e-9) / 20
+
+
+def place_stop(q, px):
+    o = requests.post(f"{TRADE}/v2/orders", headers=H, timeout=10,
+                      json={"symbol": SYM, "qty": str(q), "side": "sell", "type": "stop", "stop_price": f"{px:.2f}",
+                            "time_in_force": "day", "client_order_id": f"penny-stop-{int(time.time() * 1000)}"}).json()
+    if "id" not in o:
+        print("stop order rejected", str(o)[:200])
+        return None
+    return o["id"]
+
+
+def move_stop(px):
+    """Raise the broker stop. Returns False if the old stop already filled."""
+    global STOP_ID, STOP_PX
+    r = requests.patch(f"{TRADE}/v2/orders/{STOP_ID}", headers=H, timeout=10, json={"stop_price": f"{px:.2f}"}).json()
+    if "id" in r:
+        STOP_ID, STOP_PX = r["id"], px
+        return True
+    return not stop_filled()
+
+
+def stop_filled():
+    """True (and STOP_FILL set) if the broker stop order has filled."""
+    global STOP_FILL
+    if not STOP_ID:
+        return False
+    x = get_order(STOP_ID)
+    if x.get("status") == "filled":
+        STOP_FILL = float(x["filled_avg_price"])
+        return True
+    return False
+
+
+def cancel_stop():
+    """Cancel the broker stop before Penny sells by herself. Returns True if it had already filled."""
+    global STOP_ID, STOP_PX
+    if not STOP_ID:
+        return False
+    requests.delete(f"{TRADE}/v2/orders/{STOP_ID}", headers=H, timeout=10)
+    for _ in range(10):
+        x = get_order(STOP_ID)
+        st = x.get("status")
+        if st == "filled":
+            globals()["STOP_FILL"] = float(x["filled_avg_price"])
+            return True
+        if st in ("canceled", "expired", "rejected"):
+            break
+        time.sleep(1)
+    STOP_ID, STOP_PX = None, None
+    return False
+
+
 def sell(q=1):
+    if cancel_stop():
+        return None   # the broker stop already sold everything
     o = requests.post(f"{TRADE}/v2/orders", headers=H, timeout=10,
                       json={"symbol": SYM, "qty": str(q), "side": "sell", "type": "market", "time_in_force": "day"}).json()
     if "id" not in o:
@@ -204,6 +271,9 @@ while True:
     if n.hour * 60 + n.minute >= EXIT_MIN:
         reason = "15:58"
         break
+    if stop_filled():
+        reason = "broker stop"
+        break
     try:
         bid = opt_bid()
         spy = spy_price()
@@ -275,13 +345,28 @@ while True:
         if warned:
             warn_stop = max(warn_stop, bid * 0.90)   # ratchets up only
             stop = max(stop, warn_stop)
+        # keep the broker stop at the floor, only ever moving it up
+        sp = tick_dn(stop)
+        if STOP_ID is None and left > 0 and sp > 0:
+            STOP_ID, STOP_PX = place_stop(left, sp), sp
+        elif STOP_ID and sp > STOP_PX + 1e-9:
+            if not move_stop(sp):
+                reason = "broker stop"
+                break
         if bid <= stop:
             reason = "flip" if warned and stop == warn_stop else ("trail" if peak >= entry * 1.3 and stop > entry else ("breakeven" if stop >= entry else ("step stop" if stop >= entry * 0.80 - 1e-9 else "43% stop")))
             break
     time.sleep(10)
 
 # 3) exit
-exitp = sell(left)
+if reason == "broker stop" or STOP_FILL is not None:
+    exitp = STOP_FILL
+    if reason != "broker stop":
+        reason = "broker stop"
+else:
+    exitp = sell(left)
+    if exitp is None and STOP_FILL is not None:   # the stop filled while Penny was cancelling it
+        exitp, reason = STOP_FILL, "broker stop"
 if exitp is not None and banked:
     exitp = (sum(p * q for p, q in banked) + exitp * left) / QTY   # average exit over all contracts
 best = (peak / entry - 1) * 100
@@ -299,7 +384,7 @@ save(entry, exitp, peak, reason)
 
 # 4) re-entry after a breakeven or 43% stop exit (Titi, Oct 19). Example: Oct 19 12:25 puts, out at breakeven,
 # then SPY broke the low of the move and kept going. Window 1: Penny re-enters once by herself. Other windows: REENTER note.
-if reason in ("breakeven", "step stop", "43% stop") and spy_best is not None and not os.environ.get("REENTERED"):
+if (reason in ("breakeven", "step stop", "43% stop") or (reason == "broker stop" and exitp is not None and exitp <= entry * 1.02)) and spy_best is not None and not os.environ.get("REENTERED"):
     t_end = time.time() + 1800
     while time.time() < t_end and now().hour * 60 + now().minute < 950:
         try:
