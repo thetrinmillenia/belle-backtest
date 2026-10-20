@@ -4,7 +4,7 @@
    - Titi's Journal tab and Penny's tab in the "ATM Method - Trading Journal" sheet (through the sheet's Nora web app)
    - Penny's own trade log from the manager (results/penny_trades.csv), so nothing depends on manual logging
 2) Tags each trade by setup (Strat, sweep, CISD, RB, OB, EOD fade), window, time of day (lunch chop),
-   exit (full stop, breakeven, trail) and "was up 20%+ then lost".
+   exit (50% stop, breakeven, trail) and "was up 20%+ then lost".
 3) Saves results/loss_library.csv (every loss with its tags and lesson) and results/pattern_stats.csv
    (win rate and P/L by tag), plus results/win_library.csv (every win and what worked). With the sheet link set,
    sends them to the "Loss Library", "Win Library" and "Pattern Stats" tabs and adds today's Penny trades.
@@ -65,8 +65,8 @@ def tags_for(why, note, minute, reason=""):
         if 690 <= minute < 825:
             out.append("Lunch 11:30 to 13:45")
     r = f"{reason} {note}".lower()
-    if "50% stop" in r or "43% stop" in r:
-        out.append("Exit: full stop")
+    if "50% stop" in r:
+        out.append("Exit: 50% stop")
     elif "breakeven" in r:
         out.append("Exit: breakeven")
     elif "trail" in r:
@@ -84,8 +84,8 @@ def lesson(tr):
         return "Against the trend: quick in and out only, or wait for the trend side."
     if "Chasing" in tg:
         return "Chased the entry: wait for the pullback to the level."
-    if "Exit: full stop" in tg:
-        return "Full stop: the level did not hold. Wait for the 1m confirmation before entry."
+    if "Exit: 50% stop" in tg:
+        return "Full 50% stop: the level did not hold. Wait for the 1m confirmation before entry."
     return "Note what the higher timeframe said before entry."
 
 
@@ -143,52 +143,65 @@ if not any(t["who"] == "Titi" for t in trades) and os.path.exists("data/titi_tra
                            "note": note, "pl": pl, "best": None, "minute": m, "rules": "Y",
                            "tags": tags_for(r["setup"], note, m), "src": "titi"})
 
-# Penny's own log, for days not in the sheet yet (and to send to the Penny tab)
+# Penny's own log, for days not in the sheet yet (and to send to the Penny tab).
+# Each manager run writes its own file in results/penny/ (Titi, Oct 20: one shared file lost trades when runs pushed at once).
+import glob
 penny_new = []
-seen = {(t["date"], t["ticker"], t["note"][:60]) for t in trades}
 sheet_days = {t["date"] for t in trades if t["who"] == "Penny"}
-if os.path.exists("results/penny_trades.csv"):
-    with open("results/penny_trades.csv") as fh:
-        for r in csv.DictReader(fh):
-            try:
-                entry, exitp, qty = float(r["entry"]), float(r["exit"] or 0), int(float(r.get("qty") or 1))
-            except ValueError:
-                continue
-            pl = round((exitp - entry) * 100 * qty, 2)
-            hh, mm = (r["time_in"] or "0:0").split(":")
-            m = int(hh) * 60 + int(mm)
-            tk = "SPY" if r["contract"].startswith("SPY") else "SPX"
-            note = (f"Penny auto log. {r['contract']}, entry {r['time_in']} ET, out {r['time_out']} ET ({r['reason']}), "
-                    f"best {float(r['best']) / entry * 100 - 100:+.0f}%.")
-            tr = {"who": "Penny", "date": r["date"], "ticker": tk, "bias": "Bullish" if r["side"] == "CALLS" else "Bearish",
-                  "why": r.get("why", ""), "note": note, "pl": pl, "best": float(r["best"]) / entry * 100 - 100,
-                  "minute": m, "rules": "Y", "tags": tags_for(r.get("why", ""), note, m, r["reason"]), "src": "penny"}
-            if r["date"] not in sheet_days:
-                trades.append(tr)
-            if r["date"] == str(today):
-                penny_new.append({"Date": r["date"], "Ticker": tk, "Bias": tr["bias"], "Level Swept": tr["why"][:120],
-                                  "Sweep/Break": "Sweep" if "swe" in tr["why"].lower() else "Break",
-                                  "Entry": entry, "Exit": exitp, "Contracts": qty, "P/L": pl, "Followed Rules": "Y",
-                                  "Note": note})
+penny_pl = {}   # (date, contract) -> P/L already counted from Penny's log
+rows = []
+for path in ["results/penny_trades.csv"] + sorted(glob.glob("results/penny/*.csv")):
+    if os.path.exists(path):
+        with open(path) as fh:
+            rows += list(csv.DictReader(fh))
+seen_rows = set()
+for r in rows:
+    key = (r.get("date"), r.get("time_in"), r.get("contract"))
+    if key in seen_rows:
+        continue
+    seen_rows.add(key)
+    try:
+        entry, exitp, qty = float(r["entry"]), float(r["exit"] or 0), int(float(r.get("qty") or 1))
+    except (ValueError, KeyError, TypeError):
+        continue
+    pl = round((exitp - entry) * 100 * qty, 2)
+    hh, mm = (r["time_in"] or "0:0").split(":")
+    m = int(hh) * 60 + int(mm)
+    tk = "SPY" if r["contract"].startswith("SPY") else "SPX"
+    base = " ".join(r["contract"].split()[:2])   # "SPX 7740C" without EOD / RE
+    penny_pl[(r["date"], base)] = penny_pl.get((r["date"], base), 0) + pl
+    note = (f"Penny auto log. {r['contract']}, entry {r['time_in']} ET, out {r['time_out']} ET ({r['reason']}), "
+            f"best {float(r['best']) / entry * 100 - 100:+.0f}%.")
+    tr = {"who": "Penny", "date": r["date"], "ticker": tk, "bias": "Bullish" if r["side"] == "CALLS" else "Bearish",
+          "why": r.get("why", "") or "", "note": note, "pl": pl, "best": float(r["best"]) / entry * 100 - 100,
+          "minute": m, "rules": "Y", "tags": tags_for(r.get("why", "") or "", note, m, r["reason"]), "src": "penny"}
+    if r["date"] not in sheet_days:
+        trades.append(tr)
+    if r["date"] == str(today):
+        penny_new.append({"Date": r["date"], "Ticker": tk, "Bias": tr["bias"], "Level Swept": tr["why"][:120],
+                          "Sweep/Break": "Sweep" if "swe" in tr["why"].lower() else "Break",
+                          "Entry": entry, "Exit": exitp, "Contracts": qty, "P/L": pl, "Followed Rules": "Y",
+                          "Note": note})
 
-# Alpaca history (Titi, Oct 19): every past Penny fill Nora saved from the paper account, for days not covered above
-covered = {t["date"] for t in trades if t["who"] == "Penny"}
+# Alpaca fills (the truth for P/L): anything the Penny log missed is added from the paper account fills
 if os.path.exists("results/nora_trades.csv"):
     with open("results/nora_trades.csv") as fh:
         for r in csv.DictReader(fh):
-            if r["date"] in covered or not r.get("pl"):
+            if r["date"] in sheet_days or not r.get("pl"):
                 continue
             try:
-                pl = float(r["pl"])
+                pl = float(r["pl"]) - penny_pl.get((r["date"], r["contract"]), 0)
             except ValueError:
+                continue
+            if abs(pl) < 1 and (r["date"], r["contract"]) in penny_pl:
                 continue
             hh, mm = (r["time"] or "0:0").split(":")
             m = int(hh) * 60 + int(mm)
             tk = "SPY" if r["contract"].startswith("SPY") else "SPX"
-            note = f"Alpaca fill. {r['contract']} x{r['qty']}, entry {r['time']} ET, {r['entry']} to {r['exit']} ({r['pct']}%)."
+            note = f"Alpaca fill. {r['contract']} x{r['qty']}, first entry {r['time']} ET, {r['entry']} to {r['exit']} ({r['pct']}%)."
             trades.append({"who": "Penny", "date": r["date"], "ticker": tk,
                            "bias": "Bullish" if r["contract"].endswith("C") else "Bearish", "why": "", "note": note,
-                           "pl": pl, "best": None, "minute": m, "rules": "", "tags": tags_for("", note, m), "src": "alpaca"})
+                           "pl": round(pl, 2), "best": None, "minute": m, "rules": "", "tags": tags_for("", note, m), "src": "alpaca"})
 
 # 2) the library
 losses = [t for t in trades if t["pl"] < 0]
