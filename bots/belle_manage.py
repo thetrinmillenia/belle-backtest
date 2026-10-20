@@ -117,7 +117,7 @@ def spy_price():
     return (r.get("trade") or {}).get("p")
 
 
-# REAL STOP ORDER at the broker (Titi, Oct 20, before going live): a stop order sits at Alpaca and triggers the instant
+# REAL STOP ORDER at the broker (Titi, Oct 20, before going live). Logged and posted as "EXIT": a stop order sits at Alpaca and triggers the instant
 # the contract trades at the floor, instead of Penny noticing it up to 10 seconds later. Penny moves it up as the floor rises.
 STOP_ID = None
 STOP_PX = None
@@ -272,7 +272,7 @@ while True:
         reason = "15:58"
         break
     if stop_filled():
-        reason = "broker stop"
+        reason = "EXIT"
         break
     try:
         bid = opt_bid()
@@ -351,7 +351,7 @@ while True:
             STOP_ID, STOP_PX = place_stop(left, sp), sp
         elif STOP_ID and sp > STOP_PX + 1e-9:
             if not move_stop(sp):
-                reason = "broker stop"
+                reason = "EXIT"
                 break
         if bid <= stop:
             reason = "flip" if warned and stop == warn_stop else ("trail" if peak >= entry * 1.3 and stop > entry else ("breakeven" if stop >= entry else ("step stop" if stop >= entry * 0.80 - 1e-9 else "43% stop")))
@@ -359,14 +359,14 @@ while True:
     time.sleep(10)
 
 # 3) exit
-if reason == "broker stop" or STOP_FILL is not None:
+if reason == "EXIT" or STOP_FILL is not None:
     exitp = STOP_FILL
-    if reason != "broker stop":
-        reason = "broker stop"
+    if reason != "EXIT":
+        reason = "EXIT"
 else:
     exitp = sell(left)
     if exitp is None and STOP_FILL is not None:   # the stop filled while Penny was cancelling it
-        exitp, reason = STOP_FILL, "broker stop"
+        exitp, reason = STOP_FILL, "EXIT"
 if exitp is not None and banked:
     exitp = (sum(p * q for p, q in banked) + exitp * left) / QTY   # average exit over all contracts
 best = (peak / entry - 1) * 100
@@ -384,7 +384,7 @@ save(entry, exitp, peak, reason)
 
 # 4) re-entry after a breakeven or 43% stop exit (Titi, Oct 19). Example: Oct 19 12:25 puts, out at breakeven,
 # then SPY broke the low of the move and kept going. Window 1: Penny re-enters once by herself. Other windows: REENTER note.
-if (reason in ("breakeven", "step stop", "43% stop") or (reason == "broker stop" and exitp is not None and exitp <= entry * 1.02)) and spy_best is not None and not os.environ.get("REENTERED"):
+if (reason in ("breakeven", "step stop", "43% stop") or (reason == "EXIT" and exitp is not None and exitp <= entry * 1.02)) and spy_best is not None and not os.environ.get("REENTERED"):
     t_end = time.time() + 1800
     while time.time() < t_end and now().hour * 60 + now().minute < 950:
         try:
