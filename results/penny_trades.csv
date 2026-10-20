@@ -4,3 +4,4 @@ date,time_in,time_out,contract,side,qty,entry,exit,best,reason,why
 2026-10-20,11:05,11:13,SPX 7690P,PUTS,1,2.25,5.80,6.63,trail,"5m Strat 3-2-2 down, closed under 7743.49"
 2026-10-20,13:55,13:57,SPX 7740C,CALLS,1,1.45,0.80,1.45,43% stop,"late hour: low of the hour 7707.67 held, strong close back over"
 2026-10-20,15:00,15:03,SPX 7720C EOD,CALLS,1,1.85,1.95,2.47,trail,"swept or tapped the low 7706.08, SMT or key low, retest of the order block open 7712.33"
+2026-10-20,15:17,15:18,SPY 768P EOD,PUTS,3,0.26,0.28,0.31,breakeven,"5m Strat 2-1-2 down, closed under 7713.53"
