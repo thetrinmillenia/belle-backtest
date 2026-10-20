@@ -1,2 +1,3 @@
 date,time_in,time_out,contract,side,qty,entry,exit,best,reason,why
 2026-10-20,10:00,10:05,SPX 7740C,CALLS,1,2.30,2.30,3.44,breakeven,"swept day low 7669.03, 5m CISD displacement (big candle, heavy volume)"
+2026-10-20,10:15,10:26,SPY 772C,CALLS,3,0.38,0.71,0.91,trail,"10 AM break: swept swept day low 7669.03, closed above the 9:55 candle high 7703.23"
