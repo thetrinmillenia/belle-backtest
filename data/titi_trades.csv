@@ -1,0 +1,11 @@
+date,ticker,bias,setup,entry,exit,qty,pl,pct,note
+2026-09-30,SPX,Bearish,9:30 and midnight opens break,1.05,18.00,1,1695,,"SPX 7675P, Window 2. Peaked near $18.00, out before 15:59 ET."
+2026-10-01,SPX,Bearish,13:45 swing high (buy side) sweep,1.15,7.39,1,624,,"SPX 7675P, 5m. 15:50 candle took the 13:45 swing high, failed 2 shooter. Entry 15:54 ET, target 13:30 candle OB open. +542%."
+2026-10-05,SPX,Bullish,Pullback into the ES 7820 zone on a trend day,1.55,12.00,1,1045,,"SPX 7780C, about 14:35 ET. Trend day (4H 2:00 reversal up, 6:00 and 10:00 continuation). Belle calls. +674%."
+2026-10-05,SPX,Bearish,Power hour new day high (buy side) sweep,0.50,5.60,1,510,,"SPX 7775P, about 15:30 ET. New high, lower highs, negative CISD on the 5m. +1,020%."
+2026-10-06,SPX,Bearish,Power hour EOD puts,0.80,0.35,1,-45,,"SPX 7815P, about 15:15 ET. Up +44% but not sold, exited 0.35. Lesson: at +50% sell half or set a limit sell right away."
+2026-10-16,SPX,Bearish,High of the 11:00 hour (late hour) sweep,1.80,12.95,1,1115,,"SPXW 7700P on Belle's 11:45 ET puts, about 12 pts OTM. +619%. Closer to the money beat the cheaper strike."
+2026-10-19,SPX,Bullish,10 AM swept the 6 AM low and reversed (4H bullish),,,1,,341,"SPX 7720C, about 10:00 ET, Window 1. TP at ORH with the 0.705 OTE. +341%."
+2026-10-19,SPX,Bearish,Failed ORH 7749.75 break with bearish OB,,,1,,741,"SPX 7705P, entry 15:45 ET, Window 3 EOD. 3:20 closed above ORH, 3:25 back below. TP swing low 7735.50. +741%."
+2026-10-20,SPX,Bullish,Belle 10:00 ET calls (7750C one strike past Belle's 7740C),1.60,13.00,1,1140,,"SPX 7750C, entry 10:00 ET, Window 1. +713%. Both 7740C and 7750C ran 1000%+."
+2026-10-20,SPX,Bearish,Window 3 EOD puts at 50% of the last down swing,1.05,2.68,1,163,,"SPX 7700P, Window 3 EOD. Sold at the low. +155%."
