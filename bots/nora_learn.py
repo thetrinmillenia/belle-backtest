@@ -127,6 +127,22 @@ if SHEET:
                            "note": note, "pl": pl, "best": None, "minute": m, "rules": r.get("Followed Rules", ""),
                            "tags": tags_for(why, note, m), "src": "sheet"})
 
+# Titi's own trades (data/titi_trades.csv, Titi Oct 20): Nora learns from them even without the sheet link.
+# P/L is in dollars; when only a percent is known it counts as dollars on a $100 contract.
+if not any(t["who"] == "Titi" for t in trades) and os.path.exists("data/titi_trades.csv"):
+    with open("data/titi_trades.csv") as fh:
+        for r in csv.DictReader(fh):
+            pl = money(r.get("pl"))
+            if pl is None and r.get("pct"):
+                pl = float(r["pct"])
+            if pl is None:
+                continue
+            note = r.get("note", "")
+            m = tod(note)
+            trades.append({"who": "Titi", "date": r["date"], "ticker": r["ticker"], "bias": r["bias"], "why": r["setup"],
+                           "note": note, "pl": pl, "best": None, "minute": m, "rules": "Y",
+                           "tags": tags_for(r["setup"], note, m), "src": "titi"})
+
 # Penny's own log, for days not in the sheet yet (and to send to the Penny tab)
 penny_new = []
 seen = {(t["date"], t["ticker"], t["note"][:60]) for t in trades}
