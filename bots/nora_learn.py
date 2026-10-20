@@ -4,7 +4,7 @@
    - Titi's Journal tab and Penny's tab in the "ATM Method - Trading Journal" sheet (through the sheet's Nora web app)
    - Penny's own trade log from the manager (results/penny_trades.csv), so nothing depends on manual logging
 2) Tags each trade by setup (Strat, sweep, CISD, RB, OB, EOD fade), window, time of day (lunch chop),
-   exit (50% stop, breakeven, trail) and "was up 20%+ then lost".
+   exit (full stop, breakeven, trail) and "was up 20%+ then lost".
 3) Saves results/loss_library.csv (every loss with its tags and lesson) and results/pattern_stats.csv
    (win rate and P/L by tag), plus results/win_library.csv (every win and what worked). With the sheet link set,
    sends them to the "Loss Library", "Win Library" and "Pattern Stats" tabs and adds today's Penny trades.
@@ -65,8 +65,8 @@ def tags_for(why, note, minute, reason=""):
         if 690 <= minute < 825:
             out.append("Lunch 11:30 to 13:45")
     r = f"{reason} {note}".lower()
-    if "50% stop" in r:
-        out.append("Exit: 50% stop")
+    if "50% stop" in r or "43% stop" in r:
+        out.append("Exit: full stop")
     elif "breakeven" in r:
         out.append("Exit: breakeven")
     elif "trail" in r:
@@ -84,8 +84,8 @@ def lesson(tr):
         return "Against the trend: quick in and out only, or wait for the trend side."
     if "Chasing" in tg:
         return "Chased the entry: wait for the pullback to the level."
-    if "Exit: 50% stop" in tg:
-        return "Full 50% stop: the level did not hold. Wait for the 1m confirmation before entry."
+    if "Exit: full stop" in tg:
+        return "Full stop: the level did not hold. Wait for the 1m confirmation before entry."
     return "Note what the higher timeframe said before entry."
 
 
