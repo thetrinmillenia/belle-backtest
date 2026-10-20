@@ -17,3 +17,4 @@ date,time_in,time_out,contract,side,entry,exit,best,pct,reason
 2026-10-20,10:15,10:26,SPY 772C,CALLS,0.38,0.71,0.91,86,trail
 2026-10-20,11:05,11:13,SPX 7690P,PUTS,2.25,5.80,6.63,158,trail
 2026-10-20,13:55,13:57,SPX 7740C,CALLS,1.45,0.80,1.45,-45,43% stop
+2026-10-20,15:00,15:03,SPX 7720C EOD,CALLS,1.85,1.95,2.47,5,trail
