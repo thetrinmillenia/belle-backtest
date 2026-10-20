@@ -1,6 +1,6 @@
 # Belle backtest results
 
-Data: Yahoo Finance, last 60d. Run 2026-10-19.
+Data: Yahoo Finance, last 60d. Run 2026-10-20.
 
 ## 5 minute signals
 
@@ -11,12 +11,12 @@ Signals: 79 (8.6 per week). Entry = the sweep candle's close.
 | Group | Signals | Move |
 | --- | --- | --- |
 | All | 79 | 2 / 7 / 11 |
-| window = W1 | 43 | 4 / 9 / 16 |
+| window = W1 | 43 | 3 / 8 / 14 |
 | window = W2 | 36 | 2 / 6 / 8 |
-| direction = calls | 35 | 2 / 7 / 10 |
-| direction = puts | 44 | 3 / 7 / 12 |
-| W1 calls | 19 | 4 / 8 / 13 |
-| W1 puts | 24 | 4 / 9 / 16 |
+| direction = calls | 36 | 1 / 6 / 10 |
+| direction = puts | 43 | 3 / 7 / 12 |
+| W1 calls | 20 | 2 / 8 / 13 |
+| W1 puts | 23 | 4 / 9 / 16 |
 | W2 calls | 16 | 0 / 4 / 7 |
 | W2 puts | 20 | 2 / 6 / 9 |
 
@@ -24,9 +24,9 @@ Signals: 79 (8.6 per week). Entry = the sweep candle's close.
 
 | Group | 10 pts | 15 pts | 20 pts | 25 pts |
 | --- | --- | --- | --- | --- |
-| All | 24% | 13% | 5% | 4% |
-| W1 calls | 32% | 11% | 0% | 0% |
-| W1 puts | 42% | 25% | 12% | 8% |
+| All | 23% | 13% | 5% | 4% |
+| W1 calls | 30% | 10% | 0% | 0% |
+| W1 puts | 39% | 26% | 13% | 9% |
 | W2 calls | 6% | 0% | 0% | 0% |
 | W2 puts | 10% | 10% | 5% | 5% |
 
@@ -35,9 +35,9 @@ Signals: 79 (8.6 per week). Entry = the sweep candle's close.
 | Note | Signals | ITM at 15 pts |
 | --- | --- | --- |
 | pool_swept = 13:30 candle high | 2 | 0% |
-| pool_swept = 13:30 candle low | 2 | 0% |
+| pool_swept = 13:30 candle low | 3 | 0% |
 | pool_swept = 9:30 open | 4 | 25% |
-| pool_swept = bearish FVG CE | 16 | 25% |
+| pool_swept = bearish FVG CE | 15 | 27% |
 | pool_swept = bearish order block opening | 8 | 25% |
 | pool_swept = bullish FVG CE | 13 | 8% |
 | pool_swept = bullish order block opening | 5 | 0% |
@@ -50,14 +50,14 @@ Signals: 79 (8.6 per week). Entry = the sweep candle's close.
 | with_4h_bias = True | 50 | 14% |
 | confirmed_next_candle = False | 32 | 3% |
 | confirmed_next_candle = True | 47 | 19% |
-| failed_2 = False | 66 | 15% |
-| failed_2 = True | 13 | 0% |
+| failed_2 = False | 65 | 15% |
+| failed_2 = True | 14 | 0% |
 | smt = False | 76 | 12% |
 | smt = True | 3 | 33% |
-| h1 = green | 40 | 5% |
-| h1 = red | 39 | 21% |
-| h4 = green | 40 | 2% |
-| h4 = red | 39 | 23% |
+| h1 = green | 41 | 5% |
+| h1 = red | 38 | 21% |
+| h4 = green | 41 | 2% |
+| h4 = red | 38 | 24% |
 
 **Answer key check**
 
@@ -75,13 +75,13 @@ Signals: 40 (5.9 per week). Entry = the sweep candle's close.
 
 | Group | Signals | Move |
 | --- | --- | --- |
-| All | 40 | 4 / 8 / 13 |
-| window = W1 | 27 | 6 / 11 / 14 |
+| All | 40 | 3 / 7 / 13 |
+| window = W1 | 27 | 5 / 9 / 14 |
 | window = W2 | 13 | 2 / 4 / 7 |
-| direction = calls | 20 | 5 / 8 / 13 |
-| direction = puts | 20 | 2 / 7 / 13 |
-| W1 calls | 14 | 8 / 10 / 14 |
-| W1 puts | 13 | 4 / 11 / 19 |
+| direction = calls | 21 | 5 / 8 / 13 |
+| direction = puts | 19 | 2 / 7 / 12 |
+| W1 calls | 15 | 7 / 8 / 14 |
+| W1 puts | 12 | 3 / 10 / 20 |
 | W2 calls | 6 | 1 / 3 / 6 |
 | W2 puts | 7 | 2 / 5 / 7 |
 
@@ -89,9 +89,9 @@ Signals: 40 (5.9 per week). Entry = the sweep candle's close.
 
 | Group | 10 pts | 15 pts | 20 pts | 25 pts |
 | --- | --- | --- | --- | --- |
-| All | 22% | 8% | 5% | 2% |
-| W1 calls | 29% | 0% | 0% | 0% |
-| W1 puts | 38% | 23% | 15% | 8% |
+| All | 20% | 8% | 5% | 2% |
+| W1 calls | 27% | 0% | 0% | 0% |
+| W1 puts | 33% | 25% | 17% | 8% |
 | W2 calls | 0% | 0% | 0% | 0% |
 | W2 puts | 0% | 0% | 0% | 0% |
 
@@ -100,9 +100,9 @@ Signals: 40 (5.9 per week). Entry = the sweep candle's close.
 | Note | Signals | ITM at 15 pts |
 | --- | --- | --- |
 | pool_swept = 13:30 candle high | 9 | 22% |
-| pool_swept = 13:30 candle low | 8 | 0% |
+| pool_swept = 13:30 candle low | 9 | 0% |
 | pool_swept = 9:30 open | 3 | 0% |
-| pool_swept = bearish FVG CE | 7 | 14% |
+| pool_swept = bearish FVG CE | 6 | 17% |
 | pool_swept = bearish order block opening | 1 | 0% |
 | pool_swept = bullish FVG CE | 4 | 0% |
 | pool_swept = bullish order block opening | 1 | 0% |
@@ -110,16 +110,16 @@ Signals: 40 (5.9 per week). Entry = the sweep candle's close.
 | pool_swept = rejection block | 5 | 0% |
 | with_4h_bias = False | 16 | 0% |
 | with_4h_bias = True | 24 | 12% |
-| confirmed_next_candle = False | 13 | 8% |
-| confirmed_next_candle = True | 27 | 7% |
+| confirmed_next_candle = False | 14 | 7% |
+| confirmed_next_candle = True | 26 | 8% |
 | failed_2 = False | 33 | 9% |
 | failed_2 = True | 7 | 0% |
 | smt = False | 38 | 8% |
 | smt = True | 2 | 0% |
-| h1 = green | 20 | 0% |
-| h1 = red | 20 | 15% |
-| h4 = green | 20 | 0% |
-| h4 = red | 20 | 15% |
+| h1 = green | 21 | 0% |
+| h1 = red | 19 | 16% |
+| h4 = green | 21 | 0% |
+| h4 = red | 19 | 16% |
 
 **Answer key check**
 
