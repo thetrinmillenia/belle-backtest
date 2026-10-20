@@ -140,7 +140,8 @@ def save(entry, exitp, peak, reason):
             fh.write("date,time_in,time_out,contract,side,entry,exit,best,pct,reason\n")
         fh.write(f"{now().date()},{T_IN},{now():%H:%M},{LABEL},{SIDE},{entry:.2f},{'' if exitp is None else f'{exitp:.2f}'},{peak:.2f},{pct},{reason}\n")
     # full log for Nora's loss library (Titi, Oct 19): adds the contract count and Belle's reason
-    path2 = "results/penny_trades.csv"
+    os.makedirs("results/penny", exist_ok=True)
+    path2 = f"results/penny/{now():%Y-%m-%d}-{ORDER_ID[:8]}.csv"   # one file per trade, no push clashes (Titi, Oct 20)
     new2 = not os.path.exists(path2)
     with open(path2, "a", newline="") as fh:
         w = csv.writer(fh)
