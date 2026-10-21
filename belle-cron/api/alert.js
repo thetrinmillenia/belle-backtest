@@ -152,6 +152,25 @@ export default async function handler(req, res) {
       `PENNY:  ${[bought, ...notes].filter(Boolean).join('\n') || 'no trade'}`
     ].filter(Boolean);
     const posted = await discord(lines.join('\n\n'));
+    // BELLE DRAFTS (Titi, Oct 21): Window 1 SPY entries in Titi's voice, to her private #belle-drafts channel.
+    // She copies them into the community. @everyone is in the text but does not ping in the private channel.
+    if (process.env.STUDENT_WEBHOOK_URL && picked.SPY && mins >= 600 && mins <= 750) {
+      try {
+        const p = picked.SPY, k = Math.round(p.strike), step = cp === 'C' ? 1 : -1;
+        const ks = [k - step, k, k + step], syms = ks.map(x => occ('SPY', ymd, cp, x));
+        const q = await (await fetch(`${DATA}/v1beta1/options/quotes/latest?symbols=${syms.join(',')}&feed=indicative`, { headers: H() })).json();
+        const m = v => '$' + Number(v).toFixed(2).replace(/^0\./, '.');
+        const ask = i => { const x = q.quotes && q.quotes[syms[i]]; return x && x.ap ? m(x.ap) : 'n/a'; };
+        const side = cp === 'C' ? 'CALLS' : 'PUTS';
+        const msg = [
+          `$SPY\n$${k} ${side}\nEXPIRATION ${t.m}/${t.d}/${t.y}\n${m(p.lim)} Entry\n@everyone`,
+          [a.why ? `• ${a.why}` : null, `• Stop: SPY ${cp === 'C' ? 'under' : 'over'} ${n2(a.spyStop)}`, `• Target 1: SPY ${n2(a.spyT1)}`].filter(Boolean).join('\n'),
+          `Strike lesson:\n• ${ks[0]}${cp} ${ask(0)}: closer, costs more, moves faster\n• ${ks[1]}${cp} ${ask(1)}: my pick\n• ${ks[2]}${cp} ${ask(2)}: cheaper, needs a bigger move`,
+          'Plan: 3 contracts. Sell 1 at +50%, 1 at +100%, the last one rides.'
+        ].join('\n\n');
+        await fetch(process.env.STUDENT_WEBHOOK_URL.trim(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: msg.slice(0, 1900), allowed_mentions: { parse: [] } }) });
+      } catch (e) { }
+    }
     return res.status(200).json({ ok: true, picked, notes, discord: posted });
   } catch (e) {
     await discord('PENNY error: ' + String(e).slice(0, 300));
