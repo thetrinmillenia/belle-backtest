@@ -58,6 +58,26 @@ def post(text):
             pass
 
 
+DRAFT = os.environ.get("STUDENT_WEBHOOK_URL", "").strip()
+DRAFT_ON = False   # Window 1 SPY only, set after the fill
+DRAFT_MS = (20, 50, 75, 100, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 1000)
+
+
+def draft(text):
+    """BELLE DRAFTS (Titi, Oct 21): Window 1 SPY posts in Titi's voice, to her private #belle-drafts channel.
+    She copies them into the community. @everyone is in the text but does not ping in the private channel."""
+    if not (DRAFT and DRAFT_ON and LABEL.startswith("SPY")):
+        return
+    try:
+        requests.post(DRAFT, json={"content": text[:1900], "allowed_mentions": {"parse": []}}, timeout=10)
+    except Exception:
+        pass
+
+
+def money(p):
+    return f"${p:.2f}".replace("$0.", "$.")
+
+
 def now():
     return dt.datetime.now(ET)
 
@@ -252,6 +272,9 @@ if not o:
 entry = float(o["filled_avg_price"])
 T_IN = f"{now():%H:%M}"
 WIN1 = now().hour * 60 + now().minute <= 750
+DRAFT_ON = WIN1
+SIDE_W = "CALLS" if DIR == 1 else "PUTS"
+draft(f"JUST FILLED IN @ {money(entry)} avg\n@everyone")
 # scale out (Titi, Oct 17): SPY buys 3 contracts. Sell 1 at +50%, 1 at +100%, the last one rides the stop.
 QTY = max(1, int(float(o.get("filled_qty") or 1)))
 left = QTY
@@ -297,6 +320,10 @@ while True:
     if bid:
         peak = max(peak, bid)
         gain = bid / entry - 1
+        hit = [m for m in DRAFT_MS if gain * 100 >= m and f"d{m}" not in said]
+        if hit:
+            said.update(f"d{m}" for m in hit)
+            draft(f"{money(bid)} HERE ON SPY {SIDE_W}\nUP +{gain * 100:.0f}% {'☢️' if hit[-1] >= 100 else '🔥'}\n@everyone")
         for lvl, msg in ((0.20, "+20%"), (0.50, "+50%, take partial"), (1.00, "+100%, stop locked at +70%. Watch the levels, it can chop at +100% before the next leg")):
             if gain >= lvl and lvl not in said:
                 said.add(lvl)
@@ -306,6 +333,7 @@ while True:
                         banked.append((px, 1))
                         left -= 1
                         msg += f", sold 1 of {QTY} at {px:.2f}, {left} left"
+                        draft(f"TRIMMING 🚨\n{QTY - left}/{QTY} SOLD @ {money(px)}. {left} left, the last one rides.\n@everyone")
                 post(f"{LABEL} {msg}")
         stop = entry * 0.57   # starting stop 43% (Titi, Oct 20)
         # step stop (Titi, Oct 20; backtest: best total, same worst loss): +20% raises the stop to -20%, +40% moves it to breakeven
@@ -319,6 +347,7 @@ while True:
             if "be" not in said:
                 said.add("be")
                 post(f"{LABEL} +40%, stop moved to breakeven {entry:.2f}")
+                draft(f"Stop moved to breakeven on SPY {SIDE_W} ({money(entry)}). No risk left on this one.\n@everyone")
         if peak >= entry * 1.5:
             stop = max(stop, peak - min(peak * 0.30, 0.50))
         # EOD tight trail (Titi, Oct 19): 20% below the best from +30%, 15% below the best from +100%
@@ -381,6 +410,18 @@ else:
     else:
         post(f"{LABEL} out ({reason}), best {best:+.0f}%, closed {pct:+.0f}%")
 save(entry, exitp, peak, reason)
+if exitp is not None:
+    pct = (exitp / entry - 1) * 100
+    if pct < 0 and best < 20:
+        draft(f"STOPPED OUT on SPY {SIDE_W} @ {money(exitp)} avg, {pct:+.0f}%.\nThat is why we size small.\n@everyone")
+        tail = f"Setup failed, stopped at {pct:+.0f}%. Risk was managed."
+    else:
+        sc = ", ".join(money(p) for p, q in banked)
+        draft(f"ALL OUT on SPY {SIDE_W} @ {money(exitp)} avg, {pct:+.0f}%." + (f"\nScaled out at {sc}, then the runner." if banked else "") + "\n@everyone")
+        tail = (f"Setup delivered, max profits were {best:.0f}%. 🧀" if best > 100 else
+                f"Solid setup, max profits were {best:.0f}%." if best >= 50 else
+                f"Not satisfied with setup as max profits were {best:.0f}% only.")
+    draft(f"Just a note. I am fully hands off here. No active position remaining in SPY.\n\nI will let markets settle before alerting the next setup.\n\n{tail}\n@everyone")
 
 # 4) re-entry after a breakeven or 43% stop exit (Titi, Oct 19). Example: Oct 19 12:25 puts, out at breakeven,
 # then SPY broke the low of the move and kept going. Window 1: Penny re-enters once by herself. Other windows: REENTER note.
