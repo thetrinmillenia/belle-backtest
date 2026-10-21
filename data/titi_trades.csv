@@ -10,4 +10,4 @@ date,ticker,bias,setup,entry,exit,qty,pl,pct,note
 2026-10-20,SPX,Bullish,Belle 10:00 ET calls (7750C one strike past Belle's 7740C),1.60,13.00,1,1140,,"SPX 7750C, entry 10:00 ET, Window 1. +713%. Both 7740C and 7750C ran 1000%+."
 2026-10-20,SPX,Bearish,"Window 3 EOD puts, TP at 50% of the day high and day low",1.05,2.68,1,163,,"SPX 7700P, Window 3 EOD. Sold at the low. +155%."
 2026-10-21,SPX,Bearish,"EOD flush from the stalled highs (EQH), 38 pts 14:45 to 15:00 ET",1.10,12.10,1,1100,1000,"SPX 7760P. Flush 7769 to 7731. Belle had no puts (trend filter blocked them). Exit assumed near the screenshot price."
-2026-10-21,SPX,Bullish,"EOD reversal calls at the 15:00 ET low (sweep and reclaim)",0.65,2.63,1,198,305,"SPX 7760C. Bought near the 7731 low. Belle fired calls at 15:20 ET, about 18 pts later. Exit 15:45 ET, near the screenshot price."
+2026-10-21,SPX,Bullish,"EOD reversal calls at the 15:00 ET low (sweep and reclaim)",0.65,4.40,1,375,577,"SPX 7760C. Bought near the 7731 low. Belle fired calls at 15:20 ET, about 18 pts later. Sold near the high at 15:51 ET (SPX 7762.56)."
