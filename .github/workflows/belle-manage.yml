@@ -54,6 +54,7 @@ jobs:
           SPY_STOP: ${{ github.event.inputs.spy_stop }}
           SPY_T1: ${{ github.event.inputs.spy_t1 }}
           WHY: ${{ github.event.inputs.why }}
+          STUDENT_WEBHOOK_URL: ${{ secrets.STUDENT_WEBHOOK_URL }}
       - name: Save the trade log
         if: always()
         run: |
