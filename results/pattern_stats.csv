@@ -6,12 +6,14 @@ Exit: trail,4,3,75,424.0
 Penny SPX,7,3,43,440.0
 CISD,2,1,50,510.0
 Penny SPY,7,4,57,550.0
-Window 2,3,1,33,944.0
 OTE,2,2,100,965.0
 Late hour high/low,2,1,50,1050.0
-ORH/ORL,2,2,100,1082.0
+Window 2,4,2,50,1154.0
 OB,3,3,100,1375.0
+ORH/ORL,3,3,100,1497.0
+Exit: broker stop,3,3,100,1725.0
+Reversal,3,3,100,1835.0
 Sweep,8,7,88,3074.0
-Window 1,11,7,64,3526.0
+Window 1,12,8,67,3941.0
 Window 3 EOD,10,8,80,4061.0
-Titi SPX,12,11,92,8804.0
+Titi SPX,14,13,93,9429.0

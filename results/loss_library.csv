@@ -1,8 +1,8 @@
 Date,Who,Ticker,Bias,Setup,Tags,P/L,Lesson,Note
-2026-10-20,Penny,SPX,Bullish,"late hour: low of the hour 7707.67 held, strong close back over","Late hour high/low, Window 2",-65.0,Note what the higher timeframe said before entry.,"Penny auto log. SPX 7740C, entry 13:55 ET, out 13:57 ET (43% stop), best +0%."
+2026-10-20,Penny,SPX,Bullish,"late hour: low of the hour 7707.67 held, strong close back over","Late hour high/low, Window 2, Exit: 43% stop",-65.0,Note what the higher timeframe said before entry.,"Penny auto log. SPX 7740C, entry 13:55 ET, out 13:57 ET (43% stop), best +0%."
 2026-10-20,Penny,SPX,Bearish,"15m Strat 2-1-2 down with the trend, closed under 7711.17","Strat 2-1-2, 15m Strat, Window 3 EOD, Exit: trail",-40.0,Was up 20% or more and still lost: take the partial or move the stop sooner.,"Penny auto log. SPX 7700P EOD, entry 15:30 ET, out 15:31 ET (trail), best +36%."
 2026-10-20,Penny,SPY,Bullish,,Window 1,-1.0,Note what the higher timeframe said before entry.,"Alpaca fill. SPY 772C x3, first entry 10:15 ET, 0.38 to 0.71 (86%)."
 2026-10-20,Penny,SPY,Bullish,,Window 1,-3.0,Note what the higher timeframe said before entry.,"Alpaca fill. SPY 774C x3, first entry 10:45 ET, 0.46 to 0.45 (-2%)."
 2026-10-20,Penny,SPX,Bullish,,Window 1,-5.0,Note what the higher timeframe said before entry.,"Alpaca fill. SPX 7780C x1, first entry 10:45 ET, 2.00 to 1.95 (-3%)."
 2026-10-20,Penny,SPY,Bullish,,Window 2,-36.0,Note what the higher timeframe said before entry.,"Alpaca fill. SPY 771C x3, first entry 13:55 ET, 0.28 to 0.16 (-43%)."
-2026-10-06,Titi,SPX,Bearish,Power hour EOD puts,Window 3 EOD,-45.0,Note what the higher timeframe said before entry.,"SPX 7815P, about 15:15 ET. Up +44% but not sold, exited 0.35. Lesson: at +50% sell half or set a limit sell right away."
+2026-10-06,Titi,SPX,Bearish,Power hour EOD puts,Window 3 EOD,-45.0,EOD loss: puts are favored EOD. Check the EOD STALL CHECK and the PDC side before calls.,"SPX 7815P, about 15:15 ET. Up +44% but not sold, exited 0.35. Lesson: at +50% sell half or set a limit sell right away."
