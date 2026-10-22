@@ -101,13 +101,24 @@ export default async function handler(req, res) {
     // Window 3 = the EOD trade (Titi, Oct 19): the most important trade of the day, never blocked.
     // No 5 minute scalp timer: tight trail, Target 1, out by 15:58. A $100 contract can turn into $1,000.
     const scalp = mins >= 900;
+    // EOD puts over calls (Titi, Oct 21: "puts are better EOD"). Window 3 calls are skipped when SPY is above PDC
+    // (backtest: above PDC at 15:00, the last hour went down 67% of days). The stall break job handles EOD reversals.
+    let eodNoCalls = false;
+    if (scalp && cp === 'C' && a.spy) {
+      try {
+        const db = await (await fetch(`${DATA}/v2/stocks/SPY/bars?timeframe=1Day&feed=sip&start=${new Date(Date.now() - 10 * 864e5).toISOString().slice(0, 10)}&end=${t.y}-${t.m}-${t.d}T04:00:00Z`, { headers: H() })).json();
+        const bars = db.bars || [];
+        const pdc = bars.length ? bars[bars.length - 1].c : null;
+        if (pdc && a.spy > pdc) { eodNoCalls = true; notes.push(`EOD calls skipped: SPY ${a.spy.toFixed(2)} above PDC ${pdc.toFixed(2)}, puts are favored EOD`); }
+      } catch (e) { eodNoCalls = false; }
+    }
     // after +$200 on the day (Titi, Oct 19): no entries in any chop, especially lunch (11:30 to 13:45 ET). EOD is never blocked.
   let chopSkip = false;
   if (inWin && !holding && !scalp && mins >= 690 && mins < 825) {
     try { const ac = await (await fetch(`${TRADE}/v2/account`, { headers: H() })).json(); chopSkip = Number(ac.equity) - Number(ac.last_equity) >= 200; } catch (e) { chopSkip = false; }
     if (chopSkip) notes.push('up $200+ today, no lunch or chop entries. Saving it for the EOD trade');
   }
-  if (inWin && !holding && !chopSkip) {
+  if (inWin && !holding && !chopSkip && !eodNoCalls) {
       const acct = await (await fetch(`${TRADE}/v2/account`, { headers: H() })).json();
       let bp = Number(acct.options_buying_power || acct.buying_power || 0);
       for (const root of order) {
