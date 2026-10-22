@@ -177,6 +177,13 @@ if titi:
         L.append(f"- {r['setup']}: {r.get('note', '')} P/L {r.get('pl') or (r.get('pct', '') + '%')}")
 else:
     L.append("Titi's trades not logged yet.")
+# Titi's study notes for the day (data/titi_lessons.csv, Oct 22)
+notes = []
+if os.path.exists("data/titi_lessons.csv"):
+    with open("data/titi_lessons.csv") as fh:
+        notes = [r for r in csv.DictReader(fh) if r["date"] == str(day)]
+for r in notes:
+    L.append(f"- Study note ({r['source']}, {r['setup']}): {r['lesson']} Rule: {r['rule']}")
 L += ["", "## 5. Nora setups", ""]
 if stats:
     s2 = sorted(stats, key=lambda s: float(s["P/L"]))
