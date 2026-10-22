@@ -269,3 +269,9 @@ if best:
 for t in [t for t in losses if t["date"] == str(today)][:4]:
     lines.append(f"Today {t['who']} {t['ticker']} {t['pl']:+,.0f}: {t['lesson']}")
 post("\n".join(lines))
+
+# Titi's study notes (Oct 22): data/titi_lessons.csv is kept with the libraries as results/lessons_library.csv
+if os.path.exists("data/titi_lessons.csv"):
+    import shutil
+    shutil.copy("data/titi_lessons.csv", "results/lessons_library.csv")
+    print("lessons library updated")
