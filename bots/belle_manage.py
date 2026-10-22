@@ -109,6 +109,9 @@ def opposite_alert_since(t0):
 
 EXIT_MIN = 958   # out at 15:58 ET, never later, regardless of price (Titi, Oct 19)
 EOD = "EOD" in LABEL or "SCALP" in LABEL
+# STALL break on SPX (Titi, Oct 21): hold, no trims, patience pays. Belle's SPY stop, a 60% floor, out at the target
+# (50% of the day's swing); after +100% trail 40% below the best. No step stop, breakeven or $50 trail cap.
+HOLD = "STALL" in LABEL and LABEL.startswith("SPX")
 
 
 def opt_ask():
@@ -309,6 +312,10 @@ while True:
         break
     if spy and SPY_T1 and "t1" not in said and (spy - SPY_T1) * DIR >= 0:
         said.add("t1")
+        if HOLD:
+            post(f"{LABEL} target hit: 50% of the day's swing, taking profit")
+            reason = "target"
+            break
         msg = f"{LABEL} Target 1 hit"
         if EOD and left >= 2:   # EOD TP1 (Titi, Oct 19): bank 1 at the target, the rest trails
             px = sell(1)
@@ -337,26 +344,26 @@ while True:
                 post(f"{LABEL} {msg}")
         stop = entry * 0.57   # starting stop 43% (Titi, Oct 20)
         # step stop (Titi, Oct 20; backtest: best total, same worst loss): +20% raises the stop to -20%, +40% moves it to breakeven
-        if peak >= entry * 1.20:
+        if peak >= entry * 1.20 and not HOLD:
             stop = max(stop, entry * 0.80)
             if "step" not in said:
                 said.add("step")
                 post(f"{LABEL} +20%, stop raised to -20% ({entry * 0.80:.2f})")
-        if peak >= entry * 1.40:
+        if peak >= entry * 1.40 and not HOLD:
             stop = max(stop, entry)
             if "be" not in said:
                 said.add("be")
                 post(f"{LABEL} +40%, stop moved to breakeven {entry:.2f}")
                 draft(f"Stop moved to breakeven on SPY {SIDE_W} ({money(entry)}). No risk left on this one.\n@everyone")
-        if peak >= entry * 1.5:
+        if peak >= entry * 1.5 and not HOLD:
             stop = max(stop, peak - min(peak * 0.30, 0.50))
         # EOD tight trail (Titi, Oct 19): 20% below the best from +30%, 15% below the best from +100%
-        if EOD and peak >= entry * 1.3:
+        if EOD and not HOLD and peak >= entry * 1.3:
             stop = max(stop, peak * (0.85 if peak >= entry * 2.0 else 0.80), entry * 1.05)
         # tighter trail once the trade doubles (Titi, Oct 16): keep the winner running toward the target
         # never give back a 100% winner (Titi, Oct 17): at +100% lock +70%, then step the lock up every +10%
         # (+120% locks +90%, +150% locks +120%, and so on)
-        if peak >= entry * 2.0:
+        if peak >= entry * 2.0 and not HOLD:
             gain = int((peak / entry - 1) * 10 + 1e-9) / 10
             lock = entry * (1 + gain - 0.30)
             stop = max(stop, lock)
@@ -365,6 +372,8 @@ while True:
                 if peak >= entry * (1 + ms) and f"ms{ms}" not in said:
                     said.add(f"ms{ms}")
                     post(f"{LABEL} +{ms*100:.0f}%, stop locked at +{(gain-0.30)*100:.0f}% ({lock:.2f})")
+        if HOLD:
+            stop = entry * 0.40 if peak < entry * 2.0 else max(entry * 0.40, peak * 0.60)
         # opposite Belle alert while this trade is open (Titi, Oct 16): no new trade, tighten this one
         if not warned and time.time() - last_chk > 30:
             last_chk = time.time()
