@@ -4,12 +4,16 @@ name: Belle Stall (EOD stall break)
 # Test: Run workflow with replay = a past date (posts [TEST], no orders).
 on:
   schedule:
-    - cron: "50 17,18 * * 1-5"
+    # three tries (Oct 22: GitHub skipped the single 13:50 ET run). Only one runs at a time; later ones exit after 15:40 ET
+    - cron: "15,35,55 17,18 * * 1-5"
   workflow_dispatch:
     inputs:
       replay:
         description: "Test date YYYY-MM-DD (posts [TEST], no orders). Empty = live"
         default: ""
+concurrency:
+  group: belle-stall
+  cancel-in-progress: false
 permissions:
   contents: read
   actions: write
