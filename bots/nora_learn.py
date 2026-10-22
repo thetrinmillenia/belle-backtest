@@ -53,6 +53,7 @@ def tags_for(why, note, minute, reason=""):
                       (" rb", "RB"), ("order block", "OB"), (" ob", "OB"), ("ote", "OTE"), ("flag", "Flag"),
                       ("orh", "ORH/ORL"), ("orl", "ORH/ORL"), ("pdh", "PDH/PDL"), ("pdl", "PDH/PDL"), ("pdc", "PDC"),
                       ("2 pm", "2 PM candle"), ("14:00", "2 PM candle"), ("late hour", "Late hour high/low"),
+                      ("stall", "Stall break"), ("flush", "Flush"), ("eqh", "EQH/EQL"), ("eql", "EQH/EQL"), ("reversal", "Reversal"),
                       ("against", "Counter trend"), ("counter", "Counter trend"), ("chas", "Chasing"), ("chop", "Chop")):
         if key in t and name not in out:
             out.append(name)
@@ -65,7 +66,15 @@ def tags_for(why, note, minute, reason=""):
         if 690 <= minute < 825:
             out.append("Lunch 11:30 to 13:45")
     r = f"{reason} {note}".lower()
-    if "50% stop" in r:
+    if "target" in r:
+        out.append("Exit: target")
+    elif "43% stop" in r:
+        out.append("Exit: 43% stop")
+    elif "step stop" in r:
+        out.append("Exit: step stop")
+    elif re.search(r"\bexit\b", r):
+        out.append("Exit: broker stop")
+    elif "50% stop" in r:
         out.append("Exit: 50% stop")
     elif "breakeven" in r:
         out.append("Exit: breakeven")
@@ -78,6 +87,8 @@ def lesson(tr):
     tg = tr["tags"]
     if tr.get("best") is not None and tr["best"] >= 20 and tr["pl"] < 0:
         return "Was up 20% or more and still lost: take the partial or move the stop sooner."
+    if "Window 3 EOD" in tg and "Stall break" not in tg:
+        return "EOD loss: puts are favored EOD. Check the EOD STALL CHECK and the PDC side before calls."
     if "Lunch 11:30 to 13:45" in tg:
         return "Lunch chop: wait for a range high or low sweep, or skip it."
     if "Counter trend" in tg:
@@ -91,6 +102,8 @@ def lesson(tr):
 
 def win_lesson(tr):
     tg = tr["tags"]
+    if "Stall break" in tg:
+        return "Stall break paid: tiny candles at the high, then a fast break. Hold SPX, target 50% of the day's swing."
     if tr["pl"] >= 300:
         return "Big runner: same setup, same patience. Let the trail work."
     if "Window 3 EOD" in tg:
