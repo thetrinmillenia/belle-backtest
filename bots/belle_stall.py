@@ -90,14 +90,19 @@ def spy_bars():
 
 
 def spx_ratio():
-    """SPX / SPY ratio from Yahoo (^GSPC), fallback 10.03."""
+    """SPX / SPY ratio from the prior day's closes (Yahoo ^GSPC and Alpaca SPY), so it is right before the open
+    and in replays. Fallback 10.03."""
     try:
-        r = requests.get("https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC", params={"interval": "1m", "range": "1d"},
-                         headers={"User-Agent": "Mozilla/5.0"}, timeout=15).json()
-        spx = r["chart"]["result"][0]["meta"]["regularMarketPrice"]
-        spy = requests.get(f"{DATA}/v2/stocks/SPY/trades/latest", headers=H, params={"feed": "iex"}, timeout=15).json()["trade"]["p"]
-        if spx and spy and 9.5 < spx / spy < 10.5:
-            return spx / spy
+        r = requests.get("https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC", params={"interval": "1d", "range": "3mo"},
+                         headers={"User-Agent": "Mozilla/5.0"}, timeout=15).json()["chart"]["result"][0]
+        spx = {dt.datetime.fromtimestamp(t, ET).date(): c for t, c in zip(r["timestamp"], r["indicators"]["quote"][0]["close"]) if c}
+        d = requests.get(f"{DATA}/v2/stocks/SPY/bars", headers=H, timeout=15,
+                         params={"timeframe": "1Day", "start": str(day - dt.timedelta(days=10)), "end": str(day - dt.timedelta(days=1)),
+                                 "feed": "sip"}).json().get("bars") or []
+        for b in reversed(d):
+            k = et(b["t"]).date()
+            if k in spx and 9.5 < spx[k] / b["c"] < 10.5:
+                return spx[k] / b["c"]
     except Exception as e:
         print("ratio fallback", e)
     return 10.03
@@ -208,7 +213,7 @@ def process(B):
                   f"Watch: a 5m close above {hi:.1f} = STALL BREAK calls, target {mid:.1f}." if stall and where == "at the LOW" else
                   "No stall at the extreme yet. No EOD stall trade unless one forms by 15:30 ET.")]
         if fired:
-            lines.append(f"STALL BREAK already fired at {hm(fired[2] + 5)} ET ({ct(fired[2] + 5)} CT). Stop SPX {fired[1]:.1f}.")
+            lines[-1] = f"STALL BREAK already fired at {hm(fired[2] + 5)} ET ({ct(fired[2] + 5)} CT). Stop SPX {fired[1]:.1f}. Hold for the target."
         post("\n\n".join(lines))
 
     # STALL BREAK, 14:00 to 15:30 ET, once a day
