@@ -39,6 +39,6 @@ jobs:
           git config user.name nora-bot
           git config user.email nora-bot@users.noreply.github.com
           git add results/nora_trades.csv || true
-          git add results/loss_library.csv results/win_library.csv results/pattern_stats.csv || true
+          git add results/loss_library.csv results/win_library.csv results/pattern_stats.csv results/lessons_library.csv || true
           git commit -m "Nora trade log" || true
           for i in 1 2 3; do git pull --rebase && git push && break; sleep 5; done || true
