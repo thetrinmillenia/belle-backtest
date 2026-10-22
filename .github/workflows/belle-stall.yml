@@ -1,0 +1,32 @@
+name: Belle Stall (EOD stall break)
+# 13:50 ET (12:50 CT) on weekdays: watches for Titi's EOD stall break until 15:40 ET, posts to Discord,
+# and on a break Penny trades it on the Alpaca PAPER account (manager label "STALL").
+# Test: Run workflow with replay = a past date (posts [TEST], no orders).
+on:
+  schedule:
+    - cron: "50 17,18 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      replay:
+        description: "Test date YYYY-MM-DD (posts [TEST], no orders). Empty = live"
+        default: ""
+permissions:
+  contents: read
+  actions: write
+jobs:
+  stall:
+    runs-on: ubuntu-latest
+    timeout-minutes: 130
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests
+      - run: python bots/belle_stall.py
+        env:
+          ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPLAY: ${{ github.event.inputs.replay }}
