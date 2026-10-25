@@ -1,0 +1,66 @@
+name: Pearl (LIVE, 1 SPX contract)
+# Started by Belle's relay (Window 1 and EOD alerts) and the stall bot. OFF unless the repo variable PEARL_ON is true.
+# Live keys: secrets PEARL_KEY_ID and PEARL_SECRET_KEY (Titi adds them herself).
+# Test: Run workflow with dry = 1 (reads prices, places no orders).
+on:
+  workflow_dispatch:
+    inputs:
+      side:
+        description: "CALLS or PUTS"
+        default: "PUTS"
+      source:
+        description: "W1, STALL or EOD"
+        default: "EOD"
+      spy_stop:
+        description: "Belle's SPY stop"
+        default: ""
+      spy_t3:
+        description: "SPY Target 3 (optional)"
+        default: ""
+      why:
+        description: "Why"
+        default: ""
+      sent:
+        description: "Signal time (epoch seconds)"
+        default: ""
+      dry:
+        description: "1 = test, no orders"
+        default: ""
+concurrency:
+  group: pearl
+  cancel-in-progress: false
+permissions:
+  contents: write
+jobs:
+  pearl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 380
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests
+      - run: python bots/pearl.py
+        env:
+          PEARL_ON: ${{ vars.PEARL_ON }}
+          PEARL_KEY_ID: ${{ secrets.PEARL_KEY_ID }}
+          PEARL_SECRET_KEY: ${{ secrets.PEARL_SECRET_KEY }}
+          ALPACA_KEY_ID: ${{ inputs.dry == '1' && secrets.ALPACA_KEY_ID || '' }}
+          ALPACA_SECRET_KEY: ${{ inputs.dry == '1' && secrets.ALPACA_SECRET_KEY || '' }}
+          SIDE: ${{ inputs.side }}
+          SOURCE: ${{ inputs.source }}
+          SPY_STOP: ${{ inputs.spy_stop }}
+          SPY_T3: ${{ inputs.spy_t3 }}
+          WHY: ${{ inputs.why }}
+          SENT: ${{ inputs.sent }}
+          DRY: ${{ inputs.dry }}
+      - name: Save the trade log
+        if: always()
+        run: |
+          git config user.name "pearl"
+          git config user.email "actions@users.noreply.github.com"
+          git add results/pearl_trades.csv || true
+          git commit -m "Pearl trade $(date +%F)" || exit 0
+          git pull --rebase || true
+          git push || true
