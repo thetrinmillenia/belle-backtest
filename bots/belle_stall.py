@@ -293,8 +293,8 @@ def process(B):
     # OTE ENTRY after a stall break (Titi, Oct 25: ICT fib, enter on the 0.62 to 0.79 pullback)
     if pend and last["m"] > fired[2]:
         d, start = pend["d"], pend["start"]
-        if (d == -1 and last["c"] > start) or (d == 1 and last["c"] < start) or last["m"] > 15 * 60 + 40:
-            print(f"STALL BREAK {'PUTS' if d == -1 else 'CALLS'}: canceled, {'5m close back above the stall' if last['m'] <= 15 * 60 + 40 else 'no OTE pullback by 15:45 ET'}. No trade.")
+        if (d == -1 and last["c"] > start) or (d == 1 and last["c"] < start) or last["m"] > 15 * 60 + 45:
+            print(f"STALL BREAK {'PUTS' if d == -1 else 'CALLS'}: canceled, {'5m close back above the stall' if last['m'] <= 15 * 60 + 45 else 'no OTE pullback by 15:50 ET'}. No trade.")
             pend = None
         else:
             R = abs(start - pend["ext"])
@@ -334,7 +334,7 @@ last_m = -1
 while True:
     n = now()
     nm = n.hour * 60 + n.minute
-    if nm > 15 * 60 + 40:
+    if nm > 15 * 60 + 52:   # last entry on the 15:50 ET close (Titi, Oct 25)
         break
     try:
         B = spy_bars()
