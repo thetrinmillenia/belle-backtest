@@ -46,6 +46,7 @@ jobs:
           PEARL_ON: ${{ vars.PEARL_ON }}
           PEARL_KEY_ID: ${{ secrets.PEARL_KEY_ID }}
           PEARL_SECRET_KEY: ${{ secrets.PEARL_SECRET_KEY }}
+          PEARL_WEBHOOK_URL: ${{ secrets.PEARL_WEBHOOK_URL }}
           ALPACA_KEY_ID: ${{ inputs.dry == '1' && secrets.ALPACA_KEY_ID || '' }}
           ALPACA_SECRET_KEY: ${{ inputs.dry == '1' && secrets.ALPACA_SECRET_KEY || '' }}
           SIDE: ${{ inputs.side }}
