@@ -72,6 +72,9 @@ RULES = {
     "B no $50 cap": lambda e, pk: rule_current(e, pk, cap=False),
     "C hold (60% floor, trail 40% after +100%)": lambda e, pk: e * 0.40 if pk < e * 2 else max(e * 0.40, pk * 0.60),
     "D 43% start, no step, trail 30% after +100%": lambda e, pk: e * 0.57 if pk < e * 2 else max(e * 0.57, pk * 0.70),
+    "E 43% start, breakeven at +60%, trail 30% after +100%": lambda e, pk: e * 0.57 if pk < e * 1.6 else (e if pk < e * 2 else max(e, pk * 0.70)),
+    "F 43% start, -20% at +50%, trail 30% after +100%": lambda e, pk: e * 0.57 if pk < e * 1.5 else (e * 0.80 if pk < e * 2 else max(e * 0.80, pk * 0.70)),
+    "G 43% start, breakeven at +80%, trail 35% after +100%": lambda e, pk: e * 0.57 if pk < e * 1.8 else (e if pk < e * 2 else max(e, pk * 0.65)),
 }
 
 REAL = "REAL"
