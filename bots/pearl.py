@@ -14,7 +14,8 @@ Safety:
   - A signal older than 3 minutes is ignored (no stale entries).
   - She only buys options, so the most one trade can lose is what she paid (never more than $150).
   - DRY=1: reads prices and prints what she would do, places no orders (works before the live keys exist).
-  - No Discord posts until Titi approves the message drafts.
+  - Discord: only the approved messages (entry, +60%, +100%, out, done for the day) go to the Pearl channel
+    (secret PEARL_WEBHOOK_URL, Titi adds it herself). Everything else stays in the GitHub log.
 """
 import datetime as dt
 import os
@@ -40,6 +41,7 @@ SEC = os.environ.get("PEARL_SECRET_KEY", "").strip()
 SIDE = os.environ.get("SIDE", "").strip().upper()
 SOURCE = os.environ.get("SOURCE", "").strip().upper()
 WHY = os.environ.get("WHY", "").strip()
+HOOK = os.environ.get("PEARL_WEBHOOK_URL", "").strip()
 
 
 def num(name):
@@ -53,7 +55,21 @@ SPY_STOP, SPY_T3, SENT = num("SPY_STOP"), num("SPY_T3"), num("SENT")
 
 
 def say(text):
-    print(text)   # Discord stays off until Titi approves the drafts
+    print(text)   # GitHub log only
+
+
+def post(text):
+    """Approved Pearl messages (Titi, Oct 25) to the Pearl alerts channel. Never on a dry run."""
+    print(text)
+    if HOOK and not DRY:
+        try:
+            requests.post(HOOK, json={"content": text[:1900]}, timeout=10)
+        except Exception as e:
+            print("discord failed", e)
+
+
+def ct(n):
+    return f"{(n.hour - 1) % 24:02d}:{n.minute:02d}"
 
 
 def now():
@@ -242,6 +258,9 @@ if entry is None:
         say("Pearl: not filled in 2 minutes, canceled. No chase.")
         sys.exit(0)
 say(f"Pearl: filled 1 SPX {c['k']}{CP} at {entry:.2f} (${entry * 100:.0f})")
+K = f"{c['k']}{CP}"
+nf = now()
+post(f"**PEARL {SIDE}  {nf:%H:%M} ET ({ct(nf)} CT)**\n\nBought 1 SPX {K} at {entry:.2f} (${entry * 100:.0f})\n\nWhy:  {WHY}")
 
 
 def sell():
@@ -270,12 +289,12 @@ while reason is None:
     if peak >= entry * 1.60:
         stop = max(stop, entry)
         if not be_said:
-            say("Pearl: +60%, stop moved to breakeven")
+            post(f"PEARL {K} +60%, stop moved to breakeven")
             be_said = True
     if peak >= entry * 2.0:
         stop = max(stop, peak * 0.70)
         if not trail_said:
-            say("Pearl: +100%, trail now 30% below the best")
+            post(f"PEARL {K} +100%, trail now 30% below the best")
             trail_said = True
     s = spy_last()
     if mins() >= EXIT_MIN:
@@ -294,7 +313,9 @@ if out is None:
     say(f"Pearl: exit ({reason}) NOT confirmed, check Alpaca now")
     sys.exit(1)
 pl = (out - entry) * 100
-say(f"Pearl: out ({reason}) at {out:.2f}, best {peak / entry * 100 - 100:+.0f}%, closed {pl:+.0f} dollars")
+post(f"PEARL {K} out ({reason}), best {peak / entry * 100 - 100:+.0f}%, closed {'+' if pl >= 0 else '-'}${abs(pl):.0f}")
+if pl < 0:
+    post("PEARL done for the day (1 loss)")
 os.makedirs("results", exist_ok=True)
 f = "results/pearl_trades.csv"
 new = not os.path.exists(f)
