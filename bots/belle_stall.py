@@ -172,6 +172,17 @@ def dispatch(order_id, sym, label, side, spy_stop, spy_t1, why, spy_t2=None, spy
     print("dispatch", r.status_code, r.text[:200])
 
 
+def pearl_go(side, spy_stop, spy_t3, why):
+    """Hand the stall entry to Pearl (LIVE). Pearl checks PEARL_ON and all her own rules."""
+    if not GH:
+        return
+    r = requests.post(f"https://api.github.com/repos/{REPO}/actions/workflows/pearl.yml/dispatches", timeout=15,
+                      headers={"Authorization": f"Bearer {GH}", "Accept": "application/vnd.github+json"},
+                      json={"ref": "main", "inputs": {"side": side, "source": "STALL", "spy_stop": f"{spy_stop:.2f}",
+                                                      "spy_t3": f"{spy_t3:.2f}", "why": why[:200], "sent": str(int(time.time()))}})
+    print("pearl dispatch", r.status_code)
+
+
 def holding():
     try:
         pos = requests.get(f"{TRADE}/v2/positions", headers=H, timeout=10).json()
@@ -197,6 +208,8 @@ def enter(d, start, ext, last, why_base):
     side = "PUTS" if d == -1 else "CALLS"
     cp = "P" if d == -1 else "C"
     why = f"{why_base}. OTE entry {last['c']:.1f}"
+    if not DRY:
+        pearl_go(side, start / ratio, t3 / ratio, f"Stall break at the {'high' if d == -1 else 'low'}, OTE pullback rejected")
     spx_k = int(round(last["c"] / 5) * 5)
     spy_k = int(round(last["c"] / ratio))
     notes = []
