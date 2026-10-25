@@ -118,6 +118,17 @@ export default async function handler(req, res) {
     try { const ac = await (await fetch(`${TRADE}/v2/account`, { headers: H() })).json(); chopSkip = Number(ac.equity) - Number(ac.last_equity) >= 200; } catch (e) { chopSkip = false; }
     if (chopSkip) notes.push('up $200+ today, no lunch or chop entries. Saving it for the EOD trade');
   }
+    // Pearl (LIVE, Titi Oct 25): Window 1 (10:00 to 11:30 ET) and EOD (15:00 to 15:50 ET), calls and puts.
+  // Pearl checks PEARL_ON and all her own rules (1 contract, $150 max, 1 loss and done). Penny's rules do not apply to her.
+  if (inWin && ((mins >= 600 && mins <= 690) || mins >= 900) && process.env.GITHUB_TOKEN) {
+    try {
+      await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/pearl.yml/dispatches`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN.trim()}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'pearl' },
+        body: JSON.stringify({ ref: 'main', inputs: { side: a.side, source: mins >= 900 ? 'EOD' : 'W1', spy_stop: n2(a.spyStop), spy_t3: '', why: String(a.why || '').slice(0, 200), sent: String(Math.floor(Date.now() / 1000)) } })
+      });
+    } catch (e) { notes.push('Pearl not reached'); }
+  }
   if (inWin && !holding && !chopSkip && !eodNoCalls) {
       const acct = await (await fetch(`${TRADE}/v2/account`, { headers: H() })).json();
       let bp = Number(acct.options_buying_power || acct.buying_power || 0);
