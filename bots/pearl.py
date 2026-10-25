@@ -258,9 +258,9 @@ if entry is None:
         say("Pearl: not filled in 2 minutes, canceled. No chase.")
         sys.exit(0)
 say(f"Pearl: filled 1 SPX {c['k']}{CP} at {entry:.2f} (${entry * 100:.0f})")
-K = f"{c['k']}{CP}"
+K = f"SPX {c['k']}{CP}"
 nf = now()
-post(f"**PEARL {SIDE}  {nf:%H:%M} ET ({ct(nf)} CT)**\n\nBought 1 SPX {K} at {entry:.2f} (${entry * 100:.0f})\n\nWhy:  {WHY}")
+post(f"**PEARL {SIDE}  {nf:%H:%M} ET ({ct(nf)} CT)**\n\nBought 1 {K} at {entry:.2f} (${entry * 100:.0f})\n\nWhy:  {WHY}")
 
 
 def sell():
@@ -311,6 +311,7 @@ while reason is None:
 out = sell()
 if out is None:
     say(f"Pearl: exit ({reason}) NOT confirmed, check Alpaca now")
+    post(f"{K} EXIT NOT CONFIRMED, check Alpaca now")
     sys.exit(1)
 pl = (out - entry) * 100
 post(f"{K} out ({reason}), best {peak / entry * 100 - 100:+.0f}%, closed {'+' if pl >= 0 else '-'}${abs(pl):.0f}")
