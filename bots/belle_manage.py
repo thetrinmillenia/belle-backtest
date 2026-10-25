@@ -3,9 +3,9 @@
 Started by the Penny relay after each entry (one run per contract). It waits for the fill, then:
   - step stop (Titi, Oct 20): +20% raises the stop to -20%, +40% moves it to breakeven
   - posts +20%, +50% (take partial), +100% (stop locks +70%, then steps up every +10%), Target 1 hit
-  - exits on: Belle's stop (SPY level), a 43% loss of premium (starting stop, Titi Oct 20), the trail, or 15:58 ET (never later, Titi Oct 19)
+  - exits on: Belle's stop (SPY level), a 43% loss of premium (starting stop, Titi Oct 20), the trail, or 15:59 ET (never later, Titi Oct 25)
   - EOD trades (Window 3, label EOD): no 5 minute scalp timer, tight trail (20% below the best from +30%,
-    15% from +100%), sell 1 SPY at Target 1, hold the rest to 15:58 for the $100 to $1,000 run
+    15% from +100%), sell 1 SPY at Target 1, hold the rest to 15:59 for the $100 to $1,000 run
   - unfilled orders: the limit stays working (pullback to the entry price or better, never chase) up to 10 min,
     canceled at once if SPY hits Belle's stop
   - after a breakeven or 43% stop exit: if SPY breaks the move's high/low within 30 min with Belle's stop intact,
@@ -111,7 +111,7 @@ def opposite_alert_since(t0):
     return False
 
 
-EXIT_MIN = 958   # out at 15:58 ET, never later, regardless of price (Titi, Oct 19)
+EXIT_MIN = 959   # out at 15:59 ET, never later, regardless of price (Titi, Oct 25)
 EOD = "EOD" in LABEL or "SCALP" in LABEL
 # STALL break on SPX (Titi, Oct 21): hold, no trims, patience pays. Belle's SPY stop, a 60% floor, out at the target
 # (50% of the day's swing); after +100% trail 40% below the best. No step stop, breakeven or $50 trail cap.
@@ -247,7 +247,7 @@ def save(entry, exitp, peak, reason):
 
 def wait_fill(oid, quiet=False):
     """Strict hold-open rule (Titi, Oct 19): the limit order stays at the entry price (a pullback fills it, never chase).
-    Up to 10 minutes, canceled at once if SPY hits Belle's stop or it is 15:53 or later."""
+    Up to 10 minutes, canceled at once if SPY hits Belle's stop or it is 15:55 or later."""
     start = time.time()
     while True:
         o = get_order(oid)
@@ -262,7 +262,7 @@ def wait_fill(oid, quiet=False):
             spy = spy_price()
         except Exception:
             spy = None
-        late = now().hour * 60 + now().minute >= 953
+        late = now().hour * 60 + now().minute >= 955
         broke = spy and SPY_STOP and (spy - SPY_STOP) * DIR <= 0
         if time.time() - start > 600 or broke or late:
             requests.delete(f"{TRADE}/v2/orders/{oid}", headers=H, timeout=10)
@@ -299,7 +299,7 @@ spy_best = None   # the move's high (calls) or low (puts) on SPY while in the tr
 while True:
     n = now()
     if n.hour * 60 + n.minute >= EXIT_MIN:
-        reason = "15:58"
+        reason = "15:59"
         break
     if stop_filled():
         reason = "EXIT"
@@ -432,8 +432,8 @@ if exitp is None:
     post(f"PENNY {LABEL}: exit not confirmed, check Alpaca ({reason})")
 else:
     pct = (exitp / entry - 1) * 100
-    if reason == "15:58":
-        post(f"{LABEL} out 15:58, best {best:+.0f}%, closed {pct:+.0f}%")
+    if reason == "15:59":
+        post(f"{LABEL} out 15:59, best {best:+.0f}%, closed {pct:+.0f}%")
     elif reason == "stop":
         post(f"{LABEL} stopped out, closed {pct:+.0f}%")
     else:
