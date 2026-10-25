@@ -289,12 +289,12 @@ while reason is None:
     if peak >= entry * 1.60:
         stop = max(stop, entry)
         if not be_said:
-            post(f"PEARL {K} +60%, stop moved to breakeven")
+            post(f"{K} +60%, stop moved to breakeven")
             be_said = True
     if peak >= entry * 2.0:
         stop = max(stop, peak * 0.70)
         if not trail_said:
-            post(f"PEARL {K} +100%, trail now 30% below the best")
+            post(f"{K} +100%, trail now 30% below the best")
             trail_said = True
     s = spy_last()
     if mins() >= EXIT_MIN:
@@ -313,9 +313,9 @@ if out is None:
     say(f"Pearl: exit ({reason}) NOT confirmed, check Alpaca now")
     sys.exit(1)
 pl = (out - entry) * 100
-post(f"PEARL {K} out ({reason}), best {peak / entry * 100 - 100:+.0f}%, closed {'+' if pl >= 0 else '-'}${abs(pl):.0f}")
+post(f"{K} out ({reason}), best {peak / entry * 100 - 100:+.0f}%, closed {'+' if pl >= 0 else '-'}${abs(pl):.0f}")
 if pl < 0:
-    post("PEARL done for the day (1 loss)")
+    post("Done for the day (1 loss)")
 os.makedirs("results", exist_ok=True)
 f = "results/pearl_trades.csv"
 new = not os.path.exists(f)
