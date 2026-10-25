@@ -38,8 +38,9 @@ def now():
 
 
 def post(text):
-    text = ("[TEST] " if DRY else "") + text
     print(text)
+    if REPLAY:
+        return   # test runs print to the GitHub log only, nothing goes to Discord (Titi, Oct 25)
     if HOOK:
         try:
             requests.post(HOOK, json={"content": text[:1900]}, timeout=10)
@@ -154,7 +155,7 @@ def buy(sym, qty, lim, tag):
 
 def dispatch(order_id, sym, label, side, spy_stop, spy_t1, why, spy_t2=None, spy_t3=None):
     if not GH:
-        post("STALL: no GitHub token, the Penny manager was not started. Check the trade in Alpaca.")
+        post("ORB: no GitHub token, the Penny manager was not started. Check the trade in Alpaca.")
         return
     r = requests.post(f"https://api.github.com/repos/{REPO}/actions/workflows/belle-manage.yml/dispatches", timeout=15,
                       headers={"Authorization": f"Bearer {GH}", "Accept": "application/vnd.github+json"},
@@ -212,11 +213,8 @@ def trade(d, kind, last, orh, orl, stop):
         t1, t2, t3 = (orh + orl) / 2, (orl if d == -1 else orh), (orl - 0.27 * R if d == -1 else orh + 0.27 * R)
     side, cp = ("CALLS", "C") if d == 1 else ("PUTS", "P")
     why = f"ORB {kind} {side}: 30 min range {orl:.1f} to {orh:.1f}, 15m close {last['c']:.1f}"
-    msg = [f"**ORB {kind} {side}  {hm(last['m'] + 15)} ET ({ct(last['m'] + 15)} CT)**",
-           f"30 min opening range: ORH {orh:.1f} | ORL {orl:.1f}. 15m close {last['c']:.1f}.",
-           f"Stop: SPX {stop:.1f}",
-           f"Target 1 {t1:.1f} | Target 2 {t2:.1f} | Target 3 {t3:.1f}",
-           "SPY: trim 1 at Target 1, 1 at Target 2, last at Target 3. SPX: stop rule E, out at Target 3."]
+    spx_k = int(round(last["c"] / 5) * 5)
+    spy_k = int(round(last["c"] / ratio))
     notes = []
     if DRY:
         notes.append("test run, no orders")
@@ -228,7 +226,8 @@ def trade(d, kind, last, orh, orl, stop):
             lim = tick(c["ask"], "SPX")
             oid = buy(c["sym"], 1, lim, "SPX")
             if oid:
-                notes.append(f"bought 1 SPX {c['k']:g}{cp} at {lim:.2f}")
+                notes.append(f"bought 1 SPX {c['k']:g}{cp} at {lim:.2f} (${lim * 100:.0f} total)")
+                spx_k = int(c["k"])
                 dispatch(oid, c["sym"], f"SPX {c['k']:g}{cp} ORB", side, stop / ratio, t1 / ratio, why, t2 / ratio, t3 / ratio)
         else:
             notes.append(f"SPX skipped, nothing between ${SPX_MIN:.2f} and ${SPX_MAX:.2f}")
@@ -237,11 +236,21 @@ def trade(d, kind, last, orh, orl, stop):
             lim = tick(y["ask"], "SPY")
             oid = buy(y["sym"], SPY_QTY, lim, "SPY")
             if oid:
-                notes.append(f"bought {SPY_QTY} SPY {y['k']:g}{cp} at {lim:.2f}")
+                notes.append(f"bought {SPY_QTY} SPY {y['k']:g}{cp} at {lim:.2f} (${lim * 100 * SPY_QTY:.0f} total)")
+                spy_k = int(y["k"])
                 dispatch(oid, y["sym"], f"SPY {y['k']:g}{cp} ORB", side, stop / ratio, t1 / ratio, why, t2 / ratio, t3 / ratio)
         else:
             notes.append("SPY skipped, nothing at $0.60 or less")
-    msg.append("PENNY: " + ("; ".join(notes) or "no trade"))
+    if kind == "SWEEP":
+        reason = f"Swept the {'ORH' if d == -1 else 'ORL'} {orh if d == -1 else orl:.1f} and closed back inside on the 15m"
+    else:
+        reason = f"Two 15m closes {'above the ORH' if d == 1 else 'below the ORL'} {orh if d == 1 else orl:.1f}"
+    msg = [f"**{side}  {hm(last['m'] + 15)} ET ({ct(last['m'] + 15)} CT)**",
+           f"Belle's strike:  SPX {spx_k}{cp}  |  SPY {spy_k}{cp}",
+           f"Stop:  SPX {stop:.1f}  |  SPY {stop / ratio:.2f}",
+           f"Target 1:  {t1:.1f}  |  Target 2:  {t2:.1f}  |  Target 3:  {t3:.1f}",
+           f"Why:  {reason}",
+           "PENNY:  " + ("\n".join(notes) or "no trade")]
     post("\n\n".join(msg))
 
 
@@ -288,7 +297,7 @@ def process(B):
         trade(-1, "CONTINUATION", last, orh, orl, orl + 3)
     elif not state["inside_posted"] and last["m"] >= 10 * 60 + 45 and orl <= last["c"] <= orh:
         state["inside_posted"] = True
-        post(f"ORB  11:00 ET (10:00 CT): stuck inside the 30 min range ({orl:.1f} to {orh:.1f}). No trade. Patience is a position.")
+        print(f"ORB  11:00 ET (10:00 CT): stuck inside the 30 min range ({orl:.1f} to {orh:.1f}). No trade. Patience is a position.")
 
 
 def save_rows():
