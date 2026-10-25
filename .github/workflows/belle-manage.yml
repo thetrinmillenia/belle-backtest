@@ -22,6 +22,12 @@ on:
       spy_t1:
         description: "Target 1 as a SPY level"
         required: false
+      spy_t2:
+        description: "Fib Target 2 (SPY price)"
+        required: false
+      spy_t3:
+        description: "Fib Symmetrical Price, all out (SPY price)"
+        required: false
       why:
         description: "Belle's reason for the entry"
         required: false
@@ -53,6 +59,8 @@ jobs:
           SIDE: ${{ github.event.inputs.side }}
           SPY_STOP: ${{ github.event.inputs.spy_stop }}
           SPY_T1: ${{ github.event.inputs.spy_t1 }}
+          SPY_T2: ${{ github.event.inputs.spy_t2 }}
+          SPY_T3: ${{ github.event.inputs.spy_t3 }}
           WHY: ${{ github.event.inputs.why }}
           STUDENT_WEBHOOK_URL: ${{ secrets.STUDENT_WEBHOOK_URL }}
       - name: Save the trade log
