@@ -43,8 +43,9 @@ def now():
 
 
 def post(text):
-    text = ("[TEST] " if DRY else "") + text
     print(text)
+    if REPLAY:
+        return   # test runs print to the GitHub log only, nothing goes to Discord (Titi, Oct 25)
     if HOOK:
         try:
             requests.post(HOOK, json={"content": text[:1900]}, timeout=10)
@@ -196,12 +197,8 @@ def enter(d, start, ext, last, why_base):
     side = "PUTS" if d == -1 else "CALLS"
     cp = "P" if d == -1 else "C"
     why = f"{why_base}. OTE entry {last['c']:.1f}"
-    msg = [f"**STALL BREAK {side} ENTRY (OTE)  {hm(last['m'] + 5)} ET ({ct(last['m'] + 5)} CT)**",
-           f"Pullback into the OTE zone (0.62 to 0.79) and rejected. 5m close {last['c']:.1f}.",
-           f"Fib on the move: Start {start:.1f} | Profit Scale {ext:.1f}",
-           f"Stop: SPX {start:.1f} (beyond the Start)",
-           f"Target 1 (-0.27) {t1:.1f} | Target 2 (-0.62) {t2:.1f} | Symmetrical Price (-1) {t3:.1f}",
-           "SPY: trim 1 at Target 1, 1 at Target 2, last at Symmetrical. SPX: hold to Symmetrical Price."]
+    spx_k = int(round(last["c"] / 5) * 5)
+    spy_k = int(round(last["c"] / ratio))
     notes = []
     if DRY:
         notes.append("test run, no orders")
@@ -213,7 +210,8 @@ def enter(d, start, ext, last, why_base):
             lim = tick(c["ask"], "SPX")
             oid = buy(c["sym"], 1, lim, "SPX")
             if oid:
-                notes.append(f"bought 1 SPX {c['k']:g}{cp} at {lim:.2f}")
+                notes.append(f"bought 1 SPX {c['k']:g}{cp} at {lim:.2f} (${lim * 100:.0f} total)")
+                spx_k = int(c["k"])
                 dispatch(oid, c["sym"], f"SPX {c['k']:g}{cp} STALL FIB", side, start / ratio, t1 / ratio, why, t2 / ratio, t3 / ratio)
         else:
             notes.append(f"SPX skipped, nothing between ${SPX_MIN:.2f} and ${SPX_MAX:.2f}")
@@ -222,11 +220,17 @@ def enter(d, start, ext, last, why_base):
             lim = tick(y["ask"], "SPY")
             oid = buy(y["sym"], SPY_QTY, lim, "SPY")
             if oid:
-                notes.append(f"bought {SPY_QTY} SPY {y['k']:g}{cp} at {lim:.2f}")
+                notes.append(f"bought {SPY_QTY} SPY {y['k']:g}{cp} at {lim:.2f} (${lim * 100 * SPY_QTY:.0f} total)")
+                spy_k = int(y["k"])
                 dispatch(oid, y["sym"], f"SPY {y['k']:g}{cp} STALL FIB", side, start / ratio, t1 / ratio, why, t2 / ratio, t3 / ratio)
         else:
             notes.append("SPY skipped, nothing at $0.60 or less")
-    msg.append("PENNY: " + ("; ".join(notes) or "no trade"))
+    msg = [f"**{side}  {hm(last['m'] + 5)} ET ({ct(last['m'] + 5)} CT)**",
+           f"Belle's strike:  SPX {spx_k}{cp}  |  SPY {spy_k}{cp}",
+           f"Stop:  SPX {start:.1f}  |  SPY {start / ratio:.2f}",
+           f"Target 1:  {t1:.1f}  |  Target 2:  {t2:.1f}  |  Target 3:  {t3:.1f}",
+           f"Why:  Stall break at the {'high' if d == -1 else 'low'}, OTE pullback rejected",
+           "PENNY:  " + ("\n".join(notes) or "no trade")]
     post("\n\n".join(msg))
 
 
@@ -280,12 +284,8 @@ def process(B):
                     why = (f"STALL BREAK {side}: 60 min range {hi - lo:.1f} pts at the day {'high' if d == -1 else 'low'}, "
                            f"{taps} taps, 5m close {last['c']:.1f} through {lo if d == -1 else hi:.1f}. Target 50% of the day's swing")
                     msg = [f"**STALL BREAK {side}  {hm(last['m'] + 5)} ET ({ct(last['m'] + 5)} CT)**",
-                           f"Stall {lo:.1f} to {hi:.1f} ({hi - lo:.1f} pts, {taps} taps). 5m close {last['c']:.1f}.",
-                           f"Stop: SPX {stop_spx:.1f} (SPY {stop_spx / ratio:.2f})",
-                           f"50% of the day's swing: SPX {tgt:.1f} (SPY {tgt / ratio:.2f})"]
-                    if d == 1 and above:
-                        msg.append("Note: calls above PDC EOD. Puts are favored EOD, size small.")
-                    msg.append("Waiting for the OTE pullback (0.62 to 0.79 of the move) to enter. A 5m close back beyond the stall cancels it.")
+                           f"Stall {lo:.1f} to {hi:.1f} broke {'lower' if d == -1 else 'higher'}",
+                           f"Why:  60 min stall at the {'high' if d == -1 else 'low'} of day, 5m close {'below' if d == -1 else 'above'} the stall"]
                     pend = {"d": d, "start": stop_spx, "ext": last["l"] if d == -1 else last["h"], "why": why}
                     post("\n\n".join(msg))
                     break
@@ -294,7 +294,7 @@ def process(B):
     if pend and last["m"] > fired[2]:
         d, start = pend["d"], pend["start"]
         if (d == -1 and last["c"] > start) or (d == 1 and last["c"] < start) or last["m"] > 15 * 60 + 40:
-            post(f"STALL BREAK {'PUTS' if d == -1 else 'CALLS'}: canceled, {'5m close back above the stall' if last['m'] <= 15 * 60 + 40 else 'no OTE pullback by 15:45 ET'}. No trade.")
+            print(f"STALL BREAK {'PUTS' if d == -1 else 'CALLS'}: canceled, {'5m close back above the stall' if last['m'] <= 15 * 60 + 40 else 'no OTE pullback by 15:45 ET'}. No trade.")
             pend = None
         else:
             R = abs(start - pend["ext"])
