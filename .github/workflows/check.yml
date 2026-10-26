@@ -1,0 +1,32 @@
+name: Code check
+# Every change to a bot, the relay or a workflow is checked for errors right away, before the market sees it.
+# No orders, no Discord. A red X on the commit means something is broken.
+on:
+  push:
+    paths:
+      - "bots/**"
+      - "belle-cron/**"
+      - ".github/workflows/**"
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Every bot compiles
+        run: python -m py_compile bots/*.py
+      - name: No undefined names in the trading bots
+        run: |
+          pip install pyflakes
+          python -m pyflakes bots/penny_common.py bots/belle_or.py bots/belle_stall.py bots/pearl.py bots/shadow.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Relay files load
+        run: |
+          for f in belle-cron/api/*.js; do cp "$f" /tmp/check.mjs; node --check /tmp/check.mjs || { echo "broken: $f"; exit 1; }; done
+          python -c "import json; json.load(open('belle-cron/vercel.json'))"
