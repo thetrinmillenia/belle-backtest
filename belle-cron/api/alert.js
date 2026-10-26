@@ -129,6 +129,16 @@ export default async function handler(req, res) {
       });
     } catch (e) { notes.push('Pearl not reached'); }
   }
+    // Shadow (Titi, Oct 26): an alert Penny filters out is still scored after the close (entry, highest, heat, rule E). No order, no Discord.
+  if (inWin && (holding || chopSkip || eodNoCalls) && a.spxStrike && process.env.GITHUB_TOKEN) {
+    try {
+      await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/shadow.yml/dispatches`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN.trim()}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'shadow' },
+        body: JSON.stringify({ ref: 'main', inputs: { mode: 'record', sym: occ('SPXW', ymd, cp, Number(a.spxStrike)), side: a.side, reason: holding ? 'holding a trade' : (chopSkip ? 'chop filter (up $200, lunch)' : 'EOD calls above PDC'), sent: String(Math.floor(Date.now() / 1000)) } })
+      });
+    } catch (e) { }
+  }
   if (inWin && !holding && !chopSkip && !eodNoCalls) {
       const acct = await (await fetch(`${TRADE}/v2/account`, { headers: H() })).json();
       let bp = Number(acct.options_buying_power || acct.buying_power || 0);
