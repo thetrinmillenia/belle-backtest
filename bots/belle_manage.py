@@ -363,12 +363,6 @@ while True:
                         draft(f"TRIMMING 🚨\n{QTY - left}/{QTY} SOLD @ {money(px)}. {left} left, the last one rides.\n@everyone")
                 post(f"{LABEL} {msg}")
         stop = entry * 0.57   # starting stop 43% (Titi, Oct 20)
-        # step stop (Titi, Oct 20; backtest: best total, same worst loss): +20% raises the stop to -20%, +40% moves it to breakeven
-        if False:   # step stop retired (rule E, Oct 25)
-            stop = max(stop, entry * 0.80)
-            if "step" not in said:
-                said.add("step")
-                post(f"{LABEL} +20%, stop raised to -20% ({entry * 0.80:.2f})")
         if peak >= entry * 1.60 and not HOLD:   # rule E (Titi, Oct 25): breakeven at +60%
             stop = max(stop, entry)
             if "be" not in said:
@@ -377,21 +371,6 @@ while True:
                 draft(f"Stop moved to breakeven on SPY {SIDE_W} ({money(entry)}). No risk left on this one.\n@everyone")
         if peak >= entry * 2.0 and not HOLD:   # rule E: after +100%, trail 30% below the best (no $50 cap)
             stop = max(stop, peak * 0.70)
-        # EOD tight trail (Titi, Oct 19): 20% below the best from +30%, 15% below the best from +100%
-        if False:   # EOD tight trail retired (rule E covers EOD too, Oct 25)
-            stop = max(stop, peak * (0.85 if peak >= entry * 2.0 else 0.80), entry * 1.05)
-        # tighter trail once the trade doubles (Titi, Oct 16): keep the winner running toward the target
-        # never give back a 100% winner (Titi, Oct 17): at +100% lock +70%, then step the lock up every +10%
-        # (+120% locks +90%, +150% locks +120%, and so on)
-        if False:   # +100% lock retired (rule E, Oct 25)
-            gain = int((peak / entry - 1) * 10 + 1e-9) / 10
-            lock = entry * (1 + gain - 0.30)
-            stop = max(stop, lock)
-            # Discord only at +120%, +150% and +300% (Titi, Oct 17: no flood of messages)
-            for ms in (1.2, 1.5, 3.0):
-                if peak >= entry * (1 + ms) and f"ms{ms}" not in said:
-                    said.add(f"ms{ms}")
-                    post(f"{LABEL} +{ms*100:.0f}%, stop locked at +{(gain-0.30)*100:.0f}% ({lock:.2f})")
         if HOLD:
             stop = entry * 0.40 if peak < entry * 2.0 else max(entry * 0.40, peak * 0.60)
         # opposite Belle alert while this trade is open (Titi, Oct 16): no new trade, tighten this one
