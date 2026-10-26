@@ -56,6 +56,9 @@ if MODE == "record":
 
 # ---------- eval ----------
 day = os.environ.get("EVAL_DATE", "").strip() or f"{now():%Y-%m-%d}"
+if not os.environ.get("EVAL_DATE", "").strip() and now().hour < 16:
+    print("before 16:00 ET, the day is not done yet")
+    sys.exit(0)
 if not os.path.exists(SIG):
     print("no shadow signals yet")
     sys.exit(0)
