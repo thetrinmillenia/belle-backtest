@@ -1,0 +1,57 @@
+name: Shadow (alerts Penny skipped)
+# Started by the relay when Penny filters out a Belle alert. Saves the contract and its entry price. No orders, no Discord.
+# The scoring (highest, heat, rule E) runs in Nora's job after the close. Test: mode = eval, date = YYYY-MM-DD.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "record or eval"
+        default: "record"
+      sym:
+        description: "Option contract"
+        default: ""
+      side:
+        description: "CALLS or PUTS"
+        default: ""
+      reason:
+        description: "Why Penny skipped it"
+        default: ""
+      sent:
+        description: "Alert time (epoch seconds)"
+        default: ""
+      date:
+        description: "eval only: YYYY-MM-DD"
+        default: ""
+concurrency:
+  group: shadow
+  cancel-in-progress: false
+permissions:
+  contents: write
+jobs:
+  shadow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests
+      - run: python bots/shadow.py
+        env:
+          ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          MODE: ${{ inputs.mode }}
+          SYM: ${{ inputs.sym }}
+          SIDE: ${{ inputs.side }}
+          REASON: ${{ inputs.reason }}
+          SENT: ${{ inputs.sent }}
+          EVAL_DATE: ${{ inputs.date }}
+      - name: Save
+        run: |
+          git config user.name shadow-bot
+          git config user.email shadow-bot@users.noreply.github.com
+          git add results/shadow_signals.csv || true
+          git add results/shadow_trades.csv || true
+          git commit -m "Shadow log" || exit 0
+          for i in 1 2 3; do git pull --rebase && git push && break; sleep 5; done || true
