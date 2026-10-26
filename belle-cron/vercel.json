@@ -1,6 +1,16 @@
 {
   "crons": [
     { "path": "/api/morning", "schedule": "0 10 * * 1-5" },
-    { "path": "/api/afternoon", "schedule": "0 17 * * 1-5" }
+    { "path": "/api/afternoon", "schedule": "0 17 * * 1-5" },
+    { "path": "/api/kick?job=orb&utc=13", "schedule": "5 13 * * 1-5" },
+    { "path": "/api/kick?job=orb&utc=14", "schedule": "5 14 * * 1-5" },
+    { "path": "/api/kick?job=stall&utc=17", "schedule": "5 17 * * 1-5" },
+    { "path": "/api/kick?job=stall&utc=18", "schedule": "5 18 * * 1-5" },
+    { "path": "/api/kick?job=eod&utc=20", "schedule": "5 20 * * 1-5" },
+    { "path": "/api/kick?job=eod&utc=21", "schedule": "5 21 * * 1-5" },
+    { "path": "/api/kick?job=nora&utc=20", "schedule": "15 20 * * 1-5" },
+    { "path": "/api/kick?job=nora&utc=21", "schedule": "15 21 * * 1-5" },
+    { "path": "/api/kick?job=harper&utc=20", "schedule": "35 20 * * 1-5" },
+    { "path": "/api/kick?job=harper&utc=21", "schedule": "35 21 * * 1-5" }
   ]
 }
