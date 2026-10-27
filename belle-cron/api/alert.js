@@ -129,16 +129,15 @@ export default async function handler(req, res) {
       });
     } catch (e) { notes.push('Pearl not reached'); }
   }
-    // Shadow (Titi, Oct 26): an alert Penny filters out is still scored after the close (entry, highest, heat, rule E). No order, no Discord.
-  if (inWin && (holding || chopSkip || eodNoCalls) && a.spxStrike && process.env.GITHUB_TOKEN) {
-    try {
-      await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/shadow.yml/dispatches`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN.trim()}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'shadow' },
-        body: JSON.stringify({ ref: 'main', inputs: { mode: 'record', sym: occ('SPXW', ymd, cp, Number(a.spxStrike)), side: a.side, reason: holding ? 'holding a trade' : (chopSkip ? 'chop filter (up $200, lunch)' : 'EOD calls above PDC'), sent: String(Math.floor(Date.now() / 1000)) } })
-      });
-    } catch (e) { }
-  }
+    // Shadow (Titi, Oct 26): every alert Penny skips, fully or for one of SPX / SPY, is scored after the close
+    // (entry, highest, heat, rule E). One start per alert. No order, no Discord.
+    const shadowItems = [];
+    const shadowAdd = (root, why) => { const k = Number(root === 'SPY' ? a.spyStrike : a.spxStrike); if (inWin && k) shadowItems.push(`${occ(root, ymd, cp, k)}|${why}`); };
+    if (holding || chopSkip || eodNoCalls) {
+      const why = holding ? 'holding a trade' : (chopSkip ? 'chop filter (up $200, lunch)' : 'EOD calls above PDC');
+      shadowAdd('SPXW', why);
+      shadowAdd('SPY', why);
+    }
   if (inWin && !holding && !chopSkip && !eodNoCalls) {
       const acct = await (await fetch(`${TRADE}/v2/account`, { headers: H() })).json();
       let bp = Number(acct.options_buying_power || acct.buying_power || 0);
@@ -149,12 +148,12 @@ export default async function handler(req, res) {
         const qty = root === 'SPY' ? SPY_QTY : 1;
         const maxCost = root === 'SPY' ? SPY_MAX : MAX_COST; // per contract: SPX $100 to $250, SPY up to $0.60 (Titi, Oct 19)
         const c = await pick(root, cp, price, ymd, root === 'SPY' ? a.spyStrike : a.spxStrike, maxCost, root === 'SPY' ? 0 : MIN_COST);
-        if (!c) { notes.push(root === 'SPY' ? 'SPY skipped, nothing at $0.60 or less within 10 strikes' : `SPX skipped, nothing between ${MIN_COST} and ${MAX_COST} within 10 strikes`); continue; }
+        if (!c) { shadowAdd(root, 'no contract under the price cap'); notes.push(root === 'SPY' ? 'SPY skipped, nothing at $0.60 or less within 10 strikes' : `SPX skipped, nothing between ${MIN_COST} and ${MAX_COST} within 10 strikes`); continue; }
         if (c.moved > 0) notes.push(`${label}: Belle's ${c.chart ? c.chart.strike : ''}${cp} was $${c.chart ? Math.round(c.chart.cost * qty) : '?'}${qty > 1 ? ` for ${qty}` : ''}, over $${MAX_COST}, so Penny went ${c.moved} strike${c.moved > 1 ? 's' : ''} further out`);
         const lim = tick(c.ask, root);
-        if (lim * 100 * qty > bp) { notes.push(`${label} skipped, not enough buying power`); continue; }
+        if (lim * 100 * qty > bp) { notes.push(`${label} skipped, not enough buying power`); shadowAdd(root, 'not enough buying power'); continue; }
         const o = await (await fetch(`${TRADE}/v2/orders`, { method: 'POST', headers: H(), body: JSON.stringify({ symbol: c.sym, qty: String(qty), side: 'buy', type: 'limit', limit_price: lim.toFixed(2), time_in_force: 'day', client_order_id: `penny-${t.y}-${t.m}-${t.d}-${label}-${Date.now()}` }) })).json();
-        if (!o.id) { notes.push(`${label} order rejected`); continue; }
+        if (!o.id) { notes.push(`${label} order rejected`); shadowAdd(root, 'order rejected'); continue; }
         bp -= lim * 100 * qty;
         picked[label] = { ...c, lim, id: o.id, qty };
         if (process.env.GITHUB_TOKEN) {
@@ -167,6 +166,15 @@ export default async function handler(req, res) {
       }
     } else if (!inWin) notes.push('no trade, outside the windows');
 
+        if (shadowItems.length && process.env.GITHUB_TOKEN) {
+      try {
+        await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/shadow.yml/dispatches`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN.trim()}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'shadow' },
+          body: JSON.stringify({ ref: 'main', inputs: { mode: 'record', sym: shadowItems.join(';'), side: a.side, sent: String(Math.floor(Date.now() / 1000)) } })
+        });
+      } catch (e) { }
+    }
     const spyK = picked.SPY ? picked.SPY.strike : a.spyStrike;
     const spxK = picked.SPX ? picked.SPX.strike : a.spxStrike;
     const bought = Object.entries(picked).map(([k, v]) => `bought ${v.qty} ${k} ${v.strike}${cp} at ${v.lim.toFixed(2)} ($${Math.round(v.lim * 100 * v.qty)} total)`).join('\n');
