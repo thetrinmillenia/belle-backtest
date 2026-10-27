@@ -174,6 +174,19 @@ def pearl_go(source, side, spy_stop, spy_t3, why):
     print("pearl dispatch", r.status_code)
 
 
+def already_traded(bot, day):
+    """True when Penny already bought for this bot today (client order id penny-BOT-...), so a second start of the
+    same bot can never trade the same setup twice."""
+    try:
+        start = dt.datetime.combine(day, dt.time(0, 0), ET).isoformat()
+        orders = requests.get(f"{TRADE}/v2/orders", headers=H, timeout=15,
+                              params={"status": "all", "after": start, "limit": 500}).json()
+        return any(str(o.get("client_order_id", "")).startswith(f"penny-{bot}-") for o in orders if isinstance(o, dict))
+    except Exception as e:
+        print("order check failed", e)
+        return False
+
+
 def holding():
     try:
         pos = requests.get(f"{TRADE}/v2/positions", headers=H, timeout=10).json()
