@@ -247,7 +247,7 @@ def save(entry, exitp, peak, reason):
 
 def wait_fill(oid, quiet=False):
     """Strict hold-open rule (Titi, Oct 19): the limit order stays at the entry price (a pullback fills it, never chase).
-    Up to 10 minutes, canceled at once if SPY hits Belle's stop or it is 15:55 or later."""
+    Up to 10 minutes, canceled at once if SPY hits Belle's stop or it is 15:57 or later (a 15:55 EOD entry still gets 2 minutes to fill, Titi Oct 27)."""
     start = time.time()
     while True:
         o = get_order(oid)
@@ -262,7 +262,7 @@ def wait_fill(oid, quiet=False):
             spy = spy_price()
         except Exception:
             spy = None
-        late = now().hour * 60 + now().minute >= 955
+        late = now().hour * 60 + now().minute >= 957
         broke = spy and SPY_STOP and (spy - SPY_STOP) * DIR <= 0
         if time.time() - start > 600 or broke or late:
             requests.delete(f"{TRADE}/v2/orders/{oid}", headers=H, timeout=10)
