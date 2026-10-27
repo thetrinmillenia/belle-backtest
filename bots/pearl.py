@@ -292,10 +292,12 @@ while reason is None:
             post(f"{K} +60%, stop moved to breakeven")
             be_said = True
     if peak >= entry * 2.0:
-        stop = max(stop, peak * 0.70)
+        stop = max(stop, peak * (0.85 if SOURCE == "EOD" else 0.70))
         if not trail_said:
-            post(f"{K} +100%, trail now 30% below the best")
+            post(f"{K} +100%, trail now {'15' if SOURCE == 'EOD' else '30'}% below the best")
             trail_said = True
+    if SOURCE == "EOD" and peak >= entry * 1.30:   # EOD trail (Titi, Oct 27): 20% below the best from +30%
+        stop = max(stop, peak * 0.80)
     s = spy_last()
     if mins() >= EXIT_MIN:
         reason = "15:59"
@@ -306,7 +308,7 @@ while reason is None:
     elif s and SPY_T3 and ((D == 1 and s >= SPY_T3) or (D == -1 and s <= SPY_T3)):
         reason = "Target 3"
     else:
-        time.sleep(5)
+        time.sleep(2 if SOURCE == "EOD" else 5)   # EOD checks every 2 seconds (Titi, Oct 27)
 
 out = sell()
 if out is None:
