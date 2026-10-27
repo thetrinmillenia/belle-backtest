@@ -337,12 +337,6 @@ while True:
             reason = "target"
             break
         msg = f"{LABEL} Target 1 hit"
-        if EOD and left >= 2:   # EOD TP1 (Titi, Oct 19): bank 1 at the target, the rest trails
-            px = sell(1)
-            if px:
-                banked.append((px, 1))
-                left -= 1
-                msg += f", sold 1 of {QTY} at {px:.2f}, {left} left"
         post(msg)
     if bid:
         peak = max(peak, bid)
@@ -351,10 +345,13 @@ while True:
         if hit:
             said.update(f"d{m}" for m in hit)
             draft(f"{money(bid)} HERE ON SPY {SIDE_W}\nUP +{gain * 100:.0f}% {'☢️' if hit[-1] >= 100 else '🔥'}\n@everyone")
-        for lvl, msg in ((0.20, "+20%"), (0.50, "+50%, take partial"), (1.00, "+100%, trail now 30% below the best (rule E)")):
+        levels = ((0.20, "+20%"), (0.50, "+50%, take partial"), (1.00, "+100%, trail now 30% below the best (rule E)"))
+        if EOD:   # EOD (Titi, Oct 27): take partials at +100% and +200%, the trail is 15% below the best after +100%
+            levels = ((0.20, "+20%"), (0.50, "+50%"), (1.00, "+100%, take partial, trail now 15% below the best"), (2.00, "+200%, take partial"))
+        for lvl, msg in levels:
             if gain >= lvl and lvl not in said:
                 said.add(lvl)
-                if lvl in (0.50, 1.00) and left >= 2 and not FIB:
+                if lvl in ((1.00, 2.00) if EOD else (0.50, 1.00)) and left >= 2 and not FIB:
                     px = sell(1)
                     if px:
                         banked.append((px, 1))
@@ -371,6 +368,11 @@ while True:
                 draft(f"Stop moved to breakeven on SPY {SIDE_W} ({money(entry)}). No risk left on this one.\n@everyone")
         if peak >= entry * 2.0 and not HOLD:   # rule E: after +100%, trail 30% below the best (no $50 cap)
             stop = max(stop, peak * 0.70)
+        if EOD:   # EOD trail (Titi, Oct 27): fast spikes. 20% below the best from +30%, 15% below the best from +100%
+            if peak >= entry * 1.30:
+                stop = max(stop, peak * 0.80)
+            if peak >= entry * 2.0:
+                stop = max(stop, peak * 0.85)
         if HOLD:
             stop = entry * 0.40 if peak < entry * 2.0 else max(entry * 0.40, peak * 0.60)
         # opposite Belle alert while this trade is open (Titi, Oct 16): no new trade, tighten this one
@@ -393,7 +395,7 @@ while True:
         if bid <= stop:
             reason = "flip" if warned and stop == warn_stop else ("trail" if peak >= entry * 1.3 and stop > entry else ("breakeven" if stop >= entry else ("step stop" if stop >= entry * 0.80 - 1e-9 else "43% stop")))
             break
-    time.sleep(10)
+    time.sleep(2 if EOD else 10)   # EOD checks every 2 seconds (Titi, Oct 27)
 
 # 3) exit
 if reason == "EXIT" or STOP_FILL is not None:
