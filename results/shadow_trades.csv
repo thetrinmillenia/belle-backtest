@@ -1,0 +1,7 @@
+date,time_et,side,contract,entry,highest,highest_pct,highest_time_et,lowest_before_high,rule_e_exit,rule_e_pl,reason
+2026-10-27,11:40,CALLS,SPXW261027C07740000,2.23,6.50,191,12:00,2.15,4.55,232,"chop filter (up $200, lunch)"
+2026-10-27,11:40,CALLS,SPY261027C00771000,0.40,0.93,133,12:00,0.36,0.65,25,"chop filter (up $200, lunch)"
+2026-10-27,11:55,CALLS,SPXW261027C07745000,2.48,4.50,81,12:00,2.20,2.48,0,"chop filter (up $200, lunch)"
+2026-10-27,11:55,CALLS,SPY261027C00772000,0.30,0.49,63,12:00,0.26,0.30,0,"chop filter (up $200, lunch)"
+2026-10-27,15:25,CALLS,SPXW261027C07735000,0.67,4.12,515,15:35,0.35,0.38,-29,no contract under the price cap
+2026-10-27,15:35,CALLS,SPY261027C00771000,0.37,0.50,35,15:35,0.27,0.21,-16,order rejected

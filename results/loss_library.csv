@@ -1,4 +1,6 @@
 Date,Who,Ticker,Bias,Setup,Tags,P/L,Lesson,Note
+2026-10-27,Penny,SPY,Bearish,,Window 1,-51.0,Note what the higher timeframe said before entry.,"Alpaca fill. SPY 763P x3, first entry 10:05 ET, 0.42 to 0.25 (-40%)."
+2026-10-27,Penny,SPX,Bearish,,Window 1,-95.0,Note what the higher timeframe said before entry.,"Alpaca fill. SPX 7640P x1, first entry 10:05 ET, 2.15 to 1.20 (-44%)."
 2026-10-20,Penny,SPX,Bullish,"late hour: low of the hour 7707.67 held, strong close back over","Late hour high/low, Window 2, Exit: 43% stop",-65.0,Note what the higher timeframe said before entry.,"Penny auto log. SPX 7740C, entry 13:55 ET, out 13:57 ET (43% stop), best +0%."
 2026-10-20,Penny,SPX,Bearish,"15m Strat 2-1-2 down with the trend, closed under 7711.17","Strat 2-1-2, 15m Strat, Window 3 EOD, Exit: trail",-40.0,Was up 20% or more and still lost: take the partial or move the stop sooner.,"Penny auto log. SPX 7700P EOD, entry 15:30 ET, out 15:31 ET (trail), best +36%."
 2026-10-20,Penny,SPY,Bullish,,Window 1,-1.0,Note what the higher timeframe said before entry.,"Alpaca fill. SPY 772C x3, first entry 10:15 ET, 0.38 to 0.71 (86%)."
