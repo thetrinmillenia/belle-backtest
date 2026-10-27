@@ -33,7 +33,7 @@ MAX_ASK, MIN_ASK = 1.50, 0.30
 MAX_DAY_LOSS = 150.0
 LAST_ENTRY = 15 * 60 + 50
 EXIT_MIN = 15 * 60 + 59
-WINDOWS = {"W1": (10 * 60, 11 * 60 + 30), "STALL": (14 * 60, LAST_ENTRY), "EOD": (15 * 60, LAST_ENTRY)}
+WINDOWS = {"W1": (10 * 60, 11 * 60 + 30), "STALL": (14 * 60, LAST_ENTRY), "EOD": (15 * 60, 15 * 60 + 55)}   # EOD to 15:55 like Penny (Oct 27)
 
 DRY = os.environ.get("DRY", "").strip() == "1"
 KEY = os.environ.get("PEARL_KEY_ID", "").strip()
