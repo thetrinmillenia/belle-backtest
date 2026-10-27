@@ -1,8 +1,8 @@
 """PEARL, the LIVE bot (Titi, Oct 25 2026). Real money, Alpaca LIVE cash account.
 
 Rules (Titi):
-  - 1 SPX contract, ask $1.50 or less ($150 or less per contract). Buys with a limit order only.
-  - 1 loss and done for the day. Also done for the day if her day P/L reaches -$150.
+  - 1 SPX contract, ask $1.20 or less. Buys with a limit order only. 30% stop, breakeven at +30%.
+  - 1 loss and done for the day. Done at -$40 or at +$200 for the day. One Window 1 trade a day. Stall off.
   - One trade at a time. Last entry 15:50 ET. Everything out at 15:59 ET no matter what.
   - Week one setups: Window 1 (10:00 to 11:30 ET), the stall break (14:00 to 15:50 ET), EOD (15:00 to 15:50 ET),
     calls and puts both considered.
@@ -29,8 +29,12 @@ import requests
 ET = ZoneInfo("America/New_York")
 LIVE = "https://api.alpaca.markets"        # LIVE trading endpoint. Pearl only.
 DATA = "https://data.alpaca.markets"
-MAX_ASK, MIN_ASK = 1.50, 0.30
-MAX_DAY_LOSS = 150.0
+# Tight rules (Titi, Oct 27): account $400 to $500, goal $200+ a day, as close to no losses as rules allow
+MAX_ASK, MIN_ASK = 1.20, 0.30     # her winners were $0.45 to $1.10 contracts
+MAX_DAY_LOSS = 40.0               # done for the day at -$40
+DAY_GOAL = 200.0                  # done for the day at +$200, the goal is banked
+STOP_LOSS = 0.30                  # starting stop: 30% loss of premium (most she can lose on $1.20: $36)
+BE_AT = 1.30                      # breakeven once she is +30%, so a winner never turns into a loser
 LAST_ENTRY = 15 * 60 + 50
 EXIT_MIN = 15 * 60 + 59
 WINDOWS = {"W1": (10 * 60, 11 * 60 + 30), "STALL": (14 * 60, LAST_ENTRY), "EOD": (15 * 60, 15 * 60 + 55)}   # EOD to 15:55 like Penny (Oct 27)
@@ -92,6 +96,9 @@ if not (KEY and SEC):
     KEY, SEC = os.environ.get("ALPACA_KEY_ID", "").strip(), os.environ.get("ALPACA_SECRET_KEY", "").strip()
     LIVE = None   # dry run on data only: no account, no orders
 H = {"APCA-API-KEY-ID": KEY, "APCA-API-SECRET-KEY": SEC}
+if SOURCE == "STALL":
+    say("Pearl: stall breaks are off for Pearl until they prove themselves on Penny (Titi, Oct 27). Nothing done.")
+    sys.exit(0)
 if SIDE not in ("CALLS", "PUTS") or SOURCE not in WINDOWS:
     say(f"Pearl: bad signal (side {SIDE!r}, source {SOURCE!r}). Nothing done.")
     sys.exit(0)
@@ -198,6 +205,14 @@ if LIVE:
     if day_pl <= -MAX_DAY_LOSS:
         say(f"Pearl: day P/L {day_pl:+.0f}. Done for the day.")
         sys.exit(0)
+    if day_pl >= DAY_GOAL:
+        say(f"Pearl: day P/L {day_pl:+.0f}, the $200 goal is banked. Done for the day.")
+        sys.exit(0)
+    w1_buys = [o for o in orders if o["side"] == "buy" and o.get("filled_at")
+               and dt.datetime.fromisoformat(o["filled_at"].replace("Z", "+00:00")).astimezone(ET).hour < 12]
+    if SOURCE == "W1" and w1_buys:
+        say("Pearl: she already took her one Window 1 trade today. No repeat entries.")
+        sys.exit(0)
     acct = requests.get(f"{LIVE}/v2/account", headers=H, timeout=15).json()
     cash = float(acct.get("options_buying_power") or acct.get("cash") or 0)
 else:
@@ -285,11 +300,11 @@ while reason is None:
     px = (b + a) / 2 if b and a else b
     if px:
         peak = max(peak, px)
-    stop = entry * 0.57
-    if peak >= entry * 1.60:
+    stop = entry * (1 - STOP_LOSS)
+    if peak >= entry * BE_AT:
         stop = max(stop, entry)
         if not be_said:
-            post(f"{K} +60%, stop moved to breakeven")
+            post(f"{K} +30%, stop moved to breakeven")
             be_said = True
     if peak >= entry * 2.0:
         stop = max(stop, peak * (0.85 if SOURCE == "EOD" else 0.70))
