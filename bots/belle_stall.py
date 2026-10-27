@@ -15,8 +15,8 @@ On the entry Penny buys 1 SPX + 3 SPY on the Alpaca PAPER account and the Penny 
 import sys
 import time
 
-from penny_common import (DRY, REPLAY, buy, ct, dispatch, hm, holding, market_day, now, pdc_spy, pearl_go, pick,
-                          post, spx_ratio, spy_bars, tick)
+from penny_common import (DRY, REPLAY, already_traded, buy, ct, dispatch, hm, holding, market_day, now, pdc_spy,
+                          pearl_go, pick, post, spx_ratio, spy_bars, tick)
 
 STALL_RANGE = 10.0   # SPX points over the last 60 minutes (12 x 5m)
 TAP = 3.0            # EQH / EQL tolerance, SPX points
@@ -39,6 +39,9 @@ pend = None       # stall break waiting for the OTE pullback (Titi, Oct 25)
 def enter(d, start, ext, last, why_base):
     """Penny's entry at the OTE pullback. Fib on the move: 1 = stall extreme (start), 0 = the break's extreme.
     Stop beyond 1. SPY trims at -0.27 and -0.62, everything out at -1. SPX holds (no trims)."""
+    if not DRY and already_traded("stall", day):
+        print("stall: Penny already took a setup today, this start does nothing (no post, no order)")
+        return
     R = abs(start - ext)
     t1, t2, t3 = ext + d * 0.27 * R, ext + d * 0.62 * R, ext + d * 1.0 * R
     side = "PUTS" if d == -1 else "CALLS"
