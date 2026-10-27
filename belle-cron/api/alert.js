@@ -81,7 +81,7 @@ export default async function handler(req, res) {
     const mins = t.h * 60 + t.min;
     const ymd = `${t.y.slice(2)}${t.m}${t.d}`;
     // same windows as Belle v42 (by candle close): W1 10:00 to 12:30, W2 13:45 to 15:00, W3 15:00 to 15:50 ET
-    const inWin = t.wd !== 'Sat' && t.wd !== 'Sun' && ((mins >= 600 && mins <= 750) || (mins >= 900 && mins <= 953)); // Window 2 (13:45 to 15:00) off for Belle alerts (Titi, Oct 25: 3 of 14 won). The stall break job trades it // Window 3 entries until 15:53 like Belle
+    const inWin = t.wd !== 'Sat' && t.wd !== 'Sun' && ((mins >= 600 && mins <= 750) || (mins >= 900 && mins <= 955)); // Window 2 (13:45 to 15:00) off. EOD runs to 15:55 so the 15:50 candle counts (Titi, Oct 27)
 
     // morning: SPY first; afternoon: SPX first. Penny buys both when the cash allows.
     const order = mins < 760 ? ['SPY', 'SPXW'] : ['SPXW', 'SPY'];
