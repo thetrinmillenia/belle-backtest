@@ -14,8 +14,8 @@ import os
 import sys
 import time
 
-from penny_common import (DRY, REPLAY, buy, ct, dispatch, hm, holding, market_day, now, pdc_spy, pick, post,
-                          spx_ratio, spy_bars, tick)
+from penny_common import (DRY, REPLAY, already_traded, buy, ct, dispatch, hm, holding, market_day, now, pdc_spy,
+                          pick, post, spx_ratio, spy_bars, tick)
 
 SPX_MIN, SPX_MAX = 1.50, 2.50
 SPY_MAX = 0.60
@@ -55,6 +55,9 @@ def record(tf, kind, d, bar, ref):
 
 
 def trade(d, kind, last, orh, orl, stop):
+    if not DRY and already_traded("orb", day):
+        print("orb: Penny already took a setup today, this start does nothing (no post, no order)")
+        return
     R = orh - orl
     if kind == "CONTINUATION":
         base = orh if d == 1 else orl
