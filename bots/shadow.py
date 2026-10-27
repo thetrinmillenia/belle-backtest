@@ -1,7 +1,7 @@
 """SHADOW (Titi, Oct 26 2026). Scores the Belle alerts Penny filtered out. No orders, no Discord.
 
 record (started by the relay the moment Penny skips an alert):
-  saves the SPX contract at Belle's strike and its ask (the entry) to results/shadow_signals.csv.
+  saves the SPX and SPY contracts at Belle's strikes and their asks (the entry) to results/shadow_signals.csv.
 eval (runs in Nora's job after the close):
   for today's skipped alerts, 1 minute bars from the alert to 15:59 ET give
   the highest price and its time, the lowest price before that high (the heat),
@@ -38,20 +38,26 @@ def append(path, row, header):
 
 
 if MODE == "record":
-    sym = os.environ.get("SYM", "").strip()
-    if len(sym) < 16:
+    # SYM is "CONTRACT|reason;CONTRACT|reason" (one start per alert covers SPX and SPY), or one contract with REASON
+    items = []
+    for part in os.environ.get("SYM", "").split(";"):
+        sym, _, why = part.strip().partition("|")
+        if len(sym) >= 16:
+            items.append((sym, why or os.environ.get("REASON", "")))
+    if not items:
         print("no contract, nothing saved")
         sys.exit(0)
     try:
         sent = dt.datetime.fromtimestamp(float(os.environ.get("SENT", "")), ET)
     except ValueError:
         sent = now()
-    q = (requests.get(f"{DATA}/v1beta1/options/quotes/latest", headers=H, timeout=15,
-                      params={"symbols": sym, "feed": "indicative"}).json().get("quotes") or {}).get(sym) or {}
-    ask = q.get("ap") or ""
-    append(SIG, [f"{sent:%Y-%m-%d}", f"{sent:%H:%M}", os.environ.get("SIDE", ""), sym, ask, os.environ.get("REASON", "")],
-           ["date", "time_et", "side", "contract", "entry", "reason"])
-    print("saved", sym, ask)
+    q = requests.get(f"{DATA}/v1beta1/options/quotes/latest", headers=H, timeout=15,
+                     params={"symbols": ",".join(s for s, _ in items), "feed": "indicative"}).json().get("quotes") or {}
+    for sym, why in items:
+        ask = (q.get(sym) or {}).get("ap") or ""
+        append(SIG, [f"{sent:%Y-%m-%d}", f"{sent:%H:%M}", os.environ.get("SIDE", ""), sym, ask, why],
+               ["date", "time_et", "side", "contract", "entry", "reason"])
+        print("saved", sym, ask, why)
     sys.exit(0)
 
 # ---------- eval ----------
