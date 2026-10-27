@@ -14,3 +14,4 @@ date,ticker,bias,setup,entry,exit,qty,pl,pct,note
 2026-10-22,SPX,Bearish,"Morning puts, first leg down (the best move of the day)",1.05,3.15,1,210,200,"SPX 7625P. Exit near the screenshot price at 14:31 ET (SPX 7642.86). Calls after the first leg were +25%; lesson: sell at the 50% retracement of the leg."
 2026-10-22,SPX,Bearish,"4H session profile bearish: 10:00 ET FVG rejection and failed close above the ORH",,,1,,415,"SPX 7645P +415%. 02:00 ET bias, 06:00 ET reversal did not cancel it, 14:00 ET continuation, profit at the weekly open. Entry and exit prices not given."
 2026-10-27,SPX,Bullish,"Morning calls (Titi: calls worked perfect this morning)",1.00,7.55,1,655,655,"SPX 7735C. Exit near the screenshot price at 13:00 ET (12:00 CT), SPX 7733.18, breakeven 7736."
+2026-10-27,SPX,Bearish,"EOD puts (the 15:50 puts)",0.45,1.40,,,211,"SPX 7725P +211.11%. Exit 1.40 comes from the 0.45 entry and +211.11%. Titi reported closed at $240 (quantity to confirm)."
