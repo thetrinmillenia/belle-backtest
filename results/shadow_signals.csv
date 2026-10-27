@@ -1,3 +1,5 @@
 date,time_et,side,contract,entry,reason
 2026-10-27,11:40,CALLS,SPXW261027C07740000,2.23,"chop filter (up $200, lunch)"
 2026-10-27,11:40,CALLS,SPY261027C00771000,0.4,"chop filter (up $200, lunch)"
+2026-10-27,11:55,CALLS,SPXW261027C07745000,2.48,"chop filter (up $200, lunch)"
+2026-10-27,11:55,CALLS,SPY261027C00772000,0.3,"chop filter (up $200, lunch)"
