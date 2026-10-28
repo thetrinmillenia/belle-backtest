@@ -1,9 +1,8 @@
 name: Harper review
 
+# Harper now runs inside Nora's job after the close (Oct 27). This file is for a manual rerun only.
 # Harper, the manager: daily review after the close (16:30 ET). Read only, paper account, no Discord posts.
 on:
-  schedule:
-    - cron: "30 20,21 * * 1-5"   # 16:30 ET in both daylight and standard time; the script skips the wrong one
   workflow_dispatch:
     inputs:
       force:
