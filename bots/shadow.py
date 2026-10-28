@@ -188,7 +188,7 @@ for day in days:
         if not sym or not bars:
             print(r["time_et"], r["contract"], "no contract Penny could buy, not scored")
             continue
-        bars = [b for b in bars if bt(b) >= t0]
+        bars = [b for b in bars if t0 <= bt(b) < t1]   # Penny is out by 15:59, the 16:00 bar does not count
         if not bars:
             continue
         qty = 3 if root == "SPY" else 1
