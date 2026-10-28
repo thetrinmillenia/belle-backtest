@@ -34,6 +34,13 @@ jobs:
         run: python bots/nora_learn.py
         env:
           NORA_SHEET_URL: ${{ secrets.NORA_SHEET_URL }}
+      - name: Daily review (Harper merged into Nora, Oct 27)
+        run: python bots/harper.py
+        env:
+          ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          NORA_SHEET_URL: ${{ secrets.NORA_SHEET_URL }}
+          FORCE: ${{ github.event.inputs.force }}
       - name: Shadow trades (alerts Penny skipped)
         run: python bots/shadow.py
         env:
@@ -52,6 +59,7 @@ jobs:
           git add results/nora_trades.csv || true
           git add results/shadow_trades.csv || true
           git add results/bot_health.csv || true
+          git add results/harper || true
           git add results/loss_library.csv || true
           git add results/win_library.csv || true
           git add results/pattern_stats.csv || true
