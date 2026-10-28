@@ -371,7 +371,6 @@ def eod(now):
             g.to_csv(f"{ARCHIVE}/SPX_{d}_1m.csv")
     except Exception as e:
         parts.append(f"SPX archive not saved ({type(e).__name__})")
-    parts.append("Alerts from the indicator today: log them in live_tracker.csv with the SPX strike and the SPY mirror.")
     parts.append(FOOT)
     return "\n\n".join(parts)
 
