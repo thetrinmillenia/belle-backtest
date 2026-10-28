@@ -1,70 +1,93 @@
-# Belle system map
+# 🔔 Belle Bots
 
-SPX 0DTE alerts, paper trading (Penny), live trading (Pearl, off until Titi turns it on) and the daily learning loop.
-Times are ET with CT in brackets. Penny is Alpaca PAPER only. Pearl is the only code that can touch the live account.
+A small team of trading bots for **SPX and SPY 0DTE options**. One bot reads the chart and calls the trade, one paper trades it, one manages every open trade, one trades live with tight rules, and a few more keep the records so the team learns every day.
 
-## Who starts what
+> Educational project. Not financial advice. Options can lose 100% of what you pay. Paper results are not live results.
 
-| Starter | What it starts |
-|---|---|
-| TradingView alert to the Vercel relay (`belle-cron/api/alert.js`) | Belle's entry post, Penny's paper buy, Penny manager, Pearl (Window 1 and EOD), Shadow (skipped alerts) |
-| Vercel clock (`belle-cron/vercel.json`) | Belle morning 06:00 (05:00), Belle afternoon 13:00 (12:00), ORB in the 09:00 (08:00) hour, Stall in the 13:00 (12:00) hour, Belle EOD, Nora and Harper in the 16:00 (15:00) hour |
-| GitHub clock | Backup only. It often starts jobs hours late, and a late start simply exits |
-| A push to the repo | Code check (every bot compiles, the relay loads) |
+---
 
-## Bots
+## 👯 Meet the team
 
-| File | Job | Window | Discord |
+| | Bot | What she does | When (ET) |
 |---|---|---|---|
-| `belle-cron/api/alert.js` | Relay: reads Belle's alert, buys for Penny, starts the manager, Pearl and Shadow | Window 1 10:00 to 12:30 (09:00 to 11:30), EOD 15:00 to 15:53 (14:00 to 14:53). Window 2 off | Belle entry post |
-| `bots/belle_manage.py` | Penny manager: rule E stops, fib targets, out at 15:59 (14:59) | per trade | Penny updates |
-| `bots/belle_or.py` | ORB: 30 min opening range on 15m, both directions | entries 10:00 to 12:15 (09:00 to 11:15) | entry post |
-| `bots/belle_stall.py` | Stall break, OTE entry, EOD stall check, reversal watch | 14:00 to 15:50 (13:00 to 14:50) | stall posts |
-| `bots/penny_common.py` | Shared code for ORB and stall (ratio, contract pick, paper orders, manager and Pearl starts) | | |
-| `bots/pearl.py` | LIVE bot: 1 SPX contract, ask $1.50 or less, 1 loss and done. OFF unless `PEARL_ON` is `true` | W1, stall, EOD | Pearl channel |
-| `bots/shadow.py` | Records every alert Penny skips, scores it after the close (entry, highest, heat, rule E) | | none |
-| `bots/nora.py`, `bots/nora_learn.py` | Daily and weekly recap, win and loss library | after the close | recap |
-| `bots/harper.py` | Daily review doc | after the close | none |
-| `bots/belle.py`, `bots/belle_drafts.py` | Belle reads and the morning drafts | morning, afternoon, EOD | reads |
-| `bots/stop_bt2.py`, `bots/color_bt.py` | Read only backtests | on demand | none |
+| 🔔 | **Belle** | Reads the chart and sends the alerts: the morning read, the afternoon read and every entry | all day |
+| 🪙 | **Penny** | Paper trader. Buys the alert on a practice account | on each alert |
+| ⭐ | **Stella** | Penny's manager. Babysits every open trade: the stop, the trims, the trail and the exit | until 15:59 |
+| 🫒 | **Olive** | Watches the 30 minute opening range (ORH and ORL) on 15 minute candles | 10:00 to 12:15 |
+| 🌙 | **Sadie** | Watches for the afternoon stall break and its pullback entry | 14:00 to 15:55 |
+| 🦪 | **Pearl** | Live trader. Same playbook as Penny with tighter rules. Off until switched on | W1 and EOD |
+| 👥 | **Shay** | Shadow. Scores every alert Penny skipped, so we know which filters help | after the close |
+| 📒 | **Nora** | Record keeper: daily recap, win and loss library, bot attendance | 16:00 |
+| 📝 | **Harper** | Writes the daily review | 16:30 |
 
-## Results
+---
 
-`results/` holds the trade logs: Penny's paper trades, Nora's libraries, `or_breaks.csv` (ORB break size and volume),
-`shadow_signals.csv` and `shadow_trades.csv` (alerts Penny skipped), `pearl_trades.csv` (live). `data/` holds Titi's
-own trades and lessons.
+## 🗺️ How it fits together
 
-## Testing
+```mermaid
+flowchart LR
+    TV["📈 TradingView<br/>Belle's chart alerts"] --> R["⚡ Relay<br/>(Vercel)"]
+    VC["⏰ Vercel clock"] --> R
+    R --> D["💬 Discord<br/>alerts and reads"]
+    R --> P["🪙 Penny<br/>paper buy"]
+    R --> PL["🦪 Pearl<br/>live buy (when on)"]
+    R --> SH["👥 Shay<br/>skipped alerts"]
+    VC --> O["🫒 Olive<br/>morning"]
+    VC --> S["🌙 Sadie<br/>afternoon"]
+    O --> P
+    S --> P
+    P --> ST["⭐ Stella<br/>manages the trade"]
+    PL --> ST
+    ST --> D
+    ST --> A["🏦 Alpaca<br/>orders"]
+    A --> N["📒 Nora + 📝 Harper<br/>after the close"]
+```
 
-Every bot that trades has a replay: Run workflow with a past date. Replays print to the GitHub log only:
-no orders, no Discord. Pearl has `dry = 1`.
+---
 
-## Secrets (Titi adds these herself, never in code)
+## 📐 The rules in one place
 
-Alpaca paper keys, Discord webhooks, `PEARL_KEY_ID`, `PEARL_SECRET_KEY`, `PEARL_WEBHOOK_URL`, and the variable `PEARL_ON`.
+| Rule | Penny (paper) | Pearl (live) |
+|---|---|---|
+| Contract | 1 SPX + 3 SPY | 1 SPX, ask $1.20 or less |
+| Starting stop | 43% of the premium | 30% of the premium |
+| Breakeven | at +60% | at +30% |
+| Morning trail | 30% below the best price after +100% | same |
+| EOD trail | 20% below the best from +30%, 15% from +100%, checked every 2 seconds | same |
+| EOD trims (SPY) | 1 at +100%, 1 at +200%, the last one rides | (1 contract, rides the trail) |
+| Day limits | none | 1 loss and done, done at -$40 or at +$200 |
+| Last entry | 15:55 | 15:55 (EOD) |
+| Everything out | 15:59 | 15:59 |
 
-## Original EOD sweep backtest (backtest.yml)
+---
 
-Free backtest of the Trin Millenia EOD liquidity sweep method on SPX 0DTE.
+## 📊 Results
 
-## What it tests
+Every bot writes plain CSV files you can open in any spreadsheet:
 
-1. Marks ES liquidity pools: PDH, PDL, midnight open, 9:30 open, overnight high and low, the 13:30 candle high and low, and today's swing highs and lows.
-2. Window 1 (14:00 to 14:50 ET) and Window 2 (15:30 to 15:55 ET) only.
-3. The signal is the liquidity sweep: a candle trades through a pool and closes back inside it. Entry at that candle's close, stop at its extreme.
-4. A second trade in the same window is allowed if it points the other way.
-5. It measures how far SPX moved in the trade's favour before 15:59, and whether strikes 10, 15, 20 and 25 points out of the money went in the money.
+| File | What is in it |
+|---|---|
+| `results/paper_trades.csv` | every Penny trade: entry, exit, best price, why |
+| `results/or_breaks.csv` | Olive: size and volume of every opening range break |
+| `results/shadow_trades.csv` | Shay: what the skipped alerts would have done |
+| `results/pearl_trades.csv` | Pearl's live trades |
+| `results/bot_health.csv` | Nora's check that every bot started on time |
+| `results/*_library.csv` | the win and loss libraries the team learns from |
 
-Score notes (never block a trade): CISD within 3 bars, failed 2 (Strat shooter or hammer), ES versus NQ SMT, 1H and 4H candle colour.
+---
 
-Tested on the 5 minute and the 15 minute separately. Data: free Yahoo Finance, about the last 60 days.
+## ▶️ How to run it
 
-## How to run it
+1. **Copy the repo** and connect the `belle-cron` folder to a free Vercel project.
+2. **Add your own keys as secrets.** Keys never go in the code:
+   - GitHub, under Settings, then Secrets and variables, then Actions: `ALPACA_KEY_ID`, `ALPACA_SECRET_KEY`, `DISCORD_WEBHOOK_URL`
+   - Vercel: the same Alpaca keys and webhook, plus `GITHUB_TOKEN`, `RELAY_KEY` and `CRON_SECRET`
+   - Pearl only: `PEARL_KEY_ID`, `PEARL_SECRET_KEY`, `PEARL_WEBHOOK_URL`, and the variable `PEARL_ON` set to `true` when you are ready
+3. **Point your TradingView alerts** at the relay link.
+4. **Test first.** Every trading bot has a replay: open the Actions tab, pick the bot, press **Run workflow** and type a past date. Replays print to the log only: no orders, no Discord.
 
-Actions tab, then **Belle backtest**, then **Run workflow**. It also runs every weekday after the close. Results land in `results/summary.md` and `results/signals_5m.csv` / `results/signals_15m.csv`. `results/history.csv` keeps one row per day forever, so results can be compared over time.
+A code check runs on every change, so a broken file shows a red X before the market ever sees it.
 
-## Change a setting
+---
 
-Edit `config.py` (windows, strike distance, swing size). Add real trades to `answer_key.csv` so the report checks whether the backtest flagged them.
-
-Education only, not financial advice.
+<sub>Made with care for SPX 0DTE traders. Built on Alpaca, TradingView, Vercel, GitHub Actions and Discord.</sub>
