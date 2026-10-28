@@ -4,8 +4,8 @@ Exit: breakeven,2,1,50,6.0
 5m Strat,2,2,100,361.0
 Exit: trail,4,3,75,424.0
 CISD,2,1,50,510.0
-Penny SPY,10,6,60,637.0
-Penny SPX,11,6,55,835.0
+Penny SPY,11,6,55,541.0
+Penny SPX,12,6,50,835.0
 OTE,2,2,100,965.0
 Late hour high/low,2,1,50,1050.0
 OB,3,3,100,1375.0
@@ -16,5 +16,5 @@ Reversal,3,3,100,1835.0
 Exit: broker stop,5,5,100,2591.0
 Sweep,8,7,88,3074.0
 Window 3 EOD,12,10,83,4133.0
-Window 1,17,11,65,4351.0
+Window 1,19,11,58,4255.0
 Titi SPX,16,15,94,10295.0
