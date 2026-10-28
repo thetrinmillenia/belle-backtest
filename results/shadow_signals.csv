@@ -5,3 +5,5 @@ date,time_et,side,contract,entry,reason
 2026-10-27,11:55,CALLS,SPY261027C00772000,0.3,"chop filter (up $200, lunch)"
 2026-10-27,15:25,CALLS,SPXW261027C07735000,0.67,no contract under the price cap
 2026-10-27,15:35,CALLS,SPY261027C00771000,0.37,order rejected
+2026-10-28,10:40,PUTS,SPXW261028P07710000,12.28,holding a trade
+2026-10-28,10:40,PUTS,SPY261028P00768000,1.36,holding a trade
