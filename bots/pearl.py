@@ -314,7 +314,9 @@ while reason is None:
     if SOURCE == "EOD" and peak >= entry * 1.30:   # EOD trail (Titi, Oct 27): 20% below the best from +30%
         stop = max(stop, peak * 0.80)
     s = spy_last()
-    if mins() >= EXIT_MIN:
+    if SOURCE == "W1" and mins() >= 12 * 60:   # her morning trade is closed by 12:00 ET, no lunch trades (Oct 27)
+        reason = "12:00"
+    elif mins() >= EXIT_MIN:
         reason = "15:59"
     elif px and px <= stop:
         reason = "stop"
