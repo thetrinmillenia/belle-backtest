@@ -5,7 +5,7 @@ Titi's setup (Oct 21: 7760P $1.10 to $12.10, then 7760C $0.65 to $4.40):
     within 3 points (EQH / EQL) and price sits within 5 points of the day high (or low).
   - BREAK: a 5m close below the stall (puts) or above it (calls), 14:00 to 15:30 ET. Posts STALL BREAK.
   - ENTRY (ICT fib, Oct 25): the pullback into the OTE zone (0.62 to 0.79 of the move) that closes rejected.
-    Last entry on the 15:50 ET close. A 5m close back beyond the stall cancels it (log only).
+    Last entry on the 15:55 ET close. A 5m close back beyond the stall cancels it (log only).
   - TARGETS: -0.27, -0.62, -1 (Symmetrical Price) of the move. Stop beyond the start of the move.
   - Puts are favored EOD (backtest: above PDC at 15:00, down 67% of days).
 Posts to Discord: the 15:00 EOD STALL CHECK, the STALL BREAK, the entry, and a REVERSAL WATCH (post only).
@@ -143,8 +143,8 @@ def process(B):
     # OTE ENTRY after a stall break (Titi, Oct 25: ICT fib, enter on the 0.62 to 0.79 pullback)
     if pend and last["m"] > fired[2]:
         d, start = pend["d"], pend["start"]
-        if (d == -1 and last["c"] > start) or (d == 1 and last["c"] < start) or last["m"] > 15 * 60 + 45:
-            print(f"STALL BREAK {'PUTS' if d == -1 else 'CALLS'}: canceled, {'5m close back above the stall' if last['m'] <= 15 * 60 + 45 else 'no OTE pullback by 15:50 ET'}. No trade.")
+        if (d == -1 and last["c"] > start) or (d == 1 and last["c"] < start) or last["m"] > 15 * 60 + 50:
+            print(f"STALL BREAK {'PUTS' if d == -1 else 'CALLS'}: canceled, {'5m close back above the stall' if last['m'] <= 15 * 60 + 50 else 'no OTE pullback by 15:55 ET'}. No trade.")
             pend = None
         else:
             R = abs(start - pend["ext"])
@@ -184,7 +184,7 @@ last_m = -1
 while True:
     n = now()
     nm = n.hour * 60 + n.minute
-    if nm > 15 * 60 + 52:   # last entry on the 15:50 ET close (Titi, Oct 25)
+    if nm > 15 * 60 + 57:   # last entry on the 15:55 ET close (Oct 27)
         break
     try:
         B = spy_bars(day)
