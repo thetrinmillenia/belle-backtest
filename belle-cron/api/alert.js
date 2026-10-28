@@ -153,7 +153,7 @@ export default async function handler(req, res) {
         const lim = tick(c.ask, root);
         if (lim * 100 * qty > bp) { notes.push(`${label} skipped, not enough buying power`); shadowAdd(root, 'not enough buying power'); continue; }
         const o = await (await fetch(`${TRADE}/v2/orders`, { method: 'POST', headers: H(), body: JSON.stringify({ symbol: c.sym, qty: String(qty), side: 'buy', type: 'limit', limit_price: lim.toFixed(2), time_in_force: 'day', client_order_id: `penny-${t.y}-${t.m}-${t.d}-${label}-${Date.now()}` }) })).json();
-        if (!o.id) { const why = String(o.message || o.code || 'no reason given').replace(/[;|]/g, ',').slice(0, 140); notes.push(`${label} order rejected by Alpaca: ${why}`); shadowAdd(root, `order rejected (${c.sym}): ${why}`); continue; } // Alpaca's reason is kept (Oct 28: wash trade rejections were invisible)
+        if (!o.id) { const why = String(o.message || o.code || 'no reason given').replace(/[;|]/g, ',').slice(0, 140); notes.push(`${label} order rejected for ${why}`); shadowAdd(root, `order rejected (${c.sym}): ${why}`); continue; } // Alpaca's reason is kept (Oct 28: wash trade rejections were invisible)
         bp -= lim * 100 * qty;
         picked[label] = { ...c, lim, id: o.id, qty };
         if (process.env.GITHUB_TOKEN) {
