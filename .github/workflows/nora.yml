@@ -47,6 +47,8 @@ jobs:
           ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
           ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
           MODE: eval
+          SHAY_POST: "1"
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
       - name: Bot health (did every timed bot start on time today)
         run: python bots/health.py
         env:
@@ -58,6 +60,7 @@ jobs:
           git config user.email nora-bot@users.noreply.github.com
           git add results/nora_trades.csv || true
           git add results/shadow_trades.csv || true
+          git add results/shadow_scores.csv || true
           git add results/bot_health.csv || true
           git add results/harper || true
           git add results/loss_library.csv || true
