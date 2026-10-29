@@ -18,7 +18,7 @@ import time
 from penny_common import (DRY, REPLAY, already_traded, buy, ct, dispatch, hm, holding, market_day, now, pdc_spy,
                           pearl_go, pick, post, spx_ratio, spy_bars, tick)
 
-STALL_RANGE = 10.0   # SPX points over the last 60 minutes (12 x 5m)
+STALL_RANGE = 15.0   # SPX points over the last 60 minutes (12 x 5m). Oct 29 backtest: 15 pts 5 of 5 (+49.7), 10 pts 2 of 2 (+22.9)
 TAP = 3.0            # EQH / EQL tolerance, SPX points
 NEAR = 5.0           # stall must sit within 5 points of the day high / low
 SPX_MIN, SPX_MAX = 1.50, 2.50   # SPX premium: cheap far out contracts lost 6 of 7 (Oct 16 to 21)
