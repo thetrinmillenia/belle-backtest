@@ -101,16 +101,22 @@ export default async function handler(req, res) {
     // Window 3 = the EOD trade (Titi, Oct 19): the most important trade of the day, never blocked.
     // No 5 minute scalp timer: tight trail, Target 1, out by 15:58. A $100 contract can turn into $1,000.
     const scalp = mins >= 900;
-    // EOD puts over calls (Titi, Oct 21: "puts are better EOD"). Window 3 calls are skipped when SPY is above PDC
-    // (backtest: above PDC at 15:00, the last hour went down 67% of days). The stall break job handles EOD reversals.
-    let eodNoCalls = false;
+    // Window 3 calls (Oct 29 rule, from every Window 3 alert Oct 16 to 28): calls only when SPY is above PDC AND above
+    // the 2 PM (14:00 ET) candle high. Calls inside the 2 PM candle or below PDC are skipped with no Discord note;
+    // Shay scores them. Puts are not touched. If the data cannot be read, the trade is taken.
+    let eodNoCalls = false, eodWhy = '';
     if (scalp && cp === 'C' && a.spy) {
       try {
         const db = await (await fetch(`${DATA}/v2/stocks/SPY/bars?timeframe=1Day&feed=sip&start=${new Date(Date.now() - 10 * 864e5).toISOString().slice(0, 10)}&end=${t.y}-${t.m}-${t.d}T04:00:00Z`, { headers: H() })).json();
         const bars = db.bars || [];
         const pdc = bars.length ? bars[bars.length - 1].c : null;
-        if (pdc && a.spy > pdc) { eodNoCalls = true; notes.push(`EOD calls skipped: SPY ${a.spy.toFixed(2)} above PDC ${pdc.toFixed(2)}, puts are favored EOD`); }
-      } catch (e) { eodNoCalls = false; }
+        const ib = await (await fetch(`${DATA}/v2/stocks/SPY/bars?timeframe=5Min&feed=iex&start=${t.y}-${t.m}-${t.d}T12:00:00Z&end=${new Date().toISOString()}&limit=1000`, { headers: H() })).json();
+        const two = (ib.bars || []).filter(b => et(new Date(b.t)).h === 14);
+        const h2 = two.length ? Math.max(...two.map(b => b.h)) : null;
+        if (pdc && a.spy <= pdc) eodWhy = 'EOD calls below PDC';
+        else if (h2 && a.spy <= h2) eodWhy = 'EOD calls inside the 2 PM candle';
+        eodNoCalls = !!eodWhy;
+      } catch (e) { eodNoCalls = false; eodWhy = ''; }
     }
     // after +$200 on the day (Titi, Oct 19): no entries in any chop, especially lunch (11:30 to 13:45 ET). EOD is never blocked.
   let chopSkip = false;
@@ -120,7 +126,7 @@ export default async function handler(req, res) {
   }
     // Pearl (LIVE, Titi Oct 25): Window 1 (10:00 to 11:30 ET) and EOD (15:00 to 15:50 ET), calls and puts.
   // Pearl checks PEARL_ON and all her own rules (1 contract, $150 max, 1 loss and done). Penny's rules do not apply to her.
-  if (inWin && ((mins >= 600 && mins <= 690) || mins >= 900) && process.env.GITHUB_TOKEN) {
+  if (inWin && ((mins >= 600 && mins <= 690) || (mins >= 900 && !eodNoCalls)) && process.env.GITHUB_TOKEN) {   // Pearl follows the Window 3 call rule too
     try {
       await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/pearl.yml/dispatches`, {
         method: 'POST',
@@ -134,7 +140,7 @@ export default async function handler(req, res) {
     const shadowItems = [];
     const shadowAdd = (root, why) => { const k = Number(root === 'SPY' ? a.spyStrike : a.spxStrike); if (inWin && k) shadowItems.push(`${occ(root, ymd, cp, k)}|${why}`); };
     if (holding || chopSkip || eodNoCalls) {
-      const why = holding ? 'holding a trade' : (chopSkip ? 'chop filter (up $200, lunch)' : 'EOD calls above PDC');
+      const why = holding ? 'holding a trade' : (chopSkip ? 'chop filter (up $200, lunch)' : eodWhy);
       shadowAdd('SPXW', why);
       shadowAdd('SPY', why);
     }
