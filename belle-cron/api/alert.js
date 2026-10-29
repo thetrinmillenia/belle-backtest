@@ -115,7 +115,7 @@ export default async function handler(req, res) {
         const h2 = two.length ? Math.max(...two.map(b => b.h)) : null;
         if (pdc && a.spy <= pdc) eodWhy = 'EOD calls below PDC';
         else if (h2 && a.spy <= h2) eodWhy = 'EOD calls inside the 2 PM candle';
-        eodNoCalls = !!eodWhy;
+        eodNoCalls = false;   // Oct 29: removed. Window 3 is never blocked (the block skipped the +524% calls). eodWhy is kept for the record only
       } catch (e) { eodNoCalls = false; eodWhy = ''; }
     }
     // after +$200 on the day (Titi, Oct 19): no entries in any chop, especially lunch (11:30 to 13:45 ET). EOD is never blocked.
