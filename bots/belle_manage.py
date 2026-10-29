@@ -26,6 +26,9 @@ from zoneinfo import ZoneInfo
 
 import requests
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from penny_common import w1_loss_streak  # noqa: E402  range day guard (Oct 29)
+
 ET = ZoneInfo("America/New_York")
 TRADE = "https://paper-api.alpaca.markets"  # PAPER endpoint only
 DATA = "https://data.alpaca.markets"
@@ -359,7 +362,7 @@ while True:
                         msg += f", sold 1 of {QTY} at {px:.2f}, {left} left"
                         draft(f"TRIMMING 🚨\n{QTY - left}/{QTY} SOLD @ {money(px)}. {left} left, the last one rides.\n@everyone")
                 post(f"{LABEL} {msg}")
-        stop = entry * 0.57   # starting stop 43% (Titi, Oct 20)
+        stop = entry * (0.50 if EOD else 0.57)   # starting stop 43% (Oct 20); Window 3 50% (Oct 29 backtest: +$212 vs +$19)
         if peak >= entry * 1.60 and not HOLD:   # rule E (Titi, Oct 25): breakeven at +60%
             stop = max(stop, entry)
             if "be" not in said:
@@ -446,6 +449,9 @@ if (reason in ("breakeven", "step stop", "43% stop") or (reason == "EXIT" and ex
             break   # Belle's stop broke, the idea is dead
         if spy and (spy - spy_best) * DIR > 0.02:
             side_w = "calls" if DIR == 1 else "puts"
+            if WIN1 and w1_loss_streak(now().date()) >= 2:
+                print("re-entry skipped: 2 Window 1 losses in a row today (range day)")
+                break
             if WIN1:
                 ask = opt_ask()
                 if ask and ask * 100 * QTY <= 250:
