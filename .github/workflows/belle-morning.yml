@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       force:
-        description: "Post now, even if it is not the scheduled time"
+        description: "1 = post now, even if it is not the scheduled time. test = print to the log only, no Discord"
         default: "1"
 
 permissions:
@@ -43,7 +43,7 @@ jobs:
         if: steps.dup.outputs.n == '0' || github.event_name == 'workflow_dispatch'
         with:
           python-version: "3.11"
-      - run: pip install yfinance pandas numpy requests
+      - run: pip install yfinance pandas numpy requests lxml
         if: steps.dup.outputs.n == '0' || github.event_name == 'workflow_dispatch'
       - run: python bots/belle.py morning
         if: steps.dup.outputs.n == '0' || github.event_name == 'workflow_dispatch'
