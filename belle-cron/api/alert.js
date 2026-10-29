@@ -62,6 +62,36 @@ async function pick(root, cp, price, ymd, chartK, maxCost, minCost = 0) {
   return null;
 }
 
+// range day guard (Oct 29): Window 1 (10:00 to 12:30 ET) trades in a row that lost today, counted back from the last closed one.
+// Buys of the same side within 5 minutes are one trade (SPX + SPY). Same rule as penny_common.w1_loss_streak.
+async function w1LossStreak(t) {
+  const od = await (await fetch(`${TRADE}/v2/orders?status=closed&after=${t.y}-${t.m}-${t.d}T04:00:00Z&direction=asc&limit=500`, { headers: H() })).json();
+  const fills = (Array.isArray(od) ? od : []).filter(o => o.filled_at && String(o.symbol || '').length > 15).sort((a, b) => a.filled_at < b.filled_at ? -1 : 1);
+  const lots = {}, groups = [];
+  for (const o of fills) {
+    const s = o.symbol, p = Number(o.filled_avg_price), tm = new Date(o.filled_at);
+    let q = Number(o.filled_qty);
+    if (o.side === 'buy') {
+      let g = [...groups].reverse().find(g => g.cp === s.slice(-9, -8) && (tm - g.t) < 300000);
+      if (!g) { const e = et(tm); g = { t: tm, cp: s.slice(-9, -8), m: e.h * 60 + e.min, pl: 0, open: 0 }; groups.push(g); }
+      g.open += q;
+      (lots[s] = lots[s] || []).push([q, p, g]);
+    } else {
+      while (q > 0 && lots[s] && lots[s].length) {
+        const l = lots[s][0], m = Math.min(q, l[0]);
+        l[2].pl += m * (p - l[1]) * 100; l[2].open -= m; l[0] -= m; q -= m;
+        if (l[0] <= 0) lots[s].shift();
+      }
+    }
+  }
+  let streak = 0;
+  for (const g of groups) {
+    if (g.m < 600 || g.m > 750 || g.open > 0) continue;
+    streak = g.pl < 0 ? streak + 1 : 0;
+  }
+  return streak;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'POST only' });
@@ -118,6 +148,12 @@ export default async function handler(req, res) {
         eodNoCalls = false;   // Oct 29: removed. Window 3 is never blocked (the block skipped the +524% calls). eodWhy is kept for the record only
       } catch (e) { eodNoCalls = false; eodWhy = ''; }
     }
+    // range day guard (Oct 29): 2 Window 1 trades in a row lost today -> no more Window 1 entries, Penny waits for Window 3.
+    // Backtest Oct 16 to 29: only Oct 29 triggered, saved $426, blocked no winner. No Discord note; Shay scores the skipped alert.
+    let rangeSkip = false;
+    if (inWin && !holding && mins >= 600 && mins <= 750) {
+      try { rangeSkip = (await w1LossStreak(t)) >= 2; } catch (e) { rangeSkip = false; }
+    }
     // after +$200 on the day (Titi, Oct 19): no entries in any chop, especially lunch (11:30 to 13:45 ET). EOD is never blocked.
   let chopSkip = false;
   if (inWin && !holding && !scalp && mins >= 690 && mins < 825) {
@@ -139,12 +175,12 @@ export default async function handler(req, res) {
     // (entry, highest, heat, rule E). One start per alert. No order, no Discord.
     const shadowItems = [];
     const shadowAdd = (root, why) => { const k = Number(root === 'SPY' ? a.spyStrike : a.spxStrike); if (inWin && k) shadowItems.push(`${occ(root, ymd, cp, k)}|${why}`); };
-    if (holding || chopSkip || eodNoCalls) {
-      const why = holding ? 'holding a trade' : (chopSkip ? 'chop filter (up $200, lunch)' : eodWhy);
+    if (holding || chopSkip || eodNoCalls || rangeSkip) {
+      const why = holding ? 'holding a trade' : (chopSkip ? 'chop filter (up $200, lunch)' : (rangeSkip ? '2 losses in a row (range day)' : eodWhy));
       shadowAdd('SPXW', why);
       shadowAdd('SPY', why);
     }
-  if (inWin && !holding && !chopSkip && !eodNoCalls) {
+  if (inWin && !holding && !chopSkip && !eodNoCalls && !rangeSkip) {
       const acct = await (await fetch(`${TRADE}/v2/account`, { headers: H() })).json();
       let bp = Number(acct.options_buying_power || acct.buying_power || 0);
       for (const root of order) {
