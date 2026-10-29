@@ -7,7 +7,7 @@ eval (runs in Nora's job after the close; EVAL_DATE = YYYY-MM-DD or "all" to res
      the price caps (SPX $70 to $250, SPY $0.60), the same rule as the relay. A rejected order keeps its own contract.
   2. replays it on 1 minute bars to 15:59 ET with the exit rule of its window:
      morning: 43% stop, breakeven after +60%, trail 30% below the best after +100%, SPY trims 1 at +50% and 1 at +100%
-     EOD (15:00 on): 43% stop, breakeven after +60%, trail 20% below the best from +30% and 15% from +100%,
+     EOD (15:00 on): 50% stop, breakeven after +60%, trail 20% below the best from +30% and 15% from +100%,
                      SPY trims 1 at +100% and 1 at +200%
   3. writes results/shadow_scores.csv (best price and time, heat before the best, exit, dollars).
   Bad prints (a bar low under half its body, or a high over twice its body) are ignored.
@@ -145,7 +145,7 @@ def replay(bars, e, eod, qty):
     done = set()
     for b in bars:
         lo, hi = clean(b)
-        stop = e * 0.57
+        stop = e * (0.50 if eod else 0.57)   # Window 3 starting stop 50% (Oct 29)
         if peak >= e * 1.6:
             stop = max(stop, e)
         if eod:
