@@ -104,16 +104,19 @@ def process(B):
         taps_l = sum(1 for b in W if b["l"] <= lo + TAP)
         stall = hi - lo <= STALL_RANGE
         where = ("at the HIGH" if hod - hi <= NEAR else ("at the LOW" if lo - lod <= NEAR else "mid range"))
-        lines = ["**EOD STALL CHECK  15:00 ET (14:00 CT)**",
-                 f"Last 60 min range: {hi - lo:.1f} pts ({'STALL' if stall else 'no stall'}), {where}. "
-                 f"High taps {taps_h}, low taps {taps_l}.",
-                 f"Day high {hod:.1f} | day low {lod:.1f} | 50% of the day's swing {mid:.1f}",
-                 f"SPX {'ABOVE' if above else 'BELOW'} PDC: puts are favored EOD{' (above PDC: down 67% of days)' if above else ''}.",
-                 (f"Watch: a 5m close below {lo:.1f} = STALL BREAK puts, target {mid:.1f}." if stall and where == "at the HIGH" else
-                  f"Watch: a 5m close above {hi:.1f} = STALL BREAK calls, target {mid:.1f}." if stall and where == "at the LOW" else
-                  "No stall at the extreme yet. No EOD stall trade unless one forms by 15:30 ET.")]
+        # spaced out, one fact per line (Oct 29 approved layout, no emojis)
+        loc = {"at the HIGH": "Price is at the day HIGH", "at the LOW": "Price is at the day LOW"}.get(where, "Price is mid range")
+        lines = ["**STALL CHECK 15:00 ET (14:00 CT)**",
+                 ("STALL FORMING" if stall else "No stall") + f"\nLast 60 min range: {hi - lo:.1f} pts" + ("" if stall else ", too wide"),
+                 f"{loc}\nHigh tapped {taps_h}x, low tapped {taps_l}x",
+                 f"Day high: {hod:.1f}\nDay low: {lod:.1f}\nHalfway: {mid:.1f}",
+                 "SPX above PDC: puts favored EOD (down 67% of days)" if above else "SPX below PDC"]
         if fired:
-            lines[-1] = f"STALL BREAK already fired at {hm(fired[2] + 5)} ET ({ct(fired[2] + 5)} CT). Stop SPX {fired[1]:.1f}. Hold for the target."
+            lines.append(f"STALL BREAK already fired at {hm(fired[2] + 5)} ET ({ct(fired[2] + 5)} CT)\nStop SPX {fired[1]:.1f}\nHold for the target")
+        elif stall and where == "at the HIGH":
+            lines.append(f"Watch: a 5m close below {lo:.1f} = STALL BREAK puts\nTarget: {mid:.1f}")
+        elif stall and where == "at the LOW":
+            lines.append(f"Watch: a 5m close above {hi:.1f} = STALL BREAK calls\nTarget: {mid:.1f}")
         post("\n\n".join(lines))
 
     # STALL BREAK, 14:00 to 15:30 ET, once a day
