@@ -193,3 +193,45 @@ def holding():
         return [p["symbol"] for p in pos if len(p.get("symbol", "")) > 15]
     except Exception:
         return []
+
+
+def w1_loss_streak(day):
+    """Range day guard (Oct 29): how many Window 1 (10:00 to 12:30 ET) trades in a row lost today, counting back
+    from the last closed one. Buys of the same side within 5 minutes are one trade (SPX + SPY). 2 or more = Penny waits
+    for Window 3. Backtest Oct 16 to 29: only Oct 29 triggered, saved $426, blocked no winner."""
+    try:
+        start = dt.datetime.combine(day, dt.time(0, 0), ET).isoformat()
+        od = requests.get(f"{TRADE}/v2/orders", headers=H, timeout=15,
+                          params={"status": "closed", "after": start, "direction": "asc", "limit": 500}).json()
+        od = sorted([o for o in od if isinstance(o, dict) and o.get("filled_at") and len(o.get("symbol", "")) > 15],
+                    key=lambda o: o["filled_at"])
+        lots, groups = {}, []
+        for o in od:
+            s, q, p = o["symbol"], float(o["filled_qty"]), float(o["filled_avg_price"])
+            t = et(o["filled_at"])
+            if o["side"] == "buy":
+                g = next((g for g in reversed(groups) if g["cp"] == s[-9] and (t - g["t"]).total_seconds() < 300), None)
+                if not g:
+                    g = {"t": t, "cp": s[-9], "pl": 0.0, "open": 0.0}
+                    groups.append(g)
+                g["open"] += q
+                lots.setdefault(s, []).append([q, p, g])
+            else:
+                while q > 0 and lots.get(s):
+                    lot = lots[s][0]
+                    m = min(q, lot[0])
+                    lot[2]["pl"] += m * (p - lot[1]) * 100
+                    lot[2]["open"] -= m
+                    lot[0] -= m
+                    q -= m
+                    if lot[0] <= 0:
+                        lots[s].pop(0)
+        streak = 0
+        for g in groups:
+            if not (600 <= g["t"].hour * 60 + g["t"].minute <= 750) or g["open"] > 0:
+                continue
+            streak = streak + 1 if g["pl"] < 0 else 0
+        return streak
+    except Exception as e:
+        print("loss streak check failed", e)
+        return 0
