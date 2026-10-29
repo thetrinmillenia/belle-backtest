@@ -12,7 +12,7 @@ Secrets (GitHub repo, Settings, Secrets and variables, Actions):
 Belle style: no contractions, no dashes. Eastern time with Central in parentheses.
 Information only, not financial advice.
 """
-import os, sys, datetime as dt
+import io, os, sys, datetime as dt
 from zoneinfo import ZoneInfo
 import requests
 import pandas as pd
@@ -235,8 +235,58 @@ def morning(now):
             parts.append("**Still ahead this week (high impact):**\n" + "\n".join(ahead))
     parts.append(f"**Day ATR for a {now.strftime('%A')}:** about {ATR.get(now.weekday(), 80)} SPX pts (1 year average).")
     parts.append("**Belle's read:** " + belle_summary(reads, high_today))
+    parts.append(earnings_today(now))
     parts.append(FOOT)
     return "\n\n".join(parts)
+
+
+def index_members():
+    """S&P 500 and Nasdaq-100 tickers from Wikipedia (free, no key). Empty set if it cannot be read."""
+    out = set()
+    for url, col in (("https://en.wikipedia.org/wiki/List_of_S%26P_500_companies", "Symbol"),
+                     ("https://en.wikipedia.org/wiki/Nasdaq-100", "Ticker")):
+        try:
+            html = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=20).text
+            for t in pd.read_html(io.StringIO(html)):
+                if col in t.columns:
+                    out |= {str(x).replace(".", "-").strip().upper() for x in t[col]}
+                    break
+        except Exception as e:
+            print("index list failed", url, e)
+    return out
+
+
+def earnings_today(now):
+    """EARNINGS TODAY (Oct 29): only S&P 500 and Nasdaq-100 companies, biggest first, from Nasdaq's free calendar."""
+    head = "**EARNINGS TODAY**"
+    try:
+        rows = requests.get("https://api.nasdaq.com/api/calendar/earnings", params={"date": now.strftime("%Y-%m-%d")},
+                            headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"}, timeout=20).json()["data"]["rows"] or []
+    except Exception as e:
+        print("earnings calendar failed", e)
+        return head + "\n\nEarnings calendar not available right now."
+    members = index_members()
+
+    def cap(r):
+        try:
+            return float(str(r.get("marketCap", "")).replace("$", "").replace(",", ""))
+        except ValueError:
+            return 0.0
+    rows = [r for r in rows if (r.get("symbol") or "").upper().replace(".", "-") in members] if members else \
+        [r for r in rows if cap(r) >= 20e9]   # fallback when the index lists cannot be read: $20B and up
+    rows.sort(key=cap, reverse=True)
+    pre = [r["symbol"] for r in rows if r.get("time") == "time-pre-market"][:6]
+    post_ = [r["symbol"] for r in rows if r.get("time") == "time-after-hours"][:6]
+    if not pre and not post_:
+        return head + "\n\nNo major S&P 500 or Nasdaq-100 reports"
+    lines = [head]
+    if pre:
+        lines.append("Before the open\n" + ", ".join(pre))
+    if post_:
+        lines.append("After the close (16:00 ET, 15:00 CT)\n" + ", ".join(post_))
+    big = next(r for r in rows if r["symbol"] in pre + post_)
+    lines.append(f"Biggest mover risk: {big['symbol']} {'before the open' if big['symbol'] in pre else 'after the close'}")
+    return "\n\n".join(lines)
 
 def belle_summary(reads, high_today):
     if not reads:
@@ -385,13 +435,16 @@ if __name__ == "__main__":
     if mode not in JOBS:
         sys.exit(f"Unknown mode {mode}")
     now = dt.datetime.now(ET)
-    force = os.environ.get("FORCE_POST", "") == "1"
+    test = os.environ.get("FORCE_POST", "") == "test"   # test run: print to the GitHub log only, nothing to Discord
+    force = os.environ.get("FORCE_POST", "") == "1" or test
     m = now.hour * 60 + now.minute
     a, b = ALLOWED[mode]
     if not force and (now.weekday() > 4 or not a <= m < b):
         print(f"{mode}: not its time ({now:%a %H:%M} ET); skipping."); sys.exit(0)
     text = JOBS[mode](now)
-    if text:
+    if text and test:
+        print(text)
+    elif text:
         post(text)
     else:
         print("Nothing to post.")
