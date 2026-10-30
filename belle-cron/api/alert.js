@@ -154,11 +154,21 @@ export default async function handler(req, res) {
     if (inWin && !holding && mins >= 600 && mins <= 750) {
       try { rangeSkip = (await w1LossStreak(t)) >= 2; } catch (e) { rangeSkip = false; }
     }
-    // after +$200 on the day (Titi, Oct 19): no entries in any chop, especially lunch (11:30 to 13:45 ET). EOD is never blocked.
+    // lunch chop box (Titi, Oct 30): lunch entries (11:30 to 13:45 ET) go through unless SPY sat in a real chop box for the last 60 minutes:
+    // 12 closed 5m bars, range 40 SPX points or less, the high and the low each tapped 2+ times (within 20% of the range),
+    // and the net move under half the range. No Discord note; Raven scores the skipped alert. Window 3 is never blocked.
   let chopSkip = false;
   if (inWin && !holding && !scalp && mins >= 690 && mins < 825) {
-    try { const ac = await (await fetch(`${TRADE}/v2/account`, { headers: H() })).json(); chopSkip = Number(ac.equity) - Number(ac.last_equity) >= 200; } catch (e) { chopSkip = false; }
-    if (chopSkip) notes.push('up $200+ today, no lunch or chop entries. Saving it for the EOD trade');
+    try {
+      const cb = await (await fetch(`${DATA}/v2/stocks/SPY/bars?timeframe=5Min&feed=iex&start=${t.y}-${t.m}-${t.d}T12:00:00Z&end=${new Date().toISOString()}&limit=1000`, { headers: H() })).json();
+      const done = (cb.bars || []).filter(b => new Date(b.t).getTime() + 300000 <= Date.now() + 30000).slice(-12);
+      if (done.length === 12) {
+        const hi = Math.max(...done.map(b => b.h)), lo = Math.min(...done.map(b => b.l)), rg = hi - lo;
+        const topTaps = done.filter(b => b.h >= hi - 0.2 * rg).length, lowTaps = done.filter(b => b.l <= lo + 0.2 * rg).length;
+        const net = Math.abs(done[11].c - done[0].o);
+        chopSkip = rg > 0 && rg * 10.03 <= 40 && topTaps >= 2 && lowTaps >= 2 && net / rg < 0.5;
+      }
+    } catch (e) { chopSkip = false; }
   }
     // Pearl (LIVE, Titi Oct 25): Window 1 (10:00 to 11:30 ET) and EOD (15:00 to 15:50 ET), calls and puts.
   // Pearl checks PEARL_ON and all her own rules (1 contract, $150 max, 1 loss and done). Penny's rules do not apply to her.
@@ -176,7 +186,7 @@ export default async function handler(req, res) {
     const shadowItems = [];
     const shadowAdd = (root, why) => { const k = Number(root === 'SPY' ? a.spyStrike : a.spxStrike); if (inWin && k) shadowItems.push(`${occ(root, ymd, cp, k)}|${why}`); };
     if (holding || chopSkip || eodNoCalls || rangeSkip) {
-      const why = holding ? 'holding a trade' : (chopSkip ? 'chop filter (up $200, lunch)' : (rangeSkip ? '2 losses in a row (range day)' : eodWhy));
+      const why = holding ? 'holding a trade' : (chopSkip ? 'lunch chop (60 min box)' : (rangeSkip ? '2 losses in a row (range day)' : eodWhy));
       shadowAdd('SPXW', why);
       shadowAdd('SPY', why);
     }
