@@ -29,6 +29,12 @@ jobs:
           ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
           NORA_SHEET_URL: ${{ secrets.NORA_SHEET_URL }}
           FORCE: ${{ github.event.inputs.force }}
+      - name: Harper weekly review (manual run = any day)
+        run: python bots/harper_weekly.py
+        env:
+          ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          FORCE: ${{ github.event.inputs.force }}
       - name: Save Harper's review
         if: always()
         run: |
