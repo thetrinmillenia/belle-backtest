@@ -193,9 +193,47 @@ def htf_bias(df, now):
         side, why = d_col, f"4H {col4} and 1H {col1} split, daily {d_col} decides"
     return ("BULLISH" if side == "green" else "BEARISH"), why
 
+def mss(g):
+    """Latest market structure shift (Titi, Oct 30): a candle closes through the last swing (2 candles each side)
+    against the trend. Returns (trend, since, flip level) or None. The flip level is the swing that would turn it."""
+    hs, ls, cl = g.high.values, g.low.values, g.close.values
+    sh = sl = trend = since = None
+    for j in range(len(g)):
+        i = j - 2
+        if i >= 2:
+            if hs[i] > max(hs[i - 2], hs[i - 1], hs[i + 1], hs[i + 2]):
+                sh = hs[i]
+            if ls[i] < min(ls[i - 2], ls[i - 1], ls[i + 1], ls[i + 2]):
+                sl = ls[i]
+        if sl is not None and cl[j] < sl and trend != "bearish":
+            trend, since = "bearish", g.index[j]
+        elif sh is not None and cl[j] > sh and trend != "bullish":
+            trend, since = "bullish", g.index[j]
+    if trend is None:
+        return None
+    return trend, since, (sh if trend == "bearish" else sl)
+
+
+def mss_line(tf, m, now):
+    trend, since, flip = m
+    when = f"{since:%a %H:%M} ET ({since.astimezone(CT):%H:%M} CT)" if (now - since).days < 6 else since.strftime("%b %d")
+    turn = f"Turns bullish above {flip:,.2f}" if trend == "bearish" else f"Turns bearish below {flip:,.2f}"
+    return f"{tf}: {trend} since {when}. {turn}" if flip is not None else f"{tf}: {trend} since {when}"
+
+
+def mss_note(m4, m1):
+    """Belle's read: do the 4H and 1H shifts agree?"""
+    if not m4 or not m1:
+        return ""
+    if m4[0] == m1[0]:
+        return f" 4H and 1H agree: {m4[0]}."
+    lvl = f" Watch {m4[2]:,.2f}." if m4[2] is not None else ""
+    return (" 1H bounce inside a bearish 4H." if m4[0] == "bearish" else " 1H pullback inside a bullish 4H.") + lvl
+
+
 def morning(now):
     parts = [f"**BELLE MORNING READ** {now.strftime('%A %b %d')} | {both(now)}"]
-    reads = {}
+    reads, shifts = {}, {}
     for name, sym in SYMS.items():
         try:
             df = bars(sym, "1h", "7d")
@@ -218,6 +256,15 @@ def morning(now):
                 s.append("Overnight " + (" and ".join(took) if took else "stayed inside the prior day range"))
             s.append(f"PDH {pdh:,.2f} | PDL {pdl:,.2f} | prior close {p.close.iloc[-1]:,.2f}")
             s.append("4H read: " + four_h_read(df, now))
+            try:   # 4H and 1H market structure shift, a month of 1h candles (closed candles only)
+                dm = bars(sym, "1h", "1mo")
+                g4 = four_hour(dm)
+                m4 = mss(g4[g4.index + pd.Timedelta(hours=4) <= now])
+                m1 = mss(dm[dm.index + pd.Timedelta(hours=1) <= now])
+                s += [mss_line(tf, m, now) for tf, m in (("4H", m4), ("1H", m1)) if m]
+                shifts[name] = (m4, m1)
+            except Exception as e:
+                print("mss failed", name, e)
             reads[name] = (bias, dol_side)
             parts.append("\n".join(s))
         except Exception as e:
@@ -234,7 +281,7 @@ def morning(now):
         if ahead:
             parts.append("**Still ahead this week (high impact):**\n" + "\n".join(ahead))
     parts.append(f"**Day ATR for a {now.strftime('%A')}:** about {ATR.get(now.weekday(), 80)} SPX pts (1 year average).")
-    parts.append("**Belle's read:** " + belle_summary(reads, high_today))
+    parts.append("**Belle's read:** " + belle_summary(reads, high_today) + mss_note(*shifts.get("ES", (None, None))))
     parts.append(earnings_today(now))
     parts.append(FOOT)
     return "\n\n".join(parts)
