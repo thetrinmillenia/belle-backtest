@@ -1,4 +1,11 @@
 Date,Who,Ticker,Bias,Setup,Tags,P/L,Lesson,Note
+2026-10-30,Penny,SPX,Bullish,,Window 3 EOD,125.0,"EOD worked: key level failed, trail tight, out by 15:58.","Alpaca fill. SPX 7580C x1, first entry 15:00 ET, 2.05 to 3.30 (61%)."
+2026-10-30,Penny,SPX,Bearish,,Window 1,115.0,"Repeat it: same window, same setup.","Alpaca fill. SPX 7550P x1, first entry 10:15 ET, 2.45 to 3.60 (47%)."
+2026-10-30,Penny,SPY,Bearish,,Window 1,104.0,"Repeat it: same window, same setup.","Alpaca fill. SPY 756P x3, first entry 10:55 ET, 0.56 to 0.91 (62%)."
+2026-10-30,Penny,SPY,Bullish,,Window 3 EOD,91.0,"EOD worked: key level failed, trail tight, out by 15:58.","Alpaca fill. SPY 754C x3, first entry 15:00 ET, 0.54 to 0.84 (56%)."
+2026-10-30,Penny,SPY,Bearish,,Window 1,33.0,"Repeat it: same window, same setup.","Alpaca fill. SPY 754P x3, first entry 10:15 ET, 0.41 to 0.52 (27%)."
+2026-10-30,Penny,SPY,Bearish,,"Window 1, Lunch 11:30 to 13:45",25.0,"Repeat it: same window, same setup.","Alpaca fill. SPY 755P x3, first entry 11:36 ET, 0.43 to 0.51 (19%)."
+2026-10-29,Titi,SPX,Bullish,"EOD calls on a range day: 15:45 ET sweep of the 15:20 low, target the 13:00 internal high","Sweep, PDH/PDL, Window 3 EOD, Exit: target",430.0,"Big runner: same setup, same patience. Let the trail work.","SPX 7715C bought 14:45 CT (15:45 ET), sold near 15:57 ET at the 13:00 ET internal high (SPX about 7719.70). Midnight open and PDL stacked near the target. Range day, 5 Penny losses in the morning."
 2026-10-27,Titi,SPX,Bullish,Morning calls (Titi: calls worked perfect this morning),"Window 2, Lunch 11:30 to 13:45, Exit: broker stop",655.0,"Big runner: same setup, same patience. Let the trail work.","SPX 7735C. Exit near the screenshot price at 13:00 ET (12:00 CT), SPX 7733.18, breakeven 7736."
 2026-10-27,Penny,SPX,Bullish,,Window 1,300.0,"Big runner: same setup, same patience. Let the trail work.","Alpaca fill. SPX 7725C x1, first entry 10:30 ET, 1.90 to 4.90 (158%)."
 2026-10-27,Titi,SPX,Bearish,EOD puts (the 15:50 puts),Exit: broker stop,211.0,"Repeat it: same window, same setup.",SPX 7725P +211.11%. Exit 1.40 comes from the 0.45 entry and +211.11%. Titi reported closed at $240 (quantity to confirm).
