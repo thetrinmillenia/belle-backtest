@@ -125,7 +125,7 @@ export default async function handler(req, res) {
         holding = (Array.isArray(pos) ? pos : []).find(p => /^(SPY|SPXW)\d{6}[CP]\d{8}$/.test(p.symbol) && p.symbol.slice(-9, -8) !== cp && Number(p.qty) > 0) || null;
       } catch (e) { holding = null; }
       if (holding) {
-        // Oct 30: no longer blocks. Penny takes the new alert too (data first); Stella still tightens the open trade on the flip.
+        notes.push(`holding ${holding.symbol.startsWith('SPXW') ? 'SPX' : 'SPY'} ${holding.symbol.slice(-9, -8) === 'C' ? 'calls' : 'puts'}, no new trade against her open trade, her stop stays the same`);
       }
     }
     // Window 3 = the EOD trade (Titi, Oct 19): the most important trade of the day, never blocked.
@@ -158,6 +158,7 @@ export default async function handler(req, res) {
   let chopSkip = false;
   if (inWin && !holding && !scalp && mins >= 690 && mins < 825) {
     try { const ac = await (await fetch(`${TRADE}/v2/account`, { headers: H() })).json(); chopSkip = Number(ac.equity) - Number(ac.last_equity) >= 200; } catch (e) { chopSkip = false; }
+    if (chopSkip) notes.push('up $200+ today, no lunch or chop entries. Saving it for the EOD trade');
   }
     // Pearl (LIVE, Titi Oct 25): Window 1 (10:00 to 11:30 ET) and EOD (15:00 to 15:50 ET), calls and puts.
   // Pearl checks PEARL_ON and all her own rules (1 contract, $150 max, 1 loss and done). Penny's rules do not apply to her.
@@ -174,14 +175,12 @@ export default async function handler(req, res) {
     // (entry, highest, heat, rule E). One start per alert. No order, no Discord.
     const shadowItems = [];
     const shadowAdd = (root, why) => { const k = Number(root === 'SPY' ? a.spyStrike : a.spxStrike); if (inWin && k) shadowItems.push(`${occ(root, ymd, cp, k)}|${why}`); };
-    // Oct 30 (Titi): nothing blocks an alert. Penny takes every alert in the windows so Harper and Raven get the data.
-    // The checks above stay only as labels in the code; none of them stops a trade.
-    if (false) {
+    if (holding || chopSkip || eodNoCalls || rangeSkip) {
       const why = holding ? 'holding a trade' : (chopSkip ? 'chop filter (up $200, lunch)' : (rangeSkip ? '2 losses in a row (range day)' : eodWhy));
       shadowAdd('SPXW', why);
       shadowAdd('SPY', why);
     }
-  if (inWin) {
+  if (inWin && !holding && !chopSkip && !eodNoCalls && !rangeSkip) {
       const acct = await (await fetch(`${TRADE}/v2/account`, { headers: H() })).json();
       let bp = Number(acct.options_buying_power || acct.buying_power || 0);
       for (const root of order) {
