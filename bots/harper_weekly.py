@@ -64,7 +64,7 @@ for o in fills:
 # 2) context from SPY bars and the day tags
 days = sorted({g["day"] for g in trades})
 daily = requests.get(f"{DATA}/v2/stocks/SPY/bars", headers=H, timeout=30,
-                     params={"timeframe": "1Day", "start": str(days[0] - dt.timedelta(days=7)), "end": str(days[-1]), "feed": "sip"}).json().get("bars") or []
+                     params={"timeframe": "1Day", "start": str(days[0] - dt.timedelta(days=7)), "end": str(days[-1]), "feed": "iex"}).json().get("bars") or []   # iex: sip refuses the latest day on the free plan
 closes = {et(b["t"]).date(): b["c"] for b in daily}
 intraday = defaultdict(list)
 for d in days:
