@@ -14,9 +14,9 @@ A small team of trading bots for **SPX and SPY 0DTE options**. One bot reads the
 | 🪙 | **Penny** | Paper trader. Buys the alert on a practice account | on each alert |
 | ⭐ | **Stella** | Penny's manager. Babysits every open trade: the stop, the trims, the trail and the exit | until 15:59 |
 | 🫒 | **Olive** | Watches the 30 minute opening range (ORH and ORL) on 15 minute candles | 10:00 to 12:15 |
-| 🌙 | **Sadie** | Watches for the afternoon stall break and its pullback entry | 14:00 to 15:55 |
+| 🌿 | **Willow** | Watches for the afternoon stall break and its pullback entry | 14:00 to 15:55 |
 | 🦪 | **Pearl** | Live trader. Same playbook as Penny with tighter rules. Off until switched on | W1 and EOD |
-| 👥 | **Shay** | Shadow. Scores every alert Penny skipped, so we know which filters help | after the close |
+| 🐦‍⬛ | **Raven** | Shadow. Scores every alert Penny skipped, so we know which filters help | after the close |
 | 📒 | **Nora** | Record keeper: daily recap, win and loss library, bot attendance | 16:00 |
 | 📝 | **Harper** | Writes the daily review | 16:30 |
 
@@ -31,9 +31,9 @@ flowchart LR
     R --> D["💬 Discord<br/>alerts and reads"]
     R --> P["🪙 Penny<br/>paper buy"]
     R --> PL["🦪 Pearl<br/>live buy (when on)"]
-    R --> SH["👥 Shay<br/>skipped alerts"]
+    R --> SH["🐦‍⬛ Raven<br/>skipped alerts"]
     VC --> O["🫒 Olive<br/>morning"]
-    VC --> S["🌙 Sadie<br/>afternoon"]
+    VC --> S["🌿 Willow<br/>afternoon"]
     O --> P
     S --> P
     P --> ST["⭐ Stella<br/>manages the trade"]
@@ -69,7 +69,7 @@ Every bot writes plain CSV files you can open in any spreadsheet:
 |---|---|
 | `results/paper_trades.csv` | every Penny trade: entry, exit, best price, why |
 | `results/or_breaks.csv` | Olive: size and volume of every opening range break |
-| `results/shadow_trades.csv` | Shay: what the skipped alerts would have done |
+| `results/shadow_scores.csv` | Raven: what the skipped alerts would have done |
 | `results/pearl_trades.csv` | Pearl's live trades |
 | `results/bot_health.csv` | Nora's check that every bot started on time |
 | `results/*_library.csv` | the win and loss libraries the team learns from |
