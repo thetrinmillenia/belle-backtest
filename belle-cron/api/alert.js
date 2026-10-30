@@ -119,7 +119,7 @@ export default async function handler(req, res) {
     // Penny rule (Titi, Oct 16): holding one side and Belle fires the other side -> no new trade.
     // Discord still gets the alert; Penny tightens the open trade's stop (signal = empty watchlist penny-flip-C/P-time).
     let holding = null;
-    if (inWin) {
+    if (inWin && mins < 900) {   // Oct 30: Window 3 is never blocked, holding or not
       try {
         const pos = await (await fetch(`${TRADE}/v2/positions`, { headers: H() })).json();
         holding = (Array.isArray(pos) ? pos : []).find(p => /^(SPY|SPXW)\d{6}[CP]\d{8}$/.test(p.symbol) && p.symbol.slice(-9, -8) !== cp && Number(p.qty) > 0) || null;
