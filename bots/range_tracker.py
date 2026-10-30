@@ -94,7 +94,8 @@ def mss_events(bars):
             trend, last = "bearish", f"bearish {sl * K:.0f} ({when})"
         elif sh is not None and b["c"] > sh and trend != "bullish":
             trend, last = "bullish", f"bullish {sh * K:.0f} ({when})"
-        by_day[str(b["day"])] = last
+        flip = (f", flips above {sh * K:.0f}" if trend == "bearish" and sh else (f", flips below {sl * K:.0f}" if trend == "bullish" and sl else ""))
+        by_day[str(b["day"])] = last + flip
     return by_day
 
 
