@@ -23,3 +23,4 @@ date,time_et,side,contract,entry,reason
 2026-10-29,15:05,CALLS,SPY261029C00769000,0.63,EOD calls inside the 2 PM candle
 2026-10-29,15:25,CALLS,SPXW261029C07710000,2.08,EOD calls below PDC
 2026-10-29,15:25,CALLS,SPY261029C00768000,1.16,EOD calls below PDC
+2026-10-30,11:35,PUTS,SPXW261030P07590000,7.88,order rejected (SPXW261030P07560000): potential wash trade detected. use complex orders
