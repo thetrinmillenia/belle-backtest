@@ -147,6 +147,40 @@ def spy_price():
     return (r.get("trade") or {}).get("p")
 
 
+def irl_broken():
+    """Morning runner rule (Oct 30): the 3m IRL. Latest confirmed 3 minute swing on SPY (2 candles each side):
+    the swing high for puts, the swing low for calls. Broken = SPY trades through it (a wick counts).
+    Backtest Oct 16 to 30, morning SPX trades: +$2,828 vs +$2,174 with the old trail. No swing yet = treated as broken."""
+    try:
+        start = now().replace(hour=9, minute=30, second=0, microsecond=0)
+        b = requests.get(f"{DATA}/v2/stocks/SPY/bars", headers=H, timeout=10,
+                         params={"timeframe": "1Min", "start": start.isoformat(), "feed": "iex", "limit": 1000}).json().get("bars") or []
+        bars3 = []
+        for x in b:
+            t = dt.datetime.fromisoformat(x["t"].replace("Z", "+00:00")).astimezone(ET)
+            k = (t.hour * 60 + t.minute - 570) // 3
+            if bars3 and bars3[-1]["k"] == k:
+                bars3[-1]["h"] = max(bars3[-1]["h"], x["h"])
+                bars3[-1]["l"] = min(bars3[-1]["l"], x["l"])
+            else:
+                bars3.append({"k": k, "h": x["h"], "l": x["l"]})
+        done = bars3[:-1]   # the current 3m candle is still open
+        swing = None
+        for i in range(2, len(done) - 2):
+            w = done[i - 2:i + 3]
+            if DIR == -1 and done[i]["h"] == max(c["h"] for c in w) and sum(1 for c in w if c["h"] == done[i]["h"]) == 1:
+                swing = done[i]["h"]
+            if DIR == 1 and done[i]["l"] == min(c["l"] for c in w) and sum(1 for c in w if c["l"] == done[i]["l"]) == 1:
+                swing = done[i]["l"]
+        if swing is None or not b:
+            return True
+        last = b[-1]
+        return last["h"] > swing if DIR == -1 else last["l"] < swing
+    except Exception as e:
+        print("irl check failed", e)
+        return True
+
+
 # REAL STOP ORDER at the broker (Titi, Oct 20, before going live). Logged and posted as "EXIT": a stop order sits at Alpaca and triggers the instant
 # the contract trades at the floor, instead of Penny noticing it up to 10 seconds later. Penny moves it up as the floor rises.
 STOP_ID = None
@@ -348,7 +382,7 @@ while True:
         if hit:
             said.update(f"d{m}" for m in hit)
             draft(f"{money(bid)} HERE ON SPY {SIDE_W}\nUP +{gain * 100:.0f}% {'☢️' if hit[-1] >= 100 else '🔥'}\n@everyone")
-        levels = ((0.20, "+20%"), (0.50, "+50%, take partial"), (1.00, "+100%, trail now 30% below the best (rule E)"))
+        levels = ((0.20, "+20%"), (0.50, "+50%, take partial"), (1.00, "+100%"))
         if EOD:   # EOD (Titi, Oct 27): take partials at +100% and +200%, the trail is 15% below the best after +100%
             levels = ((0.20, "+20%"), (0.50, "+50%"), (1.00, "+100%, take partial, trail now 15% below the best"), (2.00, "+200%, take partial"))
         for lvl, msg in levels:
@@ -363,14 +397,22 @@ while True:
                         draft(f"TRIMMING 🚨\n{QTY - left}/{QTY} SOLD @ {money(px)}. {left} left, the last one rides.\n@everyone")
                 post(f"{LABEL} {msg}")
         stop = entry * (0.50 if EOD else 0.57)   # starting stop 43% (Oct 20); Window 3 50% (Oct 29 backtest: +$212 vs +$19)
-        if peak >= entry * 1.60 and not HOLD:   # rule E (Titi, Oct 25): breakeven at +60%
+        trail = None
+        if EOD and peak >= entry * 1.60 and not HOLD:   # Window 3 (unchanged): breakeven at +60%
             stop = max(stop, entry)
             if "be" not in said:
                 said.add("be")
                 post(f"{LABEL} +60%, stop moved to breakeven {entry:.2f}")
                 draft(f"Stop moved to breakeven on SPY {SIDE_W} ({money(entry)}). No risk left on this one.\n@everyone")
-        if peak >= entry * 2.0 and not HOLD:   # rule E: after +100%, trail 30% below the best (no $50 cap)
-            stop = max(stop, peak * 0.70)
+        if not EOD and not HOLD and peak >= entry * 2.0:
+            # morning runner rule (Oct 30): from +100% the broker stop holds breakeven plus a third of the best gain.
+            # The 30% trail below the best only sells if the 3m IRL is broken (checked below), so pullbacks in a trend are held.
+            stop = max(stop, entry, entry + (peak - entry) / 3)
+            trail = peak * 0.70
+            if "be" not in said:
+                said.add("be")
+                post(f"{LABEL} stop moved to {stop:.2f}")
+                draft(f"Stop moved to breakeven on SPY {SIDE_W} ({money(entry)}). No risk left on this one.\n@everyone")
         if EOD:   # EOD trail (Titi, Oct 27): fast spikes. 20% below the best from +30%, 15% below the best from +100%
             if peak >= entry * 1.30:
                 stop = max(stop, peak * 0.80)
@@ -395,6 +437,9 @@ while True:
             if not move_stop(sp):
                 reason = "EXIT"
                 break
+        if trail and stop < bid <= trail and irl_broken():
+            reason = "trail"
+            break
         if bid <= stop:
             reason = "flip" if warned and stop == warn_stop else ("trail" if peak >= entry * 1.3 and stop > entry else ("breakeven" if stop >= entry else ("step stop" if stop >= entry * 0.80 - 1e-9 else "43% stop")))
             break
