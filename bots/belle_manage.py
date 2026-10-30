@@ -188,6 +188,19 @@ STOP_PX = None
 STOP_FILL = None   # price if the broker stop order filled
 
 
+def spy_move_60m():
+    """SPY move over the 60 minutes before the fill, in the trade's direction (negative = SPY ran against the trade)."""
+    try:
+        end = now().replace(second=0, microsecond=0)
+        b = requests.get(f"{DATA}/v2/stocks/SPY/bars", headers=H, timeout=10,
+                         params={"timeframe": "1Min", "start": (end - dt.timedelta(minutes=60)).isoformat(), "end": end.isoformat(),
+                                 "feed": "iex", "limit": 100}).json().get("bars") or []
+        return (b[-1]["c"] - b[0]["o"]) * DIR if len(b) >= 30 else 0.0
+    except Exception as e:
+        print("spy 60m check failed", e)
+        return 0.0
+
+
 def tick_dn(p):
     if SYM.startswith("SPY"):
         return math.floor(p * 100 + 1e-9) / 100
@@ -318,6 +331,13 @@ T_IN = f"{now():%H:%M}"
 WIN1 = now().hour * 60 + now().minute <= 750
 DRAFT_ON = WIN1
 SIDE_W = "CALLS" if DIR == 1 else "PUTS"
+# Window 3 reversal hold, SPX only (Titi, Oct 30: "she just needs to know when to hold"). When the EOD alert is a reversal
+# (SPY moved $1.00+ against the trade in the 60 minutes before the fill), SPX is held: 35% floor, no trail until 3x,
+# then 25% below the best, an opposite alert = out, out at 15:55 ET. SPY keeps the normal trail.
+# Backtest, Window 3 SPX Oct 16 to 30: those 4 trades +$892 held vs +$262 trailed; the other 8 trades stay on the trail.
+REV_HOLD = EOD and not HOLD and SYM.startswith("SPXW") and spy_move_60m() <= -1.00
+if REV_HOLD:
+    print("reversal hold on", SYM)
 draft(f"JUST FILLED IN @ {money(entry)} avg\n@everyone")
 # scale out (Titi, Oct 17): SPY buys 3 contracts. Sell 1 at +50%, 1 at +100%, the last one rides the stop.
 QTY = max(1, int(float(o.get("filled_qty") or 1)))
@@ -338,6 +358,9 @@ while True:
     if n.hour * 60 + n.minute >= EXIT_MIN:
         reason = "15:59"
         break
+    if REV_HOLD and n.hour * 60 + n.minute >= 955:
+        reason = "hold 15:55"
+        break
     if stop_filled():
         reason = "EXIT"
         break
@@ -348,7 +371,7 @@ while True:
         bid, spy = None, None
     if spy:
         spy_best = spy if spy_best is None else (max(spy_best, spy) if DIR == 1 else min(spy_best, spy))
-    if spy and SPY_STOP and (spy - SPY_STOP) * DIR <= 0:
+    if spy and SPY_STOP and (spy - SPY_STOP) * DIR <= 0 and not REV_HOLD:
         reason = "stop"
         break
     if FIB and spy:
@@ -385,6 +408,8 @@ while True:
         levels = ((0.20, "+20%"), (0.50, "+50%, take partial"), (1.00, "+100%"))
         if EOD:   # EOD (Titi, Oct 27): take partials at +100% and +200%, the trail is 15% below the best after +100%
             levels = ((0.20, "+20%"), (0.50, "+50%"), (1.00, "+100%, take partial, trail now 15% below the best"), (2.00, "+200%, take partial"))
+        if REV_HOLD:
+            levels = ((0.20, "+20%"), (0.50, "+50%"), (1.00, "+100%"), (2.00, "+200%"))
         for lvl, msg in levels:
             if gain >= lvl and lvl not in said:
                 said.add(lvl)
@@ -398,7 +423,7 @@ while True:
                 post(f"{LABEL} {msg}")
         stop = entry * (0.50 if EOD else 0.57)   # starting stop 43% (Oct 20); Window 3 50% (Oct 29 backtest: +$212 vs +$19)
         trail = None
-        if EOD and peak >= entry * 1.60 and not HOLD:   # Window 3 (unchanged): breakeven at +60%
+        if EOD and peak >= entry * 1.60 and not HOLD and not REV_HOLD:   # Window 3 (unchanged): breakeven at +60%
             stop = max(stop, entry)
             if "be" not in said:
                 said.add("be")
@@ -413,17 +438,22 @@ while True:
                 said.add("be")
                 post(f"{LABEL} stop moved to {stop:.2f}")
                 draft(f"Stop moved to breakeven on SPY {SIDE_W} ({money(entry)}). No risk left on this one.\n@everyone")
-        if EOD:   # EOD trail (Titi, Oct 27): fast spikes. 20% below the best from +30%, 15% below the best from +100%
+        if EOD and not REV_HOLD:   # EOD trail (Titi, Oct 27): fast spikes. 20% below the best from +30%, 15% below the best from +100%
             if peak >= entry * 1.30:
                 stop = max(stop, peak * 0.80)
             if peak >= entry * 2.0:
                 stop = max(stop, peak * 0.85)
         if HOLD:
             stop = entry * 0.40 if peak < entry * 2.0 else max(entry * 0.40, peak * 0.60)
+        if REV_HOLD:
+            stop = entry * 0.35 if peak < entry * 3.0 else max(entry * 0.35, peak * 0.75)
         # opposite Belle alert while this trade is open (Titi, Oct 16): no new trade, tighten this one
         if not warned and time.time() - last_chk > 30:
             last_chk = time.time()
             if opposite_alert_since(FILL_AT):
+                if REV_HOLD:
+                    reason = "flip"
+                    break
                 warned = True
                 post(f"{LABEL}: Belle flipped sides, stop tightened to 10% under the current price")
         if warned:
