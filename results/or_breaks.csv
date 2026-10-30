@@ -6,3 +6,6 @@ date,time_et,tf,type,dir,range_x_avg,body_pct,vol_x_avg,close
 2026-10-29,10:00,5m,close outside,up,0.85,74,0.43,7718.01
 2026-10-29,10:00,15m,sweep back inside,down,0.98,15,0.58,7707.23
 2026-10-29,10:30,15m,close outside,up,0.72,14,1.06,7717.36
+2026-10-30,10:10,5m,close outside,down,1.0,93,1.16,7612.42
+2026-10-30,10:00,15m,close outside,down,1.49,95,0.73,7612.42
+2026-10-30,10:30,15m,sweep back inside,up,1.19,81,0.64,7625.46
