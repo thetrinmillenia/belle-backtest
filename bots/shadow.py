@@ -1,4 +1,4 @@
-"""SHAY, the shadow (Oct 26 2026). Scores the Belle alerts Penny filtered out. No orders.
+"""RAVEN, the shadow (was Shay) (Oct 26 2026). Scores the Belle alerts Penny filtered out. No orders.
 
 record (started by the relay the moment Penny skips an alert):
   saves the SPX and SPY contracts at Belle's strikes and their asks to results/shadow_signals.csv.
