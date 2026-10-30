@@ -1,0 +1,32 @@
+name: Range tracker
+
+# Daily ranges after the close (Titi, Oct 30): consolidation, lunch type, multi day boxes. No Discord posts.
+on:
+  schedule:
+    - cron: "20 20,21 * * 1-5"   # 16:20 ET in daylight and standard time; a second run the same day just rewrites the same rows
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests
+      - run: python bots/range_tracker.py
+        env:
+          ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+      - name: Save the ranges
+        run: |
+          git config user.name nora-bot
+          git config user.email nora-bot@users.noreply.github.com
+          git add data/day_ranges.csv
+          git commit -m "Daily ranges" || true
+          for i in 1 2 3; do git pull --rebase && git push && break; sleep 5; done || true
