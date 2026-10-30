@@ -1,44 +1,44 @@
 date,open,high,low,close,range,net,morning_range,lunch_range,afternoon_range,lunch_type,box_days,box_low,box_high,box_points,day_type,mss_1h,mss_4h
 2026-09-01,7643,7670,7618,7639,52,-4,34,38,27,took both sides,2,7618,7703,85,normal,,
-2026-09-02,7647,7687,7640,7674,47,27,47,21,15,failed sweep of the high,3,7618,7703,85,consolidation,bullish 7670 (09-02 09:30),
-2026-09-03,7702,7763,7698,7755,66,53,55,12,13,broke the high,1,7698,7763,66,normal,bullish 7670 (09-02 09:30),
-2026-09-04,7744,7752,7713,7725,39,-19,38,23,13,failed sweep of the low,2,7698,7763,66,consolidation,bullish 7670 (09-02 09:30),
-2026-09-08,7714,7720,7675,7684,45,-30,37,15,27,inside the morning range,3,7675,7763,89,consolidation,bearish 7713 (09-08 09:30),
-2026-09-09,7664,7667,7633,7647,35,-16,35,20,13,inside the morning range,2,7633,7720,87,consolidation,bearish 7713 (09-08 09:30),
-2026-09-10,7603,7623,7589,7601,34,-2,34,27,13,inside the morning range,2,7589,7667,78,consolidation,bearish 7713 (09-08 09:30),bearish 7618 (09-10 09:30)
-2026-09-11,7668,7686,7659,7664,27,-4,27,15,19,inside the morning range,1,7659,7686,27,consolidation,bullish 7657 (09-11 09:30),bearish 7618 (09-10 09:30)
-2026-09-14,7613,7658,7602,7630,55,17,31,40,22,broke the high,2,7602,7686,84,normal,bullish 7657 (09-11 09:30),bearish 7618 (09-10 09:30)
-2026-09-15,7624,7626,7584,7597,42,-27,42,14,14,inside the morning range,2,7584,7658,73,consolidation,bearish 7602 (09-15 09:30),bearish 7618 (09-10 09:30)
-2026-09-16,7617,7639,7519,7563,120,-54,23,24,116,failed sweep of the high,1,7519,7639,120,expansion,bearish 7588 (09-16 14:30),bearish 7618 (09-10 09:30)
-2026-09-17,7655,7659,7623,7649,36,-6,34,13,14,inside the morning range,1,7623,7659,36,consolidation,bullish 7639 (09-17 09:30),bearish 7618 (09-10 09:30)
-2026-09-18,7636,7643,7603,7639,40,3,30,21,24,failed sweep of the low,2,7603,7659,56,consolidation,bullish 7639 (09-17 09:30),bearish 7618 (09-10 09:30)
-2026-09-21,7686,7772,7683,7758,89,72,42,32,22,broke the high,1,7683,7772,89,normal,bullish 7639 (09-17 09:30),bullish 7659 (09-21 09:30)
-2026-09-22,7764,7774,7749,7758,25,-7,22,11,16,failed sweep of the low,2,7683,7774,91,consolidation,bullish 7639 (09-17 09:30),bullish 7659 (09-21 09:30)
-2026-09-23,7751,7753,7688,7702,65,-49,46,28,25,failed sweep of the low,3,7683,7774,91,consolidation,bearish 7749 (09-23 09:30),bullish 7659 (09-21 09:30)
-2026-09-24,7664,7712,7655,7696,57,32,32,56,27,failed sweep of the high,1,7655,7712,57,normal,bearish 7749 (09-23 09:30),bullish 7659 (09-21 09:30)
-2026-09-25,7710,7746,7686,7737,60,27,40,45,21,broke the high,2,7655,7746,90,normal,bullish 7712 (09-25 11:30),bullish 7659 (09-21 09:30)
-2026-09-28,7707,7718,7660,7678,58,-29,48,49,27,failed sweep of the high,3,7655,7746,90,consolidation,bearish 7686 (09-28 10:30),bullish 7659 (09-21 09:30)
-2026-09-29,7692,7692,7646,7667,45,-25,43,19,29,failed sweep of the low,2,7646,7718,72,consolidation,bearish 7686 (09-28 10:30),bearish 7655 (09-29 09:30)
-2026-09-30,7688,7717,7645,7646,72,-41,33,29,57,inside the morning range,3,7645,7718,73,consolidation,bearish 7686 (09-28 10:30),bearish 7655 (09-29 09:30)
-2026-10-01,7666,7679,7611,7664,68,-2,65,59,34,inside the morning range,1,7611,7679,68,normal,bearish 7686 (09-28 10:30),bearish 7655 (09-29 09:30)
-2026-10-02,7730,7750,7695,7720,55,-10,55,19,15,inside the morning range,1,7695,7750,55,normal,bullish 7717 (10-02 09:30),bullish 7717 (10-02 13:30)
-2026-10-05,7721,7789,7721,7773,68,51,31,20,26,broke the high,1,7721,7789,68,normal,bullish 7717 (10-02 09:30),bullish 7717 (10-02 13:30)
-2026-10-06,7805,7839,7803,7814,36,9,36,26,13,inside the morning range,1,7803,7839,36,consolidation,bullish 7717 (10-02 09:30),bullish 7717 (10-02 13:30)
-2026-10-07,7781,7802,7759,7795,43,14,25,30,11,broke the high,2,7759,7839,80,consolidation,bullish 7717 (10-02 09:30),bullish 7717 (10-02 13:30)
-2026-10-08,7772,7794,7728,7762,66,-10,23,66,28,took both sides,2,7728,7802,74,normal,bearish 7759 (10-08 12:30),bullish 7717 (10-02 13:30)
-2026-10-09,7786,7817,7775,7808,42,23,26,20,14,broke the high,3,7728,7817,90,consolidation,bullish 7794 (10-09 10:30),bullish 7717 (10-02 13:30)
-2026-10-12,7811,7817,7794,7804,23,-7,18,17,12,failed sweep of the low,4,7728,7817,90,consolidation,bearish 7799 (10-12 13:30),bullish 7717 (10-02 13:30)
-2026-10-13,7797,7811,7783,7804,28,7,27,20,20,failed sweep of the low,5,7728,7817,90,consolidation,bearish 7799 (10-12 13:30),bullish 7717 (10-02 13:30)
-2026-10-14,7773,7786,7690,7720,96,-53,51,38,30,broke the low,1,7690,7786,96,normal,bearish 7799 (10-12 13:30),bearish 7728 (10-14 09:30)
-2026-10-15,7686,7752,7667,7741,85,55,68,29,37,broke the high,1,7667,7752,85,normal,bullish 7735 (10-15 14:30),bearish 7728 (10-14 09:30)
-2026-10-16,7754,7755,7629,7656,126,-98,47,69,47,broke the low,1,7629,7755,126,expansion,bearish 7667 (10-16 12:30),bearish 7728 (10-14 09:30)
-2026-10-19,7696,7727,7681,7689,46,-7,44,34,24,failed sweep of the high,1,7681,7727,46,consolidation,bearish 7667 (10-16 12:30),bearish 7728 (10-14 09:30)
-2026-10-20,7680,7746,7666,7714,80,34,80,18,22,inside the morning range,2,7666,7746,80,normal,bullish 7727 (10-20 09:30),bearish 7728 (10-14 09:30)
-2026-10-21,7735,7767,7707,7754,60,19,38,23,39,broke the high,1,7707,7767,60,normal,bullish 7727 (10-20 09:30),bullish 7755 (10-21 09:30)
-2026-10-22,7686,7700,7635,7663,65,-23,55,36,29,inside the morning range,1,7635,7700,65,normal,bearish 7701 (10-22 09:30),bearish 7666 (10-22 09:30)
-2026-10-23,7622,7657,7610,7621,48,-1,48,35,20,failed sweep of the high,2,7610,7700,90,consolidation,bearish 7701 (10-22 09:30),bearish 7666 (10-22 09:30)
-2026-10-26,7646,7700,7640,7675,61,30,61,29,19,inside the morning range,3,7610,7700,91,consolidation,bullish 7657 (10-26 09:30),bearish 7666 (10-22 09:30)
-2026-10-27,7697,7734,7675,7720,59,23,46,21,21,broke the high,1,7675,7734,59,normal,bullish 7657 (10-26 09:30),bearish 7666 (10-22 09:30)
-2026-10-28,7736,7756,7716,7746,41,10,24,20,37,failed sweep of the high,2,7675,7756,81,consolidation,bullish 7657 (10-26 09:30),bearish 7666 (10-22 09:30)
-2026-10-29,7711,7731,7689,7718,41,7,29,30,30,failed sweep of the high,3,7675,7756,81,consolidation,bullish 7657 (10-26 09:30),bearish 7666 (10-22 09:30)
-2026-10-30,7637,7637,7526,7580,111,-57,41,39,62,broke the low,1,7526,7637,111,expansion,bearish 7689 (10-30 09:30),bearish 7666 (10-22 09:30)
+2026-09-02,7647,7687,7640,7674,47,27,47,21,15,failed sweep of the high,3,7618,7703,85,consolidation,"bullish 7670 (09-02 09:30), flips below 7667",
+2026-09-03,7702,7763,7698,7755,66,53,55,12,13,broke the high,1,7698,7763,66,normal,"bullish 7670 (09-02 09:30), flips below 7667",
+2026-09-04,7744,7752,7713,7725,39,-19,38,23,13,failed sweep of the low,2,7698,7763,66,consolidation,"bullish 7670 (09-02 09:30), flips below 7713",
+2026-09-08,7714,7720,7675,7684,45,-30,37,15,27,inside the morning range,3,7675,7763,89,consolidation,"bearish 7713 (09-08 09:30), flips above 7728",
+2026-09-09,7664,7667,7633,7647,35,-16,35,20,13,inside the morning range,2,7633,7720,87,consolidation,"bearish 7713 (09-08 09:30), flips above 7728",
+2026-09-10,7603,7623,7589,7601,34,-2,34,27,13,inside the morning range,2,7589,7667,78,consolidation,"bearish 7713 (09-08 09:30), flips above 7657","bearish 7618 (09-10 09:30), flips above 7763"
+2026-09-11,7668,7686,7659,7664,27,-4,27,15,19,inside the morning range,1,7659,7686,27,consolidation,"bullish 7657 (09-11 09:30), flips below 7596","bearish 7618 (09-10 09:30), flips above 7763"
+2026-09-14,7613,7658,7602,7630,55,17,31,40,22,broke the high,2,7602,7686,84,normal,"bullish 7657 (09-11 09:30), flips below 7602","bearish 7618 (09-10 09:30), flips above 7686"
+2026-09-15,7624,7626,7584,7597,42,-27,42,14,14,inside the morning range,2,7584,7658,73,consolidation,"bearish 7602 (09-15 09:30), flips above 7603","bearish 7618 (09-10 09:30), flips above 7686"
+2026-09-16,7617,7639,7519,7563,120,-54,23,24,116,failed sweep of the high,1,7519,7639,120,expansion,"bearish 7588 (09-16 14:30), flips above 7639","bearish 7618 (09-10 09:30), flips above 7686"
+2026-09-17,7655,7659,7623,7649,36,-6,34,13,14,inside the morning range,1,7623,7659,36,consolidation,"bullish 7639 (09-17 09:30), flips below 7519","bearish 7618 (09-10 09:30), flips above 7686"
+2026-09-18,7636,7643,7603,7639,40,3,30,21,24,failed sweep of the low,2,7603,7659,56,consolidation,"bullish 7639 (09-17 09:30), flips below 7603","bearish 7618 (09-10 09:30), flips above 7659"
+2026-09-21,7686,7772,7683,7758,89,72,42,32,22,broke the high,1,7683,7772,89,normal,"bullish 7639 (09-17 09:30), flips below 7603","bullish 7659 (09-21 09:30), flips below 7603"
+2026-09-22,7764,7774,7749,7758,25,-7,22,11,16,failed sweep of the low,2,7683,7774,91,consolidation,"bullish 7639 (09-17 09:30), flips below 7749","bullish 7659 (09-21 09:30), flips below 7603"
+2026-09-23,7751,7753,7688,7702,65,-49,46,28,25,failed sweep of the low,3,7683,7774,91,consolidation,"bearish 7749 (09-23 09:30), flips above 7773","bullish 7659 (09-21 09:30), flips below 7603"
+2026-09-24,7664,7712,7655,7696,57,32,32,56,27,failed sweep of the high,1,7655,7712,57,normal,"bearish 7749 (09-23 09:30), flips above 7712","bullish 7659 (09-21 09:30), flips below 7603"
+2026-09-25,7710,7746,7686,7737,60,27,40,45,21,broke the high,2,7655,7746,90,normal,"bullish 7712 (09-25 11:30), flips below 7686","bullish 7659 (09-21 09:30), flips below 7655"
+2026-09-28,7707,7718,7660,7678,58,-29,48,49,27,failed sweep of the high,3,7655,7746,90,consolidation,"bearish 7686 (09-28 10:30), flips above 7718","bullish 7659 (09-21 09:30), flips below 7655"
+2026-09-29,7692,7692,7646,7667,45,-25,43,19,29,failed sweep of the low,2,7646,7718,72,consolidation,"bearish 7686 (09-28 10:30), flips above 7718","bearish 7655 (09-29 09:30), flips above 7746"
+2026-09-30,7688,7717,7645,7646,72,-41,33,29,57,inside the morning range,3,7645,7718,73,consolidation,"bearish 7686 (09-28 10:30), flips above 7717","bearish 7655 (09-29 09:30), flips above 7746"
+2026-10-01,7666,7679,7611,7664,68,-2,65,59,34,inside the morning range,1,7611,7679,68,normal,"bearish 7686 (09-28 10:30), flips above 7717","bearish 7655 (09-29 09:30), flips above 7717"
+2026-10-02,7730,7750,7695,7720,55,-10,55,19,15,inside the morning range,1,7695,7750,55,normal,"bullish 7717 (10-02 09:30), flips below 7611","bullish 7717 (10-02 13:30), flips below 7611"
+2026-10-05,7721,7789,7721,7773,68,51,31,20,26,broke the high,1,7721,7789,68,normal,"bullish 7717 (10-02 09:30), flips below 7611","bullish 7717 (10-02 13:30), flips below 7611"
+2026-10-06,7805,7839,7803,7814,36,9,36,26,13,inside the morning range,1,7803,7839,36,consolidation,"bullish 7717 (10-02 09:30), flips below 7763","bullish 7717 (10-02 13:30), flips below 7611"
+2026-10-07,7781,7802,7759,7795,43,14,25,30,11,broke the high,2,7759,7839,80,consolidation,"bullish 7717 (10-02 09:30), flips below 7759","bullish 7717 (10-02 13:30), flips below 7611"
+2026-10-08,7772,7794,7728,7762,66,-10,23,66,28,took both sides,2,7728,7802,74,normal,"bearish 7759 (10-08 12:30), flips above 7794","bullish 7717 (10-02 13:30), flips below 7611"
+2026-10-09,7786,7817,7775,7808,42,23,26,20,14,broke the high,3,7728,7817,90,consolidation,"bullish 7794 (10-09 10:30), flips below 7728","bullish 7717 (10-02 13:30), flips below 7728"
+2026-10-12,7811,7817,7794,7804,23,-7,18,17,12,failed sweep of the low,4,7728,7817,90,consolidation,"bearish 7799 (10-12 13:30), flips above 7817","bullish 7717 (10-02 13:30), flips below 7728"
+2026-10-13,7797,7811,7783,7804,28,7,27,20,20,failed sweep of the low,5,7728,7817,90,consolidation,"bearish 7799 (10-12 13:30), flips above 7811","bullish 7717 (10-02 13:30), flips below 7728"
+2026-10-14,7773,7786,7690,7720,96,-53,51,38,30,broke the low,1,7690,7786,96,normal,"bearish 7799 (10-12 13:30), flips above 7809","bearish 7728 (10-14 09:30), flips above 7817"
+2026-10-15,7686,7752,7667,7741,85,55,68,29,37,broke the high,1,7667,7752,85,normal,"bullish 7735 (10-15 14:30), flips below 7667","bearish 7728 (10-14 09:30), flips above 7817"
+2026-10-16,7754,7755,7629,7656,126,-98,47,69,47,broke the low,1,7629,7755,126,expansion,"bearish 7667 (10-16 12:30), flips above 7755","bearish 7728 (10-14 09:30), flips above 7817"
+2026-10-19,7696,7727,7681,7689,46,-7,44,34,24,failed sweep of the high,1,7681,7727,46,consolidation,"bearish 7667 (10-16 12:30), flips above 7727","bearish 7728 (10-14 09:30), flips above 7755"
+2026-10-20,7680,7746,7666,7714,80,34,80,18,22,inside the morning range,2,7666,7746,80,normal,"bullish 7727 (10-20 09:30), flips below 7666","bearish 7728 (10-14 09:30), flips above 7755"
+2026-10-21,7735,7767,7707,7754,60,19,38,23,39,broke the high,1,7707,7767,60,normal,"bullish 7727 (10-20 09:30), flips below 7701","bullish 7755 (10-21 09:30), flips below 7666"
+2026-10-22,7686,7700,7635,7663,65,-23,55,36,29,inside the morning range,1,7635,7700,65,normal,"bearish 7701 (10-22 09:30), flips above 7767","bearish 7666 (10-22 09:30), flips above 7767"
+2026-10-23,7622,7657,7610,7621,48,-1,48,35,20,failed sweep of the high,2,7610,7700,90,consolidation,"bearish 7701 (10-22 09:30), flips above 7657","bearish 7666 (10-22 09:30), flips above 7767"
+2026-10-26,7646,7700,7640,7675,61,30,61,29,19,inside the morning range,3,7610,7700,91,consolidation,"bullish 7657 (10-26 09:30), flips below 7664","bearish 7666 (10-22 09:30), flips above 7767"
+2026-10-27,7697,7734,7675,7720,59,23,46,21,21,broke the high,1,7675,7734,59,normal,"bullish 7657 (10-26 09:30), flips below 7664","bearish 7666 (10-22 09:30), flips above 7767"
+2026-10-28,7736,7756,7716,7746,41,10,24,20,37,failed sweep of the high,2,7675,7756,81,consolidation,"bullish 7657 (10-26 09:30), flips below 7664","bearish 7666 (10-22 09:30), flips above 7767"
+2026-10-29,7711,7731,7689,7718,41,7,29,30,30,failed sweep of the high,3,7675,7756,81,consolidation,"bullish 7657 (10-26 09:30), flips below 7689","bearish 7666 (10-22 09:30), flips above 7756"
+2026-10-30,7637,7637,7526,7580,111,-57,41,39,62,broke the low,1,7526,7637,111,expansion,"bearish 7689 (10-30 09:30), flips above 7719","bearish 7666 (10-22 09:30), flips above 7756"
