@@ -206,7 +206,7 @@ if os.path.exists("results/shadow_scores.csv"):
         for r in sh:
             why[r["reason"]][0] += 1
             why[r["reason"]][1] += int(r["pl"])
-        L += ["", "## Skipped alerts this week (Shay)", "", "| Why skipped | Contracts | Would have made |", "|---|---|---|"]
+        L += ["", "## Skipped alerts this week (Raven)", "", "| Why skipped | Contracts | Would have made |", "|---|---|---|"]
         L += [f"| {k} | {v[0]} | ${v[1]:+,} |" for k, v in sorted(why.items())]
 if w3rows:
     L += ["", "## Window 3: Penny's real result vs selling at the liquidity target (SPX contract)", "",
