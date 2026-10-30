@@ -48,9 +48,10 @@ for o in fills:
     if o["side"] == "buy":
         g = next((g for g in reversed(trades) if g["day"] == t.date() and g["cp"] == s[-9] and (t - g["t"]).total_seconds() < 300), None)
         if not g:
-            g = {"day": t.date(), "t": t, "cp": s[-9], "pl": 0.0, "cid": o.get("client_order_id", "")}
+            g = {"day": t.date(), "t": t, "cp": s[-9], "pl": 0.0, "cid": o.get("client_order_id", ""), "buys": []}
             trades.append(g)
         lots[s].append([q, p, g])
+        g["buys"].append((s, q, p))
     else:
         while q > 0 and lots[s]:
             lot = lots[s][0]
@@ -69,8 +70,20 @@ closes = {et(b["t"]).date(): b["c"] for b in daily}
 intraday = defaultdict(list)
 for d in days:
     b = requests.get(f"{DATA}/v2/stocks/SPY/bars", headers=H, timeout=30,
-                     params={"timeframe": "5Min", "start": f"{d}T13:00:00Z", "end": f"{d}T21:00:00Z", "feed": "iex", "limit": 1000}).json().get("bars") or []
-    intraday[d] = [(et(x["t"]).hour * 60 + et(x["t"]).minute, x) for x in b]
+                     params={"timeframe": "5Min", "start": f"{d - dt.timedelta(days=6)}T13:00:00Z", "end": f"{d}T21:00:00Z", "feed": "iex",
+                             "limit": 5000}).json().get("bars") or []
+    b = [x for x in b if 570 <= et(x["t"]).hour * 60 + et(x["t"]).minute < 960]   # regular hours only
+    e13 = e50 = e200 = None
+    rows = []
+    for x in b:   # EMAs 13 / 50 / 200 on 5m closes, carried across days
+        c = x["c"]
+        e13 = c if e13 is None else e13 + (c - e13) * 2 / 14
+        e50 = c if e50 is None else e50 + (c - e50) * 2 / 51
+        e200 = c if e200 is None else e200 + (c - e200) * 2 / 201
+        x["e"] = (e13, e50, e200)
+        if et(x["t"]).date() == d:
+            rows.append((et(x["t"]).hour * 60 + et(x["t"]).minute, x))
+    intraday[d] = rows
 day_tags = {}
 if os.path.exists("data/day_tags.csv"):
     with open("data/day_tags.csv") as fh:
@@ -98,6 +111,15 @@ for d, gs in by_day.items():
             tags.append("after a loss")
         if px and pdc:
             tags.append(f"{side} {'above' if px > pdc else 'below'} PDC")
+        before = [x for mm, x in bars if mm + 5 <= m][-12:]
+        if len(before) >= 6:
+            crosses = sum(1 for a, b2 in zip(before, before[1:])
+                          for k in range(3) if (a["c"] - a["e"][k]) * (b2["c"] - b2["e"][k]) < 0)
+            e = before[-1]["e"]
+            if crosses >= 3:
+                tags.append("EMAs tangled (price crossed the 13/50/200 3+ times in the last hour)")
+            elif e[0] > e[1] > e[2] or e[0] < e[1] < e[2]:
+                tags.append("EMAs stacked (trend)")
         if px and h2 and m >= 900:
             tags.append(f"W3 {side} " + ("above the 2 PM high" if px > h2 else ("below the 2 PM low" if px < l2 else "inside the 2 PM candle")))
         for tg in (day_tags.get(str(d), "") or "").split(";"):
@@ -128,6 +150,40 @@ for tg, (n, w, pl) in stat.items():
         cands.append([tg, idea, n, f"{w / n:.0%}", f"{rest_w / rest_n:.0%}", f"{-pl:+.0f}", blocked])
 cands.sort(key=lambda c: -abs(float(c[5])))
 
+# 3b) Window 3 exits: what Penny's trail got vs selling at the liquidity target (calls: the highest high since 13:00 ET,
+# puts: the lowest low since 13:00 ET, both on SPY 5m before the entry). Same 50% starting stop. SPX contracts only.
+w3rows = []
+for g in trades:
+    m = g["t"].hour * 60 + g["t"].minute
+    spx = [b for b in g["buys"] if b[0].startswith("SPXW")]
+    if m < 900 or not spx:
+        continue
+    sym, q, e = spx[0]
+    bars = intraday.get(g["day"], [])
+    aft = [x for mm, x in bars if 780 <= mm and mm + 5 <= m]
+    if not aft:
+        continue
+    tgt = max(x["h"] for x in aft) if g["cp"] == "C" else min(x["l"] for x in aft)
+    hit = next((mm for mm, x in bars if mm >= m and ((g["cp"] == "C" and x["h"] >= tgt) or (g["cp"] == "P" and x["l"] <= tgt))), None)
+    ob = requests.get(f"{DATA}/v1beta1/options/bars", headers=H, timeout=30,
+                      params={"symbols": sym, "timeframe": "1Min", "start": g["t"].isoformat(),
+                              "end": g["t"].replace(hour=15, minute=59).isoformat(), "limit": 1000}).json().get("bars", {}).get(sym, [])
+    if not ob:
+        continue
+    out, peak = None, e
+    for x in ob:
+        mm = et(x["t"]).hour * 60 + et(x["t"]).minute
+        if x["l"] <= e * 0.5 and peak < e * 1.6:
+            out = e * 0.5
+            break
+        peak = max(peak, x["h"])
+        if hit is not None and mm >= hit:
+            out = x["c"]
+            break
+    if out is None:
+        out = ob[-1]["c"]
+    w3rows.append((g["day"], f"{m // 60:02d}:{m % 60:02d}", sym[-9:], e, round(tgt * 10.03, 1), hit, round((out - e) * 100), round(g["pl"])))
+
 # 4) write the weekly review
 wk0 = (now - dt.timedelta(days=now.weekday())).date()
 week = [g for g in trades if g["day"] >= wk0]
@@ -152,6 +208,13 @@ if os.path.exists("results/shadow_scores.csv"):
             why[r["reason"]][1] += int(r["pl"])
         L += ["", "## Skipped alerts this week (Shay)", "", "| Why skipped | Contracts | Would have made |", "|---|---|---|"]
         L += [f"| {k} | {v[0]} | ${v[1]:+,} |" for k, v in sorted(why.items())]
+if w3rows:
+    L += ["", "## Window 3: Penny's real result vs selling at the liquidity target (SPX contract)", "",
+          "| Day | In ET | Contract | Entry | Target (SPX approx) | Target hit ET | At target | Penny's trade (SPX + SPY) |", "|---|---|---|---|---|---|---|---|"]
+    for r in w3rows:
+        hit = f"{r[5] // 60:02d}:{r[5] % 60:02d}" if r[5] is not None else "not hit"
+        L.append(f"| {r[0]:%m-%d} | {r[1]} | {r[2]} | {r[3]:.2f} | {r[4]} | {hit} | ${r[6]:+,} | ${r[7]:+,} |")
+    L.append(f"Total at target: ${sum(r[6] for r in w3rows):+,}")
 L += ["", "## Rule candidates (8+ trades, win rate 20+ points away from the rest)", ""]
 if cands:
     L += ["| Tag | Idea | Trades | Win rate | Rest | Skipping it would change P/L by | Winners it would block |", "|---|---|---|---|---|---|---|"]
