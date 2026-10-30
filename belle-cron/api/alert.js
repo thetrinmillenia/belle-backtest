@@ -133,7 +133,7 @@ export default async function handler(req, res) {
     const scalp = mins >= 900;
     // Window 3 calls (Oct 29 rule, from every Window 3 alert Oct 16 to 28): calls only when SPY is above PDC AND above
     // the 2 PM (14:00 ET) candle high. Calls inside the 2 PM candle or below PDC are skipped with no Discord note;
-    // Shay scores them. Puts are not touched. If the data cannot be read, the trade is taken.
+    // Raven scores them. Puts are not touched. If the data cannot be read, the trade is taken.
     let eodNoCalls = false, eodWhy = '';
     if (scalp && cp === 'C' && a.spy) {
       try {
@@ -149,7 +149,7 @@ export default async function handler(req, res) {
       } catch (e) { eodNoCalls = false; eodWhy = ''; }
     }
     // range day guard (Oct 29): 2 Window 1 trades in a row lost today -> no more Window 1 entries, Penny waits for Window 3.
-    // Backtest Oct 16 to 29: only Oct 29 triggered, saved $426, blocked no winner. No Discord note; Shay scores the skipped alert.
+    // Backtest Oct 16 to 29: only Oct 29 triggered, saved $426, blocked no winner. No Discord note; Raven scores the skipped alert.
     let rangeSkip = false;
     if (inWin && !holding && mins >= 600 && mins <= 750) {
       try { rangeSkip = (await w1LossStreak(t)) >= 2; } catch (e) { rangeSkip = false; }
