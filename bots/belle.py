@@ -221,12 +221,12 @@ def mss_line(tf, m, now):
     return f"{tf}: {trend} since {when}. {turn}" if flip is not None else f"{tf}: {trend} since {when}"
 
 
-def mss_note(m4, m1):
-    """Belle's read: do the 4H and 1H shifts agree?"""
+def mss_note(m4, m1, bias=None):
+    """Belle's read: do the 4H and 1H shifts agree? Said only when it matches the candle bias (no mixed message)."""
     if not m4 or not m1:
         return ""
     if m4[0] == m1[0]:
-        return f" 4H and 1H agree: {m4[0]}."
+        return f" 4H and 1H agree: {m4[0]}." if not bias or bias.lower() == m4[0] else ""
     lvl = f" Watch {m4[2]:,.2f}." if m4[2] is not None else ""
     return (" 1H bounce inside a bearish 4H." if m4[0] == "bearish" else " 1H pullback inside a bullish 4H.") + lvl
 
@@ -281,7 +281,7 @@ def morning(now):
         if ahead:
             parts.append("**Still ahead this week (high impact):**\n" + "\n".join(ahead))
     parts.append(f"**Day ATR for a {now.strftime('%A')}:** about {ATR.get(now.weekday(), 80)} SPX pts (1 year average).")
-    parts.append("**Belle's read:** " + belle_summary(reads, high_today) + mss_note(*shifts.get("ES", (None, None))))
+    parts.append("**Belle's read:** " + belle_summary(reads, high_today) + mss_note(*shifts.get("ES", (None, None)), (reads.get("ES") or (None,))[0]))
     parts.append(earnings_today(now))
     parts.append(FOOT)
     return "\n\n".join(parts)
