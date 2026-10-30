@@ -53,6 +53,11 @@ jobs:
         run: python bots/health.py
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Harper weekly review (Fridays after the close only)
+        run: python bots/harper_weekly.py
+        env:
+          ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
       - name: Save Nora's log
         if: always()
         run: |
