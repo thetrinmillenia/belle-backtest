@@ -108,7 +108,7 @@ def run_day(day):
         while ai < len(alerts) and alerts[ai][0] <= m:
             a_m, side, src = alerts[ai]
             ai += 1
-            if a_m != m or m >= LAST_MIN:
+            if m - a_m > 3 or m >= LAST_MIN:   # the data can miss a minute: enter on the next bar, up to 3 minutes late
                 continue
             if pos and pos[1] != side:
                 close(c, m, "opposite alert")
