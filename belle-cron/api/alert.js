@@ -199,12 +199,24 @@ export default async function handler(req, res) {
         if (!price) { notes.push(`${label} skipped, no price`); continue; }
         const qty = root === 'SPY' ? SPY_QTY : 1;
         const maxCost = root === 'SPY' ? SPY_MAX : MAX_COST; // per contract: SPX $100 to $250, SPY up to $0.60 (Titi, Oct 19)
-        const c = await pick(root, cp, price, ymd, root === 'SPY' ? a.spyStrike : a.spxStrike, maxCost, root === 'SPY' ? 0 : MIN_COST);
+        let c = await pick(root, cp, price, ymd, root === 'SPY' ? a.spyStrike : a.spxStrike, maxCost, root === 'SPY' ? 0 : MIN_COST);
         if (!c) { shadowAdd(root, 'no contract under the price cap'); notes.push(root === 'SPY' ? 'SPY skipped, nothing at $0.60 or less within 10 strikes' : `SPX skipped, nothing between ${MIN_COST} and ${MAX_COST} within 10 strikes`); continue; }
         if (c.moved > 0) notes.push(`${label}: Belle's ${c.chart ? c.chart.strike : ''}${cp} was $${c.chart ? Math.round(c.chart.cost * qty) : '?'}${qty > 1 ? ` for ${qty}` : ''}, over $${MAX_COST}, so Penny went ${c.moved} strike${c.moved > 1 ? 's' : ''} further out`);
-        const lim = tick(c.ask, root);
+        let lim = tick(c.ask, root);
         if (lim * 100 * qty > bp) { notes.push(`${label} skipped, not enough buying power`); shadowAdd(root, 'not enough buying power'); continue; }
-        const o = await (await fetch(`${TRADE}/v2/orders`, { method: 'POST', headers: H(), body: JSON.stringify({ symbol: c.sym, qty: String(qty), side: 'buy', type: 'limit', limit_price: lim.toFixed(2), time_in_force: 'day', client_order_id: `penny-${t.y}-${t.m}-${t.d}-${label}-${Date.now()}` }) })).json();
+        const buy = (cc, lm) => fetch(`${TRADE}/v2/orders`, { method: 'POST', headers: H(), body: JSON.stringify({ symbol: cc.sym, qty: String(qty), side: 'buy', type: 'limit', limit_price: lm.toFixed(2), time_in_force: 'day', client_order_id: `penny-${t.y}-${t.m}-${t.d}-${label}-${Date.now()}` }) }).then(r => r.json());
+        let o = await buy(c, lim);
+        // Oct 31: Penny already holds this contract with a stop working, so Alpaca rejects the buy as a wash trade
+        // (Oct 30 11:35 ET: the SPX 7560P that ran +1,493% was skipped this way). Buy the next strike out, or in, instead.
+        if (!o.id && /wash/i.test(String(o.message || ''))) {
+          const st = root === 'SPY' ? 1 : 5, dir = cp === 'C' ? 1 : -1;
+          for (const k of [c.strike + dir * st, c.strike - dir * st]) {
+            const c2 = await pick(root, cp, price, ymd, k, maxCost, root === 'SPY' ? 0 : MIN_COST);
+            if (!c2 || c2.sym === c.sym || tick(c2.ask, root) * 100 * qty > bp) continue;
+            const o2 = await buy(c2, tick(c2.ask, root));
+            if (o2.id) { o = o2; c = c2; lim = tick(c2.ask, root); break; }
+          }
+        }
         if (!o.id) { const why = String(o.message || o.code || 'no reason given').replace(/[;|]/g, ',').slice(0, 140); notes.push(`${label} order rejected for ${why}`); shadowAdd(root, `order rejected (${c.sym}): ${why}`); continue; } // Alpaca's reason is kept (Oct 28: wash trade rejections were invisible)
         bp -= lim * 100 * qty;
         picked[label] = { ...c, lim, id: o.id, qty };
