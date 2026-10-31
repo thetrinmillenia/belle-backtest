@@ -1,5 +1,5 @@
 """HARPER'S WEEKLY REVIEW (Oct 29 2026). Runs in Nora's job after the close, on Fridays only (FORCE=1 runs it any day).
-Read only, PAPER account. No Discord. Writes results/harper/weekly-YYYY-MM-DD.md and results/harper/rule_candidates.csv.
+Read only, PAPER account. No Discord. Oct 31: day type and lunch type tags (range tracker), 4H MSS tags, walk-forward check. Writes results/harper/weekly-YYYY-MM-DD.md and results/harper/rule_candidates.csv.
 
 Every Penny trade since the start is tagged with its entry context (window, minute, side, above or below PDC,
 inside or outside the 2 PM candle, first trade of the day, after a loss, day tags such as FOMC / earnings / range day).
@@ -88,6 +88,11 @@ day_tags = {}
 if os.path.exists("data/day_tags.csv"):
     with open("data/day_tags.csv") as fh:
         day_tags = {r["date"]: r["tags"] for r in csv.DictReader(fh)}
+# daily ranges from the range tracker (Oct 31): day type, lunch type, 1h and 4h MSS
+ranges = {}
+if os.path.exists("data/day_ranges.csv"):
+    with open("data/day_ranges.csv") as fh:
+        ranges = {r["date"]: r for r in csv.DictReader(fh)}
 
 by_day = defaultdict(list)
 for g in trades:
@@ -122,6 +127,15 @@ for d, gs in by_day.items():
                 tags.append("EMAs stacked (trend)")
         if px and h2 and m >= 900:
             tags.append(f"W3 {side} " + ("above the 2 PM high" if px > h2 else ("below the 2 PM low" if px < l2 else "inside the 2 PM candle")))
+        rg = ranges.get(str(d), {})
+        if rg.get("day_type"):
+            tags.append("day type: " + rg["day_type"])
+        if rg.get("lunch_type"):
+            tags.append("lunch: " + rg["lunch_type"])
+        prev_rg = ranges.get(max([k for k in ranges if k < str(d)], default=""), {})
+        m4 = (prev_rg.get("mss_4h") or "").split(" ")[0]   # the 4H MSS known before the open
+        if m4 in ("bullish", "bearish"):
+            tags.append(f"{side} {'with' if (m4 == 'bullish') == (side == 'calls') else 'against'} the 4H MSS")
         for tg in (day_tags.get(str(d), "") or "").split(";"):
             if tg.strip():
                 tags.append("day: " + tg.strip())
@@ -149,6 +163,25 @@ for tg, (n, w, pl) in stat.items():
         idea = f"skip {tg}" if gap < 0 else f"favor {tg}"
         cands.append([tg, idea, n, f"{w / n:.0%}", f"{rest_w / rest_n:.0%}", f"{-pl:+.0f}", blocked])
 cands.sort(key=lambda c: -abs(float(c[5])))
+
+# 3a) walk-forward (Oct 31, from quants.md): does each candidate hold on data it never saw?
+# First half of the trades (in time order) = where the idea was found; second half = the check.
+order = sorted(trades, key=lambda g: g["t"])
+half = len(order) // 2
+
+
+def gap_in(gs, tg):
+    a = [g for g in gs if tg in g["tags"]]
+    b = [g for g in gs if tg not in g["tags"]]
+    if len(a) < 4 or len(b) < 4:
+        return None
+    return sum(g["pl"] > 0 for g in a) / len(a) - sum(g["pl"] > 0 for g in b) / len(b)
+
+
+for c in cands:
+    g1, g2 = gap_in(order[:half], c[0]), gap_in(order[half:], c[0])
+    holds = "too few trades" if g1 is None or g2 is None else ("yes" if g1 * g2 > 0 and abs(g2) >= 0.10 else "no")
+    c += [f"{g1:+.0%}" if g1 is not None else "-", f"{g2:+.0%}" if g2 is not None else "-", holds]
 
 # 3b) Window 3 exits: what Penny's trail got vs selling at the liquidity target (calls: the highest high since 13:00 ET,
 # puts: the lowest low since 13:00 ET, both on SPY 5m before the entry). Same 50% starting stop. SPX contracts only.
@@ -194,6 +227,11 @@ L += ["## By day", "", "| Day | Trades | Wins | P/L | Day tags |", "|---|---|---
 for d in sorted({g["day"] for g in week}):
     gs = by_day[d]
     L.append(f"| {d:%a %m-%d} | {len(gs)} | {sum(1 for g in gs if g['pl'] > 0)} | ${sum(g['pl'] for g in gs):+,.0f} | {day_tags.get(str(d), '')} |")
+dt_rows = sorted((tg, v) for tg, v in stat.items() if tg.startswith(("day type: ", "lunch: ")) or "4H MSS" in tg)
+if dt_rows:
+    L += ["", "## By day type, lunch type and 4H MSS (all trades since the start)", "",
+          "| Tag | Trades | Win rate | P/L |", "|---|---|---|---|"]
+    L += [f"| {tg} | {n} | {w / n:.0%} | ${pl:+,.0f} |" for tg, (n, w, pl) in dt_rows]
 L += ["", "## Entry timing, all trades since the start", "", "| Tag | Trades | Win rate | P/L |", "|---|---|---|---|"]
 for tg, (n, w, pl) in sorted(stat.items(), key=lambda x: (-x[1][0], x[0])):
     if n >= 3:
@@ -215,10 +253,12 @@ if w3rows:
         hit = f"{r[5] // 60:02d}:{r[5] % 60:02d}" if r[5] is not None else "not hit"
         L.append(f"| {r[0]:%m-%d} | {r[1]} | {r[2]} | {r[3]:.2f} | {r[4]} | {hit} | ${r[6]:+,} | ${r[7]:+,} |")
     L.append(f"Total at target: ${sum(r[6] for r in w3rows):+,}")
-L += ["", "## Rule candidates (8+ trades, win rate 20+ points away from the rest)", ""]
+L += ["", "## Rule candidates (8+ trades, win rate 20+ points away from the rest)", "",
+      "Walk-forward: the gap in the first half of the trades vs the second half. Holds = same direction and 10+ points in the second half.", ""]
 if cands:
-    L += ["| Tag | Idea | Trades | Win rate | Rest | Skipping it would change P/L by | Winners it would block |", "|---|---|---|---|---|---|---|"]
-    L += [f"| {c[0]} | {c[1]} | {c[2]} | {c[3]} | {c[4]} | ${c[5]} | {c[6]} |" for c in cands[:10]]
+    L += ["| Tag | Idea | Trades | Win rate | Rest | Skipping it would change P/L by | Winners it would block | First half | Second half | Holds |",
+          "|---|---|---|---|---|---|---|---|---|---|"]
+    L += [f"| {c[0]} | {c[1]} | {c[2]} | {c[3]} | {c[4]} | ${c[5]} | {c[6]} | {c[7]} | {c[8]} | {c[9]} |" for c in cands[:10]]
 else:
     L.append("None yet. Most tags need more trades.")
 L += ["", "Harper never changes code, orders or alerts. A rule changes only with a yes."]
@@ -228,7 +268,8 @@ with open(path, "w") as fh:
     fh.write("\n".join(L) + "\n")
 with open("results/harper/rule_candidates.csv", "w", newline="") as fh:
     w = csv.writer(fh)
-    w.writerow(["tag", "idea", "trades", "win_rate", "rest_win_rate", "pl_change_if_skipped", "winners_blocked", "written"])
+    w.writerow(["tag", "idea", "trades", "win_rate", "rest_win_rate", "pl_change_if_skipped", "winners_blocked",
+                "first_half_gap", "second_half_gap", "holds", "written"])
     for c in cands:
         w.writerow(c + [f"{now:%Y-%m-%d}"])
 print("\n".join(L))
