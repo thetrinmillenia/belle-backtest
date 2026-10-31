@@ -1,5 +1,7 @@
-tag,idea,trades,win_rate,rest_win_rate,pl_change_if_skipped,winners_blocked,written
-W1 morning puts,favor W1 morning puts,12,67%,45%,-1271,8,2026-10-30
-calls above PDC,favor calls above PDC,26,62%,39%,-1206,16,2026-10-30
-midday,skip midday,12,17%,57%,+869,2,2026-10-30
-calls below PDC,skip calls below PDC,11,18%,56%,+517,2,2026-10-30
+tag,idea,trades,win_rate,rest_win_rate,pl_change_if_skipped,winners_blocked,first_half_gap,second_half_gap,holds,written
+W1 morning puts,favor W1 morning puts,12,67%,45%,-1271,8,+34%,+14%,yes,2026-10-31
+calls above PDC,favor calls above PDC,26,62%,39%,-1206,16,+24%,+19%,yes,2026-10-31
+lunch: failed sweep of the high,skip lunch: failed sweep of the high,20,35%,56%,+888,7,+26%,-55%,no,2026-10-31
+midday,skip midday,12,17%,57%,+869,2,-44%,-38%,yes,2026-10-31
+day type: consolidation,skip day type: consolidation,22,36%,57%,+619,8,+26%,-53%,no,2026-10-31
+calls below PDC,skip calls below PDC,11,18%,56%,+517,2,-60%,-24%,yes,2026-10-31
