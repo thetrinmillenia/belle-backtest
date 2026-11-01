@@ -10,6 +10,7 @@ Rules (v1, to be tuned with Harper):
   stop 20 points, target 40 points (2R), out at 15:55 ET at the latest
   an alert the other way while in a trade = out at that minute (Titi: the opposite alert tells us to get out),
   then the new side is taken; an alert the same way while in a trade is ignored
+  range guard (Nov 1, same as Penny): after 2 Window 1 losses in a row, no new Window 1 entries that day
   costs: about $1.50 a round trip (commission plus exchange fees)
 Run: python bots/futures_paper.py                 (today)
      DATES=2026-10-27,2026-10-28 python bots/futures_paper.py   (backfill)
@@ -88,6 +89,16 @@ def run_day(day):
                      "exit": f"{px:.2f}", "exit_time_et": f"{m // 60:02d}:{m % 60:02d}", "reason": why, "points": pts,
                      "pl": round(pts * PT - COST, 2), "best_points": round(best, 2), "heat_points": round(heat, 2)})
 
+    guarded = []
+
+    def w1_losses():
+        n = 0
+        for r in reversed([r for r in rows if 600 <= int(r["time_et"][:2]) * 60 + int(r["time_et"][3:]) <= 750]):
+            if r["pl"] >= 0:
+                break
+            n += 1
+        return n
+
     ai = 0
     for m, hi, lo, c in bars:
         if pos:
@@ -113,10 +124,15 @@ def run_day(day):
             if pos and pos[1] != side:
                 close(c, m, "opposite alert")
                 pos = None
+            if not pos and 600 <= a_m <= 750 and w1_losses() >= 2:   # range guard, same as Penny: no Window 1 entry after 2 losses in a row
+                guarded.append(f"{a_m // 60:02d}:{a_m % 60:02d} {side}")
+                continue
             if not pos:
                 pos = (a_m, side, src, c, 0.0, 0.0)
     if pos:
         close(bars[-1][3], bars[-1][0], "close")
+    if guarded:
+        print(day, "range guard skipped:", ", ".join(guarded))
     return rows
 
 
