@@ -253,6 +253,19 @@ if w3rows:
         hit = f"{r[5] // 60:02d}:{r[5] % 60:02d}" if r[5] is not None else "not hit"
         L.append(f"| {r[0]:%m-%d} | {r[1]} | {r[2]} | {r[3]:.2f} | {r[4]} | {hit} | ${r[6]:+,} | ${r[7]:+,} |")
     L.append(f"Total at target: ${sum(r[6] for r in w3rows):+,}")
+if os.path.exists("results/futures_paper.csv"):   # Nov 1: every Belle alert as 1 MES on paper (bots/futures_paper.py)
+    with open("results/futures_paper.csv") as fh:
+        fx = list(csv.DictReader(fh))
+    fw = [r for r in fx if r["date"] >= str(wk0)]
+    if fx:
+        L += ["", "## Futures paper (1 MES per Belle alert)", "", "| Period | Trades | Wins | P/L |", "|---|---|---|---|"]
+        for nm, rs in (("This week", fw), ("Since the start", fx)):
+            L.append(f"| {nm} | {len(rs)} | {sum(1 for r in rs if float(r['pl']) > 0)} | ${sum(float(r['pl']) for r in rs):+,.0f} |")
+        by = defaultdict(lambda: [0, 0.0])
+        for r in fx:
+            by[r["reason"]][0] += 1
+            by[r["reason"]][1] += float(r["pl"])
+        L += ["", "| Exit | Trades | P/L |", "|---|---|---|"] + [f"| {k} | {v[0]} | ${v[1]:+,.0f} |" for k, v in sorted(by.items())]
 L += ["", "## Rule candidates (8+ trades, win rate 20+ points away from the rest)", "",
       "Walk-forward: the gap in the first half of the trades vs the second half. Holds = same direction and 10+ points in the second half.", ""]
 if cands:
