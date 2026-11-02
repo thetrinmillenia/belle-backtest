@@ -211,14 +211,22 @@ def mss(g):
             trend, since = "bullish", g.index[j]
     if trend is None:
         return None
-    return trend, since, (sh if trend == "bearish" else sl)
+    # flip = the swing that would turn it; cont = the swing that, broken, continues the trend (Nov 2)
+    return trend, since, (sh if trend == "bearish" else sl), (sl if trend == "bearish" else sh)
 
 
-def mss_line(tf, m, now):
-    trend, since, flip = m
-    when = f"{since:%a %H:%M} ET ({since.astimezone(CT):%H:%M} CT)" if (now - since).days < 6 else since.strftime("%b %d")
-    turn = f"Turns bullish above {flip:,.2f}" if trend == "bearish" else f"Turns bearish below {flip:,.2f}"
-    return f"{tf}: {trend} since {when}. {turn}" if flip is not None else f"{tf}: {trend} since {when}"
+def mss_line(tf, m, now, daily=False):
+    trend, since, flip, cont = m
+    if daily or (now - since).days >= 6:
+        when = since.strftime("%b %d")
+    else:
+        when = f"{since:%a %H:%M} ET ({since.astimezone(CT):%H:%M} CT)"
+    out = [f"{tf}: {trend} since {when}"]
+    if flip is not None:
+        out.append(f"Turns bullish above {flip:,.2f}" if trend == "bearish" else f"Turns bearish below {flip:,.2f}")
+    if cont is not None:
+        out.append(f"Bearish continues below {cont:,.2f}" if trend == "bearish" else f"Bullish continues above {cont:,.2f}")
+    return "\n".join(out)
 
 
 def mss_note(m4, m1, bias=None):
@@ -472,10 +480,149 @@ def eod(now):
     return "\n\n".join(parts)
 
 
-JOBS = {"morning": morning, "release": release, "afternoon": afternoon, "eod": eod}
+# ---------------- open read (Titi, Nov 2): 09:30 ET (08:30 CT), cash indices and ETFs, Daily and 1H ----------------
+OPEN_SYMS = (("SPX", "^GSPC"), ("NDX", "^NDX"), ("SPY", "SPY"), ("QQQ", "QQQ"))
+
+
+def rth_only(df):
+    t = df.index.time
+    return df[(t >= dt.time(9, 30)) & (t < dt.time(16, 0))]
+
+
+def daily_read(d):
+    """The prior daily candle against the day before it."""
+    p, q = d.iloc[-1], d.iloc[-2]
+    col = color(p.open, p.close)
+    if p.high > q.high and p.low < q.low:
+        how = "outside day, took both the PDH and the PDL"
+    elif p.low < q.low:
+        how = "took the PDL and closed back inside" if p.close > q.low else "closed below the PDL"
+    elif p.high > q.high:
+        how = "took the PDH and closed back inside" if p.close < q.high else "closed above the PDH"
+    else:
+        how = "inside day"
+    return f"Daily: {col} candle, {how}"
+
+
+def open_data(sym, now):
+    d = bars(sym, "1d", "6mo")
+    d = d[d.index.date < now.date()]
+    h1 = rth_only(bars(sym, "1h", "1mo"))
+    h1 = h1[h1.index + pd.Timedelta(hours=1) <= now]
+    m1 = bars(sym, "1m", "1d")
+    m1 = m1[(m1.index.date == now.date()) & (m1.index.time >= dt.time(9, 30))]
+    if not len(m1) or len(d) < 3:
+        return None
+    p = d.iloc[-1]
+    return {"open": float(m1.open.iloc[0]), "pdh": float(p.high), "pdl": float(p.low), "pdc": float(p.close),
+            "mid": (float(p.high) + float(p.low)) / 2, "dread": daily_read(d), "md": mss(d), "m1": mss(h1)}
+
+
+def gap_line(x, pts="pts"):
+    g = x["open"] - x["pdc"]
+    return f"Gap: {'up' if g >= 0 else 'down'} {abs(g):,.2f} {pts} from the prior close {x['pdc']:,.2f}"
+
+
+def likely(x):
+    """WHAT IS LIKELY: bias from the Daily and 1H MSS, pivot = prior day 50%, targets = nearest levels, invalidation."""
+    d, h = (x["md"] or (None,))[0], (x["m1"] or (None,))[0]
+    P = x["mid"]
+    lv = [x["pdh"], x["pdl"]] + [v for m in (x["md"], x["m1"]) if m for v in (m[2], m[3]) if v is not None]
+    below = sorted([v for v in lv if v < min(P, x["open"]) - 0.5], reverse=True)
+    above = sorted([v for v in lv if v > max(P, x["open"]) + 0.5])
+    out = []
+    if d and d == h:
+        out.append(f"Bias: {d} (daily and 1H agree)")
+    else:
+        out.append(f"Bias: split (daily {d or 'none'}, 1H {h or 'none'}). Wait for the 5m")
+    bear = (d == h == "bearish")
+    if below:
+        out.append(f"Below {P:,.2f}: sell side target {below[0]:,.2f}" + (" (PDL)" if abs(below[0] - x["pdl"]) < 0.01 else ""))
+    if above:
+        out.append(f"Back above {P:,.2f}: first stop {above[0]:,.2f}" + (" (PDH)" if abs(above[0] - x["pdh"]) < 0.01 else ""))
+    if d and d == h:
+        if bear and above:
+            out.append(f"Above {above[0]:,.2f}: the bearish read is wrong")
+        elif not bear and below:
+            out.append(f"Below {below[0]:,.2f}: the bullish read is wrong")
+    return out
+
+
+def open_read(now):
+    import time as _t
+    start = now.replace(hour=9, minute=30, second=30, microsecond=0)
+    while dt.datetime.now(ET) < start:   # the run starts early (GitHub can be late), then waits for the first candle
+        _t.sleep(5)
+    data = {}
+    for _ in range(40):   # up to about 10 minutes for the 09:30 candle to show up
+        now = dt.datetime.now(ET)
+        for name, sym in OPEN_SYMS:
+            if name not in data:
+                try:
+                    x = open_data(sym, now)
+                    if x:
+                        data[name] = x
+                except Exception as e:
+                    print("open data", name, type(e).__name__, e)
+        if "SPX" in data:
+            break
+        _t.sleep(15)
+    if "SPX" not in data:
+        return None
+    now = dt.datetime.now(ET)
+    parts = ["**BELLE OPEN READ**  09:30 ET (08:30 CT)"]
+    x = data["SPX"]
+    where = ("Opened above the PDH" if x["open"] > x["pdh"] else ("Opened below the PDL" if x["open"] < x["pdl"] else "Opened inside the prior day range"))
+    s = [f"SPX opened {x['open']:,.2f}", gap_line(x), f"{where} ({x['pdl']:,.2f} to {x['pdh']:,.2f})",
+         f"{'Above' if x['open'] > x['mid'] else 'Below'} the prior day 50% {x['mid']:,.2f} ({'premium' if x['open'] > x['mid'] else 'discount'})"]
+    parts.append("\n".join(s))
+    s = [x["dread"]]
+    if x["md"]:
+        s.append(mss_line("Daily", x["md"], now, daily=True))
+    parts.append("\n".join(s))
+    if x["m1"]:
+        parts.append(mss_line("1H", x["m1"], now))
+    if "NDX" in data:
+        n = data["NDX"]
+        nd, nh = (n["md"] or ("none",))[0], (n["m1"] or ("none",))[0]
+        sd, sh_ = (x["md"] or ("none",))[0], (x["m1"] or ("none",))[0]
+        agree = "agrees with SPX" if (nd, nh) == (sd, sh_) else "does not agree with SPX, SMT"
+        g = n["open"] - n["pdc"]
+        parts.append(f"NDX opened {n['open']:,.2f} | gap {'up' if g >= 0 else 'down'} {abs(g):,.2f} pts\nDaily {nd} | 1H {nh} ({agree})")
+    if "SPY" in data:
+        y = data["SPY"]
+        s = [f"SPY opened {y['open']:,.2f} | gap {'up' if y['open'] >= y['pdc'] else 'down'} {abs(y['open'] - y['pdc']):,.2f}",
+             f"PDH {y['pdh']:,.2f} | PDL {y['pdl']:,.2f} | 50% {y['mid']:,.2f}"]
+        if y["m1"]:
+            tr, _, fl, co = y["m1"]
+            if fl is not None:
+                s.append(f"1H turns {'bullish above' if tr == 'bearish' else 'bearish below'} {fl:,.2f}")
+            if co is not None:
+                s.append(f"1H {tr} continues {'below' if tr == 'bearish' else 'above'} {co:,.2f}")
+        parts.append("\n".join(s))
+    if "QQQ" in data:
+        q = data["QQQ"]
+        qd = "up" if q["open"] >= q["pdc"] else "down"
+        if "SPY" in data:
+            yd = "up" if data["SPY"]["open"] >= data["SPY"]["pdc"] else "down"
+            rel = f"with SPY: both opened {qd}" if qd == yd else f"against SPY: QQQ {qd}, SPY {yd}"
+            parts.append(f"QQQ {q['open']:,.2f} ({rel})")
+        else:
+            parts.append(f"QQQ {q['open']:,.2f} (opened {qd})")
+    parts.append("**WHAT IS LIKELY**\n" + "\n".join(likely(x)))
+    ev = events(now)
+    if ev:
+        nxt = [e for e in ev if e["t"].date() == now.date() and e["t"] > now]
+        if nxt:
+            parts.append("Next news: " + ev_line(nxt[0]))
+    parts.append(FOOT)
+    return "\n\n".join(parts)
+
+
+JOBS = {"morning": morning, "release": release, "afternoon": afternoon, "eod": eod, "open": open_read}
 # allowed ET minutes after midnight for each job. Cron fires twice (summer and winter time);
 # only the run inside its window posts, so there are never duplicates.
-ALLOWED = {"morning": (300, 565), "release": (510, 560), "afternoon": (800, 860), "eod": (960, 1015)}
+ALLOWED = {"morning": (300, 565), "release": (510, 560), "afternoon": (800, 860), "eod": (960, 1015), "open": (545, 575)}
 
 if __name__ == "__main__":
     mode = sys.argv[1] if len(sys.argv) > 1 else ""
