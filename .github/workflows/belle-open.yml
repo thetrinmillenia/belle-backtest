@@ -1,0 +1,48 @@
+name: Belle open
+
+# Open read (Titi, Nov 2): posts at 09:30 ET (08:30 CT) with SPX, NDX, SPY and QQQ, Daily and 1H.
+# Starts at 09:10 ET with a backup at 09:20 ET (GitHub can start late), then waits for the first 1 minute candle.
+on:
+  schedule:
+    - cron: "10,20 13,14 * * 1-5"   # 09:10 and 09:20 ET in daylight and standard time; only the run inside 09:05 to 09:35 ET posts
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "1 = post now, even if it is not the scheduled time. test = print to the log only, no Discord"
+        default: "test"
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: belle-open
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Already posted today?
+        id: dup
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          n=$(gh run list -R "$GITHUB_REPOSITORY" -w belle-open.yml -s success -e schedule --created ">=$(date -u +%F)" --json databaseId -q 'length')
+          echo "Successful scheduled open runs today: $n"
+          echo "n=$n" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        if: steps.dup.outputs.n == '0' || github.event_name == 'workflow_dispatch'
+      - uses: actions/setup-python@v5
+        if: steps.dup.outputs.n == '0' || github.event_name == 'workflow_dispatch'
+        with:
+          python-version: "3.11"
+      - run: pip install yfinance pandas numpy requests lxml
+        if: steps.dup.outputs.n == '0' || github.event_name == 'workflow_dispatch'
+      - run: python bots/belle.py open
+        if: steps.dup.outputs.n == '0' || github.event_name == 'workflow_dispatch'
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          FORCE_POST: ${{ github.event.inputs.force }}
