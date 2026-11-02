@@ -1,4 +1,10 @@
 Date,Who,Ticker,Bias,Setup,Tags,P/L,Lesson,Note
+2026-11-02,Penny,SPY,Bullish,,Window 1,-63.0,Note what the higher timeframe said before entry.,"Alpaca fill. SPY 766C x3, first entry 10:45 ET, 0.49 to 0.28 (-43%)."
+2026-11-02,Penny,SPX,Bullish,,Window 1,-90.0,Note what the higher timeframe said before entry.,"Alpaca fill. SPX 7690C x1, first entry 10:45 ET, 2.05 to 1.15 (-44%)."
+2026-11-02,Penny,SPX,Bullish,,Window 3 EOD,-125.0,EOD loss: puts are favored EOD. Check the EOD STALL CHECK and the PDC side before calls.,"Alpaca fill. SPX 7595C x1, first entry 15:00 ET, 2.05 to 0.80 (-61%)."
+2026-11-02,Penny,SPX,Bearish,,Window 3 EOD,-120.0,EOD loss: puts are favored EOD. Check the EOD STALL CHECK and the PDC side before calls.,"Alpaca fill. SPX 7550P x1, first entry 15:15 ET, 2.40 to 1.20 (-50%)."
+2026-11-02,Penny,SPY,Bearish,,Window 3 EOD,-60.0,EOD loss: puts are favored EOD. Check the EOD STALL CHECK and the PDC side before calls.,"Alpaca fill. SPY 752P x3, first entry 15:15 ET, 0.44 to 0.24 (-45%)."
+2026-11-02,Penny,SPX,Bullish,,Window 3 EOD,-105.0,EOD loss: puts are favored EOD. Check the EOD STALL CHECK and the PDC side before calls.,"Alpaca fill. SPX 7590C x1, first entry 15:25 ET, 2.05 to 1.00 (-51%)."
 2026-10-30,Penny,SPX,Bearish,,Window 1,-5.0,Note what the higher timeframe said before entry.,"Alpaca fill. SPX 7560P x1, first entry 10:55 ET, 2.20 to 2.15 (-2%)."
 2026-10-29,Penny,SPY,Bullish,,Window 1,-105.0,Note what the higher timeframe said before entry.,"Alpaca fill. SPY 774C x6, first entry 10:05 ET, 0.38 to 0.21 (-45%)."
 2026-10-29,Penny,SPX,Bullish,,Window 1,-140.0,Note what the higher timeframe said before entry.,"Alpaca fill. SPX 7770C x2, first entry 10:05 ET, 1.60 to 0.90 (-44%)."
