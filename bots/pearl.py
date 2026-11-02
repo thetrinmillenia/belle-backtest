@@ -2,7 +2,7 @@
 
 Rules (Titi):
   - 1 SPX contract, ask $1.20 or less. Buys with a limit order only. 30% stop, breakeven at +30%.
-  - 1 loss and done for the day. Done at -$40 or at +$200 for the day. One Window 1 trade a day. Stall off.
+  - 1 loss and done for the day. Done at -$60, or no new entries once she is +$1,000 for the day (Nov 2; an open trade is never cut). One Window 1 trade a day. Stall off.
   - One trade at a time. Last entry 15:50 ET. Everything out at 15:59 ET no matter what.
   - Week one setups: Window 1 (10:00 to 11:30 ET), the stall break (14:00 to 15:50 ET), EOD (15:00 to 15:50 ET),
     calls and puts both considered.
@@ -34,8 +34,8 @@ LIVE = "https://api.alpaca.markets"        # LIVE trading endpoint. Pearl only.
 DATA = "https://data.alpaca.markets"
 # Tight rules (Titi, Oct 27): account $400 to $500, goal $200+ a day, as close to no losses as rules allow
 MAX_ASK, MIN_ASK = 1.50, 0.70     # Nov 2 (Titi): $70 floor, $150 cap; over $2,000 the cap is $250, or $170 from 13:30 ET (set at entry)
-MAX_DAY_LOSS = 40.0               # done for the day at -$40
-DAY_GOAL = 200.0                  # done for the day at +$200, the goal is banked
+MAX_DAY_LOSS = 60.0               # Nov 2: done for the day at -$60 (one -40% stop on a $150 contract)
+DAY_GOAL = 1000.0                 # Nov 2: no new entries once +$1,000 for the day; an open trade keeps running
 STOP_LOSS = 0.30                  # starting stop: 30% loss of premium (most she can lose on $1.20: $36)
 BE_AT = 1.30                      # breakeven once she is +30%, so a winner never turns into a loser
 LAST_ENTRY = 15 * 60 + 50
@@ -296,7 +296,7 @@ if LIVE:
         say(f"Pearl: day P/L {day_pl:+.0f}. Done for the day.")
         sys.exit(0)
     if day_pl >= DAY_GOAL:
-        say(f"Pearl: day P/L {day_pl:+.0f}, the $200 goal is banked. Done for the day.")
+        say(f"Pearl: day P/L {day_pl:+.0f}, the $1,000 goal is banked. No new entries today.")
         sys.exit(0)
     w1_buys = [o for o in orders if o["side"] == "buy" and o.get("filled_at")
                and dt.datetime.fromisoformat(o["filled_at"].replace("Z", "+00:00")).astimezone(ET).hour < 12]
