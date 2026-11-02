@@ -30,7 +30,7 @@ ET = ZoneInfo("America/New_York")
 LIVE = "https://api.alpaca.markets"        # LIVE trading endpoint. Pearl only.
 DATA = "https://data.alpaca.markets"
 # Tight rules (Titi, Oct 27): account $400 to $500, goal $200+ a day, as close to no losses as rules allow
-MAX_ASK, MIN_ASK = 1.20, 0.30     # her winners were $0.45 to $1.10 contracts
+MAX_ASK, MIN_ASK = 1.50, 0.70     # Nov 2 (Titi): $70 floor, $150 cap; over $2,000 the cap is $250, or $170 from 13:30 ET (set at entry)
 MAX_DAY_LOSS = 40.0               # done for the day at -$40
 DAY_GOAL = 200.0                  # done for the day at +$200, the goal is banked
 STOP_LOSS = 0.30                  # starting stop: 30% loss of premium (most she can lose on $1.20: $36)
@@ -154,8 +154,10 @@ def occ(k):
 
 
 def pick(spx):
-    """Closest strike to the money with an ask from $0.30 to $1.50, walking out of the money."""
-    base = int(spx // 5) * 5 + (5 if D == 1 else 0)
+    """Strike rule (Titi, Nov 2): start at the rule distance out of the money, walk further out until the ask fits the cap."""
+    m = n0.hour * 60 + n0.minute
+    off = 35 if m < 720 else 10 if m < 810 else 35 if m < 900 else 15   # same rule as the relay (test of 91 alerts)
+    base = int(round((spx + D * off) / 5)) * 5
     ks = [base + D * 5 * i for i in range(30)]
     syms = [occ(k) for k in ks]
     q = get(f"{DATA}/v1beta1/options/quotes/latest", symbols=",".join(syms), feed="indicative").get("quotes") or {}
@@ -217,6 +219,10 @@ if LIVE:
     cash = float(acct.get("options_buying_power") or acct.get("cash") or 0)
 else:
     cash = 10_000.0
+
+# ---------- size (Titi, Nov 2): $150 cap until the account is over $2,000, then $250, or $170 from 13:30 ET ----------
+equity = float((globals().get("acct") or {}).get("equity") or cash)
+MAX_ASK = 1.50 if equity < 2000 else (1.70 if n0.hour * 60 + n0.minute >= 810 else 2.50)
 
 # ---------- entry ----------
 ratio = spx_ratio()
