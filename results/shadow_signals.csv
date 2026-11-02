@@ -24,3 +24,4 @@ date,time_et,side,contract,entry,reason
 2026-10-29,15:25,CALLS,SPXW261029C07710000,2.08,EOD calls below PDC
 2026-10-29,15:25,CALLS,SPY261029C00768000,1.16,EOD calls below PDC
 2026-10-30,11:35,PUTS,SPXW261030P07590000,7.88,order rejected (SPXW261030P07560000): potential wash trade detected. use complex orders
+2026-11-02,11:55,PUTS,SPXW261102P07610000,4.96,order rejected (SPXW261102P07595000): potential wash trade detected. use complex orders
