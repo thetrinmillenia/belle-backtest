@@ -67,7 +67,9 @@ days = sorted({g["day"] for g in trades})
 daily = requests.get(f"{DATA}/v2/stocks/SPY/bars", headers=H, timeout=30,
                      params={"timeframe": "1Day", "start": str(days[0] - dt.timedelta(days=7)), "end": str(days[-1]), "feed": "iex"}).json().get("bars") or []   # iex: sip refuses the latest day on the free plan
 closes = {et(b["t"]).date(): b["c"] for b in daily}
+day_hl = {et(b["t"]).date(): (b["h"], b["l"]) for b in daily}
 intraday = defaultdict(list)
+hist5 = {}   # every regular hours 5m bar fetched for the day (6 days back), for the 1H structure at entry
 for d in days:
     b = requests.get(f"{DATA}/v2/stocks/SPY/bars", headers=H, timeout=30,
                      params={"timeframe": "5Min", "start": f"{d - dt.timedelta(days=6)}T13:00:00Z", "end": f"{d}T21:00:00Z", "feed": "iex",
@@ -84,6 +86,72 @@ for d in days:
         if et(x["t"]).date() == d:
             rows.append((et(x["t"]).hour * 60 + et(x["t"]).minute, x))
     intraday[d] = rows
+    hist5[d] = [(et(x["t"]), x) for x in b]
+K = 10.03   # SPY to SPX points
+
+
+def h1_structure(d, m):
+    """1H trend at the entry (Nov 2): 1H candles from the 5m bars (09:30 based), closed before the entry.
+    Returns (trend, flip level, continuation level) in SPY prices, or None."""
+    cs = {}
+    for t, x in hist5.get(d, []):
+        mm = t.hour * 60 + t.minute
+        if t.date() == d and mm + 5 > m:
+            continue
+        k = (t.date(), (mm - 570) // 60)
+        if k not in cs:
+            cs[k] = [x["h"], x["l"], x["c"], t.date() < d or (mm - 570) // 60 * 60 + 630 <= m]
+        else:
+            cs[k][0], cs[k][1], cs[k][2] = max(cs[k][0], x["h"]), min(cs[k][1], x["l"]), x["c"]
+    g = [v for k, v in sorted(cs.items()) if v[3]]
+    sh = sl = trend = None
+    for j in range(len(g)):
+        i = j - 2
+        if i >= 2:
+            if g[i][0] > max(g[i - 2][0], g[i - 1][0], g[i + 1][0], g[i + 2][0]):
+                sh = g[i][0]
+            if g[i][1] < min(g[i - 2][1], g[i - 1][1], g[i + 1][1], g[i + 2][1]):
+                sl = g[i][1]
+        if sl is not None and g[j][2] < sl and trend != "bearish":
+            trend = "bearish"
+        elif sh is not None and g[j][2] > sh and trend != "bullish":
+            trend = "bullish"
+    if trend is None:
+        return None
+    return trend, (sh if trend == "bearish" else sl), (sl if trend == "bearish" else sh)
+
+
+def level_tags(d, m, cp):
+    """Where the alert fired against the key levels (Titi, Nov 2: the levels are super important)."""
+    side = "calls" if cp == "C" else "puts"
+    prev = [k for k in day_hl if k < d]
+    bars_d = intraday.get(d, [])
+    px = next((x["c"] for mm, x in reversed(bars_d) if mm + 5 <= m), None)
+    if not prev or px is None:
+        return []
+    pdh, pdl = day_hl[max(prev)]
+    mid = (pdh + pdl) / 2
+    tags = [f"level: {side} {'above' if px > mid else 'below'} the prior day 50%"]
+    before = [x for mm, x in bars_d if mm + 5 <= m]
+    if before and min(x["l"] for x in before) < pdl and px > pdl:
+        tags.append(f"level: {side} after a PDL sweep (back above)")
+    if before and max(x["h"] for x in before) > pdh and px < pdh:
+        tags.append(f"level: {side} after a PDH sweep (back below)")
+    if abs(px - pdl) * K <= 5:
+        tags.append(f"level: {side} within 5 pts of the PDL")
+    if abs(px - pdh) * K <= 5:
+        tags.append(f"level: {side} within 5 pts of the PDH")
+    st = h1_structure(d, m)
+    if st:
+        trend, flip, cont = st
+        tags.append(f"level: {side} {'with' if (trend == 'bullish') == (cp == 'C') else 'against'} the 1H trend")
+        if flip is not None and abs(px - flip) * K <= 5:
+            tags.append(f"level: {side} within 5 pts of the 1H flip level")
+        if cont is not None and abs(px - cont) * K <= 5:
+            tags.append(f"level: {side} within 5 pts of the 1H continuation level")
+    return tags
+
+
 day_tags = {}
 if os.path.exists("data/day_tags.csv"):
     with open("data/day_tags.csv") as fh:
@@ -127,6 +195,7 @@ for d, gs in by_day.items():
                 tags.append("EMAs stacked (trend)")
         if px and h2 and m >= 900:
             tags.append(f"W3 {side} " + ("above the 2 PM high" if px > h2 else ("below the 2 PM low" if px < l2 else "inside the 2 PM candle")))
+        tags += level_tags(d, m, g["cp"])
         rg = ranges.get(str(d), {})
         if rg.get("day_type"):
             tags.append("day type: " + rg["day_type"])
@@ -227,11 +296,33 @@ L += ["## By day", "", "| Day | Trades | Wins | P/L | Day tags |", "|---|---|---
 for d in sorted({g["day"] for g in week}):
     gs = by_day[d]
     L.append(f"| {d:%a %m-%d} | {len(gs)} | {sum(1 for g in gs if g['pl'] > 0)} | ${sum(g['pl'] for g in gs):+,.0f} | {day_tags.get(str(d), '')} |")
+lv_rows = sorted((tg, v) for tg, v in stat.items() if tg.startswith("level: "))
 dt_rows = sorted((tg, v) for tg, v in stat.items() if tg.startswith(("day type: ", "lunch: ")) or "4H MSS" in tg)
 if dt_rows:
     L += ["", "## By day type, lunch type and 4H MSS (all trades since the start)", "",
           "| Tag | Trades | Win rate | P/L |", "|---|---|---|---|"]
     L += [f"| {tg} | {n} | {w / n:.0%} | ${pl:+,.0f} |" for tg, (n, w, pl) in dt_rows]
+if lv_rows:
+    L += ["", "## By level (where Penny's trades fired, all trades since the start)", "",
+          "| Level | Trades | Win rate | P/L |", "|---|---|---|---|"]
+    L += [f"| {tg[7:]} | {n} | {w / n:.0%} | ${pl:+,.0f} |" for tg, (n, w, pl) in lv_rows]
+if os.path.exists("results/shadow_scores.csv"):   # the same level tags for the alerts Raven scored (skipped by Penny)
+    with open("results/shadow_scores.csv") as fh:
+        sk = list(csv.DictReader(fh))
+    lv_sk = defaultdict(lambda: [0, 0])
+    for r in sk:
+        try:
+            d0 = dt.date.fromisoformat(r["date"])
+            hh, mi = map(int, r["time_et"].split(":"))
+            cp0 = "C" if r["side"] == "CALLS" else "P"
+            for tg in level_tags(d0, hh * 60 + mi, cp0):
+                lv_sk[tg][0] += 1
+                lv_sk[tg][1] += int(float(r["pl"] or 0))
+        except Exception:
+            continue
+    if lv_sk:
+        L += ["", "## By level, skipped alerts (Raven)", "", "| Level | Contracts | Would have made |", "|---|---|---|"]
+        L += [f"| {tg[7:]} | {v[0]} | ${v[1]:+,} |" for tg, v in sorted(lv_sk.items())]
 L += ["", "## Entry timing, all trades since the start", "", "| Tag | Trades | Win rate | P/L |", "|---|---|---|---|"]
 for tg, (n, w, pl) in sorted(stat.items(), key=lambda x: (-x[1][0], x[0])):
     if n >= 3:
