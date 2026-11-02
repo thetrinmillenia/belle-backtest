@@ -336,6 +336,9 @@ SIDE_W = "CALLS" if DIR == 1 else "PUTS"
 # then 25% below the best, an opposite alert = out, out at 15:55 ET. SPY keeps the normal trail.
 # Backtest, Window 3 SPX Oct 16 to 30: those 4 trades +$892 held vs +$262 trailed; the other 8 trades stay on the trail.
 REV_HOLD = EOD and not HOLD and SYM.startswith("SPXW") and spy_move_60m() <= -1.00
+# Nov 2 (Titi): Penny's 1 SPX contract tests Pearl's tiered trail: -40% start, half of the best after +100%,
+# 75% of the best after +300%. SPY, the stall hold and the Window 3 reversal hold keep their own rules.
+TIER = SYM.startswith("SPXW") and not HOLD and not REV_HOLD
 if REV_HOLD:
     print("reversal hold on", SYM)
 draft(f"JUST FILLED IN @ {money(entry)} avg\n@everyone")
@@ -423,13 +426,13 @@ while True:
                 post(f"{LABEL} {msg}")
         stop = entry * (0.50 if EOD else 0.57)   # starting stop 43% (Oct 20); Window 3 50% (Oct 29 backtest: +$212 vs +$19)
         trail = None
-        if EOD and peak >= entry * 1.60 and not HOLD and not REV_HOLD:   # Window 3 (unchanged): breakeven at +60%
+        if EOD and peak >= entry * 1.60 and not HOLD and not REV_HOLD and not TIER:   # Window 3 (unchanged): breakeven at +60%
             stop = max(stop, entry)
             if "be" not in said:
                 said.add("be")
                 post(f"{LABEL} +60%, stop moved to breakeven {entry:.2f}")
                 draft(f"Stop moved to breakeven on SPY {SIDE_W} ({money(entry)}). No risk left on this one.\n@everyone")
-        if not EOD and not HOLD and peak >= entry * 2.0:
+        if not EOD and not HOLD and not TIER and peak >= entry * 2.0:
             # morning runner rule (Oct 30): from +100% the broker stop holds breakeven plus a third of the best gain.
             # The 30% trail below the best only sells if the 3m IRL is broken (checked below), so pullbacks in a trend are held.
             stop = max(stop, entry, entry + (peak - entry) / 3)
@@ -438,7 +441,7 @@ while True:
                 said.add("be")
                 post(f"{LABEL} stop moved to {stop:.2f}")
                 draft(f"Stop moved to breakeven on SPY {SIDE_W} ({money(entry)}). No risk left on this one.\n@everyone")
-        if EOD and not REV_HOLD:   # EOD trail (Titi, Oct 27): fast spikes. 20% below the best from +30%, 15% below the best from +100%
+        if EOD and not REV_HOLD and not TIER:   # EOD trail (Titi, Oct 27): fast spikes. 20% below the best from +30%, 15% below the best from +100%
             if peak >= entry * 1.30:
                 stop = max(stop, peak * 0.80)
             if peak >= entry * 2.0:
@@ -447,6 +450,14 @@ while True:
             stop = entry * 0.40 if peak < entry * 2.0 else max(entry * 0.40, peak * 0.60)
         if REV_HOLD:
             stop = entry * 0.35 if peak < entry * 3.0 else max(entry * 0.35, peak * 0.75)
+        if TIER:
+            stop = entry * 0.60 if peak < entry * 2.0 else max(entry * 0.60, peak * 0.50)
+            if peak >= entry * 4.0:
+                stop = max(stop, peak * 0.75)
+            for lvl, txt in ((2.0, "half"), (4.0, "75%")):
+                if peak >= entry * lvl and f"tier{lvl}" not in said:
+                    said.add(f"tier{lvl}")
+                    post(f"{LABEL} +{(lvl - 1) * 100:.0f}%\n\nSells if it drops to {txt} of its best")
         # opposite Belle alert while this trade is open (Titi, Oct 16): no new trade, tighten this one
         if not warned and time.time() - last_chk > 30:
             last_chk = time.time()
