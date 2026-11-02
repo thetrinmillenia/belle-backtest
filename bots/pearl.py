@@ -6,8 +6,11 @@ Rules (Titi):
   - One trade at a time. Last entry 15:50 ET. Everything out at 15:59 ET no matter what.
   - Week one setups: Window 1 (10:00 to 11:30 ET), the stall break (14:00 to 15:50 ET), EOD (15:00 to 15:50 ET),
     calls and puts both considered.
-  - Stops: rule E (43% loss of premium, breakeven after +60%, trail 30% below the best after +100%) plus Belle's
-    SPY stop. Exits at Target 3 (fib Symmetrical Price) when the setup gives one, otherwise she rides the trail.
+  - Sniper rules (Titi, Nov 2; test of 78 alerts Oct 19 to Nov 2):
+    entry only on the right side of the 5m SPY 200 EMA (puts below it, calls above it).
+    Safety stop -40%, or a 5m close back across the 200 EMA.
+    Trend day (Daily, 4H and 1H all agree with the trade): after +100% she sells at half of the best price,
+    after +300% at 75% of the best. No selling on the 13 or 50 EMA. Choppy day: she sells at +100%.
 Safety:
   - OFF unless the repo variable PEARL_ON is exactly "true".
   - Live keys come only from PEARL_KEY_ID / PEARL_SECRET_KEY. Penny's paper keys never place an order here.
@@ -37,7 +40,8 @@ STOP_LOSS = 0.30                  # starting stop: 30% loss of premium (most she
 BE_AT = 1.30                      # breakeven once she is +30%, so a winner never turns into a loser
 LAST_ENTRY = 15 * 60 + 50
 EXIT_MIN = 15 * 60 + 59
-WINDOWS = {"W1": (10 * 60, 11 * 60 + 30), "STALL": (14 * 60, LAST_ENTRY), "EOD": (15 * 60, 15 * 60 + 55)}   # EOD to 15:55 like Penny (Oct 27)
+WINDOWS = {"W1": (10 * 60, 11 * 60 + 30), "STALL": (14 * 60, LAST_ENTRY), "EOD": (13 * 60 + 30, 15 * 60 + 55)}   # Nov 2: EOD from 13:30 ET like Penny
+SAFETY = 0.60                     # Nov 2: safety stop -40% of premium
 
 DRY = os.environ.get("DRY", "").strip() == "1"
 KEY = os.environ.get("PEARL_KEY_ID", "").strip()
@@ -149,6 +153,90 @@ def quote(sym):
     return q.get("bp") or 0.0, q.get("ap") or 0.0
 
 
+def spy_bars(tf, days):
+    start = (now() - dt.timedelta(days=days)).astimezone(dt.timezone.utc).isoformat()
+    out, tok = [], None
+    while True:
+        p = {"timeframe": tf, "start": start, "feed": "iex", "limit": 10000}
+        if tok:
+            p["page_token"] = tok
+        j = get(f"{DATA}/v2/stocks/SPY/bars", **p)
+        out += j.get("bars") or []
+        tok = j.get("next_page_token")
+        if not tok:
+            return out
+
+
+def rth5(days):
+    """Closed regular hours 5m SPY bars, oldest first: (time ET, high, low, close)."""
+    rows = []
+    for b in spy_bars("5Min", days):
+        t = dt.datetime.fromisoformat(b["t"].replace("Z", "+00:00")).astimezone(ET)
+        if dt.time(9, 30) <= t.time() < dt.time(16, 0) and t + dt.timedelta(minutes=5) <= now():
+            rows.append((t, b["h"], b["l"], b["c"]))
+    return rows
+
+
+def ema(vals, n):
+    k, m, out = 2 / (n + 1), None, []
+    for v in vals:
+        m = v if m is None else v * k + m * (1 - k)
+        out.append(m)
+    return out
+
+
+def ema200_side():
+    """+1 when the last closed 5m SPY close is above its 200 EMA, -1 when below (Titi, Nov 2)."""
+    rows = rth5(7)
+    if len(rows) < 200:
+        return None
+    e = ema([r[3] for r in rows], 200)
+    return 1 if rows[-1][3] > e[-1] else -1
+
+
+def mss(g):
+    """Market structure: a candle closes through the last swing (2 candles each side). Returns 1, -1 or None."""
+    sh = sl = tr = None
+    for j in range(len(g)):
+        i = j - 2
+        if i >= 2:
+            if g[i][0] > max(g[i - 2][0], g[i - 1][0], g[i + 1][0], g[i + 2][0]):
+                sh = g[i][0]
+            if g[i][1] < min(g[i - 2][1], g[i - 1][1], g[i + 1][1], g[i + 2][1]):
+                sl = g[i][1]
+        if sl is not None and g[j][2] < sl and tr != -1:
+            tr = -1
+        elif sh is not None and g[j][2] > sh and tr != 1:
+            tr = 1
+    return tr
+
+
+def trend_day():
+    """Trend day when the Daily, 4H and 1H structure all agree with the trade (Titi, Nov 2)."""
+    try:
+        rows = rth5(45)
+        groups = {}
+        for t, h, l, c in rows:
+            for size in (60, 240):
+                k = (size, t.date(), (t.hour * 60 + t.minute - 570) // size)
+                g = groups.get(k)
+                groups[k] = [h, l, c] if g is None else [max(g[0], h), min(g[1], l), c]
+        days = {}
+        for t, h, l, c in rows:
+            if t.date() < n0.date():
+                g = days.get(t.date())
+                days[t.date()] = [h, l, c] if g is None else [max(g[0], h), min(g[1], l), c]
+        h1 = [v for k, v in sorted(groups.items()) if k[0] == 60]
+        h4 = [v for k, v in sorted(groups.items()) if k[0] == 240]
+        d1 = [days[k] for k in sorted(days)]
+        trends = [mss(d1), mss(h4), mss(h1)]
+        print("trend Daily, 4H, 1H:", trends)
+        return all(x == D for x in trends)
+    except Exception as e:
+        print("trend check failed", e)
+        return False
+
+
 def occ(k):
     return f"SPXW{n0:%y%m%d}{CP}{int(round(k * 1000)):08d}"
 
@@ -233,6 +321,11 @@ if not spy:
 if SPY_STOP and ((D == 1 and spy <= SPY_STOP) or (D == -1 and spy >= SPY_STOP)):
     say(f"Pearl: SPY {spy:.2f} is already through Belle's stop {SPY_STOP:.2f}. Nothing done.")
     sys.exit(0)
+side200 = ema200_side()
+if side200 is not None and side200 != D:
+    say(f"Pearl: SPY is on the wrong side of the 5m 200 EMA for {SIDE.lower()}. Nothing done.")
+    sys.exit(0)
+TREND = trend_day()
 c = pick(spy * ratio)
 if not c:
     say(f"Pearl: no SPX {CP} with an ask from ${MIN_ASK:.2f} to ${MAX_ASK:.2f}. Nothing done.")
@@ -281,7 +374,8 @@ if entry is None:
 say(f"Pearl: filled 1 SPX {c['k']}{CP} at {entry:.2f} (${entry * 100:.0f})")
 K = f"SPX {c['k']}{CP}"
 nf = now()
-post(f"**PEARL {SIDE}  {nf:%H:%M} ET ({ct(nf)} CT)**\n\nBought 1 {K} at {entry:.2f} (${entry * 100:.0f})\n\nWhy:  {WHY}")
+post(f"**PEARL {SIDE}  {nf:%H:%M} ET ({ct(nf)} CT)**\n\nBought 1 {K} at {entry:.2f} (${entry * 100:.0f})\n\n"
+     f"{'Trend day: holding' if TREND else 'Choppy day: selling at +100%'}\n\nWhy:  {WHY}")
 
 
 def sell():
@@ -299,39 +393,41 @@ def sell():
     return None
 
 
-# ---------- manage: rule E, Belle's SPY stop, Target 3, out at 15:59 ET ----------
-peak, reason, be_said, trail_said = entry, None, False, False
+# ---------- manage (Titi, Nov 2): -40% or the 200 EMA, then the tiered trail on trend days, +100% on choppy days ----------
+peak, reason, said100, said300, ema_min, side_now = entry, None, False, False, -1, None
 while reason is None:
     b, a = quote(c["sym"])
     px = (b + a) / 2 if b and a else b
     if px:
         peak = max(peak, px)
-    stop = entry * (1 - STOP_LOSS)
-    if peak >= entry * BE_AT:
-        stop = max(stop, entry)
-        if not be_said:
-            post(f"{K} +30%, stop moved to breakeven")
-            be_said = True
-    if peak >= entry * 2.0:
-        stop = max(stop, peak * (0.85 if SOURCE == "EOD" else 0.70))
-        if not trail_said:
-            post(f"{K} +100%, trail now {'15' if SOURCE == 'EOD' else '30'}% below the best")
-            trail_said = True
-    if SOURCE == "EOD" and peak >= entry * 1.30:   # EOD trail (Titi, Oct 27): 20% below the best from +30%
-        stop = max(stop, peak * 0.80)
-    s = spy_last()
-    if SOURCE == "W1" and mins() >= 12 * 60:   # her morning trade is closed by 12:00 ET, no lunch trades (Oct 27)
-        reason = "12:00"
-    elif mins() >= EXIT_MIN:
+    stop = entry * SAFETY
+    if TREND and peak >= entry * 2.0:
+        stop = max(stop, peak * 0.50)
+        if not said100:
+            post(f"{K} +100%\n\nSells if it drops to half of its best")
+            said100 = True
+    if TREND and peak >= entry * 4.0:
+        stop = max(stop, peak * 0.75)
+        if not said300:
+            post(f"{K} +300%\n\nSells if it drops to 75% of its best")
+            said300 = True
+    m = mins()
+    if m % 5 == 0 and m != ema_min:   # a 5m candle just closed: check the 200 EMA once
+        ema_min = m
+        try:
+            side_now = ema200_side()
+        except Exception as e:
+            print("200 EMA check failed", e)
+    if m >= EXIT_MIN:
         reason = "15:59"
+    elif not TREND and px and px >= entry * 2.0:
+        reason = "+100%"
     elif px and px <= stop:
-        reason = "stop"
-    elif s and SPY_STOP and ((D == 1 and s <= SPY_STOP) or (D == -1 and s >= SPY_STOP)):
-        reason = "Belle stop"
-    elif s and SPY_T3 and ((D == 1 and s >= SPY_T3) or (D == -1 and s <= SPY_T3)):
-        reason = "Target 3"
+        reason = "trail" if peak >= entry * 2.0 and TREND else "stop"
+    elif side_now is not None and side_now != D:
+        reason = "200 EMA"
     else:
-        time.sleep(2 if SOURCE == "EOD" else 5)   # EOD checks every 2 seconds (Titi, Oct 27)
+        time.sleep(2)
 
 out = sell()
 if out is None:
