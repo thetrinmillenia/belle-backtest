@@ -20,7 +20,7 @@ permissions:
 jobs:
   stall:
     runs-on: ubuntu-latest
-    timeout-minutes: 200
+    timeout-minutes: 270   # Nov 2: in standard time (EST) the first run starts at 12:15 ET and must last to 15:57 ET
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
