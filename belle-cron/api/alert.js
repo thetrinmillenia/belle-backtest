@@ -219,7 +219,8 @@ export default async function handler(req, res) {
         // (Oct 30 11:35 ET: the SPX 7560P that ran +1,493% was skipped this way). Buy the next strike out, or in, instead.
         if (!o.id && /wash/i.test(String(o.message || ''))) {
           const st = root === 'SPY' ? 1 : 5, dir = cp === 'C' ? 1 : -1;
-          for (const k of [c.strike + dir * st, c.strike - dir * st]) {
+          for (let i = 1; i <= 5; i++) {   // Nov 2 (Titi): one strike cheaper (further out) at a time, skipping strikes Penny already holds
+            const k = c.strike + dir * st * i;
             const c2 = await pick(root, cp, price, ymd, k, maxCost, minCost);
             if (!c2 || c2.sym === c.sym || tick(c2.ask, root) * 100 * qty > bp) continue;
             const o2 = await buy(c2, tick(c2.ask, root));
