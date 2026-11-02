@@ -111,7 +111,7 @@ export default async function handler(req, res) {
     const mins = t.h * 60 + t.min;
     const ymd = `${t.y.slice(2)}${t.m}${t.d}`;
     // same windows as Belle v42 (by candle close): W1 10:00 to 12:30, W2 13:45 to 15:00, W3 15:00 to 15:50 ET
-    const inWin = t.wd !== 'Sat' && t.wd !== 'Sun' && ((mins >= 600 && mins <= 750) || (mins >= 900 && mins <= 955)); // Window 2 (13:45 to 15:00) off. EOD runs to 15:55 so the 15:50 candle counts (Titi, Oct 27)
+    const inWin = t.wd !== 'Sat' && t.wd !== 'Sun' && ((mins >= 600 && mins <= 750) || (mins >= 840 && mins <= 955)); // Nov 2 (Titi): Window 3 starts 14:00 ET (13:00 CT). Window 2 (13:45 to 14:00) off. EOD runs to 15:55 so the 15:50 candle counts (Titi, Oct 27)
 
     // morning: SPY first; afternoon: SPX first. Penny buys both when the cash allows.
     const order = mins < 760 ? ['SPY', 'SPXW'] : ['SPXW', 'SPY'];
@@ -119,7 +119,7 @@ export default async function handler(req, res) {
     // Penny rule (Titi, Oct 16): holding one side and Belle fires the other side -> no new trade.
     // Discord still gets the alert; Penny tightens the open trade's stop (signal = empty watchlist penny-flip-C/P-time).
     let holding = null;
-    if (inWin && mins < 900) {   // Oct 30: Window 3 is never blocked, holding or not
+    if (inWin && mins < 840) {   // Oct 30: Window 3 is never blocked, holding or not
       try {
         const pos = await (await fetch(`${TRADE}/v2/positions`, { headers: H() })).json();
         holding = (Array.isArray(pos) ? pos : []).find(p => /^(SPY|SPXW)\d{6}[CP]\d{8}$/.test(p.symbol) && p.symbol.slice(-9, -8) !== cp && Number(p.qty) > 0) || null;
@@ -130,7 +130,7 @@ export default async function handler(req, res) {
     }
     // Window 3 = the EOD trade (Titi, Oct 19): the most important trade of the day, never blocked.
     // No 5 minute scalp timer: tight trail, Target 1, out by 15:58. A $100 contract can turn into $1,000.
-    const scalp = mins >= 900;
+    const scalp = mins >= 840;
     // Window 3 calls (Oct 29 rule, from every Window 3 alert Oct 16 to 28): calls only when SPY is above PDC AND above
     // the 2 PM (14:00 ET) candle high. Calls inside the 2 PM candle or below PDC are skipped with no Discord note;
     // Raven scores them. Puts are not touched. If the data cannot be read, the trade is taken.
@@ -172,12 +172,12 @@ export default async function handler(req, res) {
   }
     // Pearl (LIVE, Titi Oct 25): Window 1 (10:00 to 11:30 ET) and EOD (15:00 to 15:50 ET), calls and puts.
   // Pearl checks PEARL_ON and all her own rules (1 contract, $150 max, 1 loss and done). Penny's rules do not apply to her.
-  if (inWin && ((mins >= 600 && mins <= 690) || (mins >= 900 && !eodNoCalls)) && process.env.GITHUB_TOKEN) {   // Pearl follows the Window 3 call rule too
+  if (inWin && ((mins >= 600 && mins <= 690) || (mins >= 840 && !eodNoCalls)) && process.env.GITHUB_TOKEN) {   // Pearl follows the Window 3 call rule too
     try {
       await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/pearl.yml/dispatches`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN.trim()}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'pearl' },
-        body: JSON.stringify({ ref: 'main', inputs: { side: a.side, source: mins >= 900 ? 'EOD' : 'W1', spy_stop: n2(a.spyStop), spy_t3: '', why: String(a.why || '').slice(0, 200), sent: String(Math.floor(Date.now() / 1000)) } })
+        body: JSON.stringify({ ref: 'main', inputs: { side: a.side, source: mins >= 840 ? 'EOD' : 'W1', spy_stop: n2(a.spyStop), spy_t3: '', why: String(a.why || '').slice(0, 200), sent: String(Math.floor(Date.now() / 1000)) } })
       });
     } catch (e) { notes.push('Pearl not reached'); }
   }
