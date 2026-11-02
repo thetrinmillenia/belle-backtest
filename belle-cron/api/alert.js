@@ -11,6 +11,15 @@ const MIN_COST = 70; // Titi, Oct 19: lowest SPX contract is $70
 const SPY_MAX = 60; // Titi, Oct 19: SPY not much higher than $0.60 per contract
 const TARGET_COST = 100; // Titi, Oct 16: loves premiums around $100
 const MAX_COST = 250; // Titi, Oct 17: anything over $250 is too much
+const EOD_MAX = 170, EOD_MIN = 50; // Titi, Nov 2: the EOD trade (13:30 ET on) is $170 at most, $50 floor
+// Strike rule (Titi, Nov 2; test of 91 alerts Oct 19 to Nov 2): distance out of the money by time of day.
+// Before 12:00 ET 35 out, 12:00 to 13:30 ET 10 out, 13:30 to 15:00 ET 35 out (the 7560P), after 15:00 ET 15 out. SPY = SPX / 10.
+function ruleStrike(root, cp, price, mins) {
+  const off = mins < 720 ? 35 : mins < 810 ? 10 : mins < 900 ? 35 : 15;
+  const dir = cp === 'C' ? 1 : -1;
+  if (root === 'SPY') return Math.round(price + dir * Math.round(off / 10));
+  return Math.round((price + dir * off) / 5) * 5;
+}
 const SPY_QTY = 3;   // SPY: 3 contracts so Penny can scale out, all 3 together within the same $ limit
 
 function et(d = new Date()) {
@@ -184,7 +193,7 @@ export default async function handler(req, res) {
     // Shadow (Titi, Oct 26): every alert Penny skips, fully or for one of SPX / SPY, is scored after the close
     // (entry, highest, heat, rule E). One start per alert. No order, no Discord.
     const shadowItems = [];
-    const shadowAdd = (root, why) => { const k = Number(root === 'SPY' ? a.spyStrike : a.spxStrike); if (inWin && k) shadowItems.push(`${occ(root, ymd, cp, k)}|${why}`); };
+    const shadowAdd = (root, why) => { const px = root === 'SPY' ? a.spy : a.spx; const k = px ? ruleStrike(root === 'SPY' ? 'SPY' : 'SPX', cp, px, mins) : 0; if (inWin && k) shadowItems.push(`${occ(root, ymd, cp, k)}|${why}`); };
     if (holding || chopSkip || eodNoCalls || rangeSkip) {
       const why = holding ? 'holding a trade' : (chopSkip ? 'lunch chop (60 min box)' : (rangeSkip ? '2 losses in a row (range day)' : eodWhy));
       shadowAdd('SPXW', why);
@@ -198,10 +207,10 @@ export default async function handler(req, res) {
         const label = root === 'SPY' ? 'SPY' : 'SPX';
         if (!price) { notes.push(`${label} skipped, no price`); continue; }
         const qty = root === 'SPY' ? SPY_QTY : 1;
-        const maxCost = root === 'SPY' ? SPY_MAX : MAX_COST; // per contract: SPX $100 to $250, SPY up to $0.60 (Titi, Oct 19)
-        let c = await pick(root, cp, price, ymd, root === 'SPY' ? a.spyStrike : a.spxStrike, maxCost, root === 'SPY' ? 0 : MIN_COST);
-        if (!c) { shadowAdd(root, 'no contract under the price cap'); notes.push(root === 'SPY' ? 'SPY skipped, nothing at $0.60 or less within 10 strikes' : `SPX skipped, nothing between ${MIN_COST} and ${MAX_COST} within 10 strikes`); continue; }
-        if (c.moved > 0) notes.push(`${label}: Belle's ${c.chart ? c.chart.strike : ''}${cp} was $${c.chart ? Math.round(c.chart.cost * qty) : '?'}${qty > 1 ? ` for ${qty}` : ''}, over $${MAX_COST}, so Penny went ${c.moved} strike${c.moved > 1 ? 's' : ''} further out`);
+        const maxCost = root === 'SPY' ? SPY_MAX : (mins >= 810 ? EOD_MAX : MAX_COST), minCost = root === 'SPY' ? 0 : (mins >= 810 ? EOD_MIN : MIN_COST); // Nov 2: EOD $50 to $170 // per contract: SPX $100 to $250, SPY up to $0.60 (Titi, Oct 19)
+        let c = await pick(root, cp, price, ymd, ruleStrike(root, cp, price, mins), maxCost, minCost);
+        if (!c) { shadowAdd(root, 'no contract under the price cap'); notes.push(root === 'SPY' ? 'SPY skipped, nothing at $0.60 or less within 10 strikes' : `SPX skipped, nothing between ${minCost} and ${maxCost} within 10 strikes`); continue; }
+        if (c.moved > 0) notes.push(`${label}: Belle's ${c.chart ? c.chart.strike : ''}${cp} was $${c.chart ? Math.round(c.chart.cost * qty) : '?'}${qty > 1 ? ` for ${qty}` : ''}, over $${maxCost}, so Penny went ${c.moved} strike${c.moved > 1 ? 's' : ''} further out`);
         let lim = tick(c.ask, root);
         if (lim * 100 * qty > bp) { notes.push(`${label} skipped, not enough buying power`); shadowAdd(root, 'not enough buying power'); continue; }
         const buy = (cc, lm) => fetch(`${TRADE}/v2/orders`, { method: 'POST', headers: H(), body: JSON.stringify({ symbol: cc.sym, qty: String(qty), side: 'buy', type: 'limit', limit_price: lm.toFixed(2), time_in_force: 'day', client_order_id: `penny-${t.y}-${t.m}-${t.d}-${label}-${Date.now()}` }) }).then(r => r.json());
@@ -211,7 +220,7 @@ export default async function handler(req, res) {
         if (!o.id && /wash/i.test(String(o.message || ''))) {
           const st = root === 'SPY' ? 1 : 5, dir = cp === 'C' ? 1 : -1;
           for (const k of [c.strike + dir * st, c.strike - dir * st]) {
-            const c2 = await pick(root, cp, price, ymd, k, maxCost, root === 'SPY' ? 0 : MIN_COST);
+            const c2 = await pick(root, cp, price, ymd, k, maxCost, minCost);
             if (!c2 || c2.sym === c.sym || tick(c2.ask, root) * 100 * qty > bp) continue;
             const o2 = await buy(c2, tick(c2.ask, root));
             if (o2.id) { o = o2; c = c2; lim = tick(c2.ask, root); break; }
@@ -248,7 +257,8 @@ export default async function handler(req, res) {
     const lines = [
       `**${scalp ? 'EOD ' : ''}${a.side}  ${hm} ET (${ct} CT)**`,
       scalp ? 'Window 3 EOD trade: tight trail, Target 1, out by 15:58.' : null,
-      `Belle's strike:  SPX ${a.spxStrike || 'n/a'}${cp}  |  SPY ${a.spyStrike || 'n/a'}${cp}`,
+      `Belle's strike:  SPX ${a.spx ? ruleStrike('SPX', cp, a.spx, mins) : 'n/a'}${cp}  |  SPY ${a.spy ? ruleStrike('SPY', cp, a.spy, mins) : 'n/a'}${cp}`,
+      a.spx ? `Why this strike:  ${mins >= 810 ? 'EOD' : (mins < 720 ? 'morning' : 'midday')}, ${Math.round(Math.abs((picked.SPX ? picked.SPX.strike : ruleStrike('SPX', cp, a.spx, mins)) - a.spx))} out${picked.SPX ? `, $${Math.round(picked.SPX.lim * 100)}` : ''} (cap $${mins >= 810 ? EOD_MAX : MAX_COST})` : null,
       a.spxAlt ? `Strike choices:  SPX ${a.spxAlt}  |  SPY ${a.spyAlt}` : null,
       `Stop:  SPX ${n2(a.spxStop)}  |  SPY ${n2(a.spyStop)}`,
       `Target 1:  SPX ${n2(a.spxT1)}  |  SPY ${n2(a.spyT1)}`,
