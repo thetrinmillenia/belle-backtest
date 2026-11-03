@@ -194,6 +194,60 @@ def major_levels(direction):
         return []
 
 
+def mss(g):
+    """Market structure: a candle closes through the last swing (2 candles each side). Returns 1, -1 or None."""
+    sh = sl = tr = None
+    for j in range(len(g)):
+        i = j - 2
+        if i >= 2:
+            if g[i][0] > max(g[i - 2][0], g[i - 1][0], g[i + 1][0], g[i + 2][0]):
+                sh = g[i][0]
+            if g[i][1] < min(g[i - 2][1], g[i - 1][1], g[i + 1][1], g[i + 2][1]):
+                sl = g[i][1]
+        if sl is not None and g[j][2] < sl and tr != -1:
+            tr = -1
+        elif sh is not None and g[j][2] > sh and tr != 1:
+            tr = 1
+    return tr
+
+
+def trend_day(direction):
+    """Same as Pearl (Titi, Nov 3): a trend day when the Daily, 4H and 1H structure all agree with the trade."""
+    try:
+        start = (dt.datetime.now(ET) - dt.timedelta(days=45)).astimezone(dt.timezone.utc).isoformat()
+        rows, tok = [], None
+        while True:
+            p = {"timeframe": "5Min", "feed": "iex", "start": start, "limit": 10000}
+            if tok:
+                p["page_token"] = tok
+            j = requests.get(f"{DATA}/v2/stocks/SPY/bars", headers=H, timeout=15, params=p).json()
+            for x in j.get("bars") or []:
+                t = dt.datetime.fromisoformat(x["t"].replace("Z", "+00:00")).astimezone(ET)
+                if dt.time(9, 30) <= t.time() < dt.time(16, 0) and t + dt.timedelta(minutes=5) <= dt.datetime.now(ET):
+                    rows.append((t, x["h"], x["l"], x["c"]))
+            tok = j.get("next_page_token")
+            if not tok:
+                break
+        today = dt.datetime.now(ET).date()
+        groups, days = {}, {}
+        for t, h, l, c in rows:
+            for size in (60, 240):
+                k = (size, t.date(), (t.hour * 60 + t.minute - 570) // size)
+                g = groups.get(k)
+                groups[k] = [h, l, c] if g is None else [max(g[0], h), min(g[1], l), c]
+            if t.date() < today:
+                g = days.get(t.date())
+                days[t.date()] = [h, l, c] if g is None else [max(g[0], h), min(g[1], l), c]
+        trends = [mss([days[k] for k in sorted(days)]),
+                  mss([v for k, v in sorted(groups.items()) if k[0] == 240]),
+                  mss([v for k, v in sorted(groups.items()) if k[0] == 60])]
+        print("trend Daily, 4H, 1H:", trends)
+        return all(x == direction for x in trends)
+    except Exception as e:
+        print("trend check failed", e)
+        return False
+
+
 def ema200_side():
     """+1 when the last closed 5m SPY close is above its 200 EMA, -1 when below (Titi, Nov 2)."""
     try:
@@ -411,10 +465,11 @@ REV_HOLD = False   # Nov 3 (Titi): the Window 3 reversal hold is replaced by Pea
 # SPY, the stall hold and the Window 3 reversal hold keep their own rules.
 TIER = SYM.startswith("SPXW") and not HOLD and not REV_HOLD
 LV_AHEAD = major_levels(DIR) if TIER else []
+TREND = trend_day(DIR) if TIER else False   # Nov 3 (Titi): choppy day (D, 4H, 1H do not agree) = sell at +100%, like Pearl
 LV_TAG = None
 EMA_MIN = -1
 if TIER:
-    print("levels ahead:", LV_AHEAD)
+    print("levels ahead:", LV_AHEAD, "| trend day:", TREND)
 if REV_HOLD:
     print("reversal hold on", SYM)
 draft(f"JUST FILLED IN @ {money(entry)} avg\n@everyone")
@@ -533,6 +588,9 @@ while True:
                 if sp_now and (sp_now - LV_AHEAD[0][1]) * DIR >= 0:
                     LV_TAG = LV_AHEAD[0][0]
                     print(f"{LABEL}: SPY tagged the {LV_TAG} {LV_AHEAD[0][1]:.2f}, trail on")
+            if not TREND and bid >= entry * 2.0:   # choppy day: take the +100% (Titi, Nov 3)
+                reason = "+100%"
+                break
             stop = entry * 0.60
             if peak >= entry * 3.0:
                 stop = max(stop, entry * 1.15)
