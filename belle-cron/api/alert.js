@@ -122,13 +122,17 @@ export default async function handler(req, res) {
     // same windows as Belle v42 (by candle close): W1 10:00 to 12:30, W2 13:45 to 15:00, W3 15:00 to 15:50 ET
     const inWin = t.wd !== 'Sat' && t.wd !== 'Sun' && ((mins >= 600 && mins <= 750) || (mins >= 810 && mins <= 955)); // Nov 2 (Titi): EOD window starts 13:30 ET (12:30 CT) so the 13:30 to 14:00 entry is never missed. EOD runs to 15:55 so the 15:50 candle counts (Titi, Oct 27)
 
+    // Nov 3 (Titi): no trades are blocked for Penny. She takes every alert from 09:30 to 15:55 ET so she keeps learning.
+    // The holding rule, the range guard and the lunch chop box no longer block her (Pearl keeps her own rules).
+    const PENNY_BLOCKS = false;
+    const pennyWin = t.wd !== 'Sat' && t.wd !== 'Sun' && mins >= 570 && mins <= 955;
     // morning: SPY first; afternoon: SPX first. Penny buys both when the cash allows.
     const order = mins < 760 ? ['SPY', 'SPXW'] : ['SPXW', 'SPY'];
     const picked = {}, notes = [];
     // Penny rule (Titi, Oct 16): holding one side and Belle fires the other side -> no new trade.
     // Discord still gets the alert; Penny tightens the open trade's stop (signal = empty watchlist penny-flip-C/P-time).
     let holding = null;
-    if (inWin && mins < 810) {   // Oct 30: Window 3 is never blocked, holding or not
+    if (PENNY_BLOCKS && inWin && mins < 810) {   // Oct 30: Window 3 is never blocked, holding or not
       try {
         const pos = await (await fetch(`${TRADE}/v2/positions`, { headers: H() })).json();
         holding = (Array.isArray(pos) ? pos : []).find(p => /^(SPY|SPXW)\d{6}[CP]\d{8}$/.test(p.symbol) && p.symbol.slice(-9, -8) !== cp && Number(p.qty) > 0) || null;
@@ -160,14 +164,14 @@ export default async function handler(req, res) {
     // range day guard (Oct 29): 2 Window 1 trades in a row lost today -> no more Window 1 entries, Penny waits for Window 3.
     // Backtest Oct 16 to 29: only Oct 29 triggered, saved $426, blocked no winner. No Discord note; Raven scores the skipped alert.
     let rangeSkip = false;
-    if (inWin && !holding && mins >= 600 && mins <= 750) {
+    if (PENNY_BLOCKS && inWin && !holding && mins >= 600 && mins <= 750) {
       try { rangeSkip = (await w1LossStreak(t)) >= 2; } catch (e) { rangeSkip = false; }
     }
     // lunch chop box (Titi, Oct 30): lunch entries (11:30 to 13:45 ET) go through unless SPY sat in a real chop box for the last 60 minutes:
     // 12 closed 5m bars, range 40 SPX points or less, the high and the low each tapped 2+ times (within 20% of the range),
     // and the net move under half the range. No Discord note; Raven scores the skipped alert. Window 3 is never blocked.
   let chopSkip = false;
-  if (inWin && !holding && !scalp && mins >= 690 && mins < 825) {
+  if (PENNY_BLOCKS && inWin && !holding && !scalp && mins >= 690 && mins < 825) {
     try {
       const cb = await (await fetch(`${DATA}/v2/stocks/SPY/bars?timeframe=5Min&feed=iex&start=${t.y}-${t.m}-${t.d}T12:00:00Z&end=${new Date().toISOString()}&limit=1000`, { headers: H() })).json();
       const done = (cb.bars || []).filter(b => new Date(b.t).getTime() + 300000 <= Date.now() + 30000).slice(-12);
@@ -199,7 +203,7 @@ export default async function handler(req, res) {
       shadowAdd('SPXW', why);
       shadowAdd('SPY', why);
     }
-  if (inWin && !holding && !chopSkip && !eodNoCalls && !rangeSkip) {
+  if (pennyWin && !holding && !chopSkip && !eodNoCalls && !rangeSkip) {
       const acct = await (await fetch(`${TRADE}/v2/account`, { headers: H() })).json();
       let bp = Number(acct.options_buying_power || acct.buying_power || 0);
       for (const root of order) {
@@ -238,7 +242,7 @@ export default async function handler(req, res) {
           });
         }
       }
-    } else if (!inWin) notes.push('no trade, outside the windows');
+    } else if (!pennyWin) notes.push('no trade, outside the windows');
 
         if (shadowItems.length && process.env.GITHUB_TOKEN) {
       try {
