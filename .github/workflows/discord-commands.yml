@@ -1,0 +1,20 @@
+name: Discord commands (register once)
+# Registers /out, /in and /lockout in Titi's Discord server (Titi, Nov 3). Run by hand after the secrets are added.
+# Secrets Titi adds herself: DISCORD_APP_ID and DISCORD_BOT_TOKEN (Discord Developer Portal).
+on:
+  workflow_dispatch:
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Register the commands
+        env:
+          APP: ${{ secrets.DISCORD_APP_ID }}
+          TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          GUILD: "1385707326983376946"
+        run: |
+          curl -sS -X PUT "https://discord.com/api/v10/applications/$APP/guilds/$GUILD/commands" \
+            -H "Authorization: Bot $TOKEN" -H "Content-Type: application/json" \
+            -d '[{"name":"out","description":"Sell all open contracts. Trading continues."},
+                 {"name":"lockout","description":"Sell everything and stop new trades until tomorrow."},
+                 {"name":"in","description":"Lift today'"'"'s lockout."}]' | head -c 600
