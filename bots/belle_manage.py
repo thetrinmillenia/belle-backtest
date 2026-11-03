@@ -147,6 +147,55 @@ def spy_price():
     return (r.get("trade") or {}).get("p")
 
 
+def major_levels(direction):
+    """Major SPY levels ahead of the trade (Titi, Nov 2): PDH, PDL, prior week high, low and 50%. Nearest first."""
+    try:
+        b = requests.get(f"{DATA}/v2/stocks/SPY/bars", headers=H, timeout=10,
+                         params={"timeframe": "1Day", "feed": "sip", "start": str(dt.datetime.now(ET).date() - dt.timedelta(days=25)), "limit": 100}).json().get("bars") or []
+        today = dt.datetime.now(ET).date()
+        days = [(dt.datetime.fromisoformat(x["t"].replace("Z", "+00:00")).astimezone(ET).date(), x) for x in b]
+        days = [(d, x) for d, x in days if d < today]
+        lv = {}
+        if days:
+            lv["PDH"], lv["PDL"] = days[-1][1]["h"], days[-1][1]["l"]
+        wk = today.isocalendar()[:2]
+        prev = [d.isocalendar()[:2] for d, _ in days if d.isocalendar()[:2] < wk]
+        if prev:
+            xs = [x for d, x in days if d.isocalendar()[:2] == max(prev)]
+            hi, lo = max(x["h"] for x in xs), min(x["l"] for x in xs)
+            lv["PWH"], lv["PWL"], lv["PW50"] = hi, lo, (hi + lo) / 2
+        r = requests.get(f"{DATA}/v2/stocks/SPY/trades/latest", params={"feed": "iex"}, headers=H, timeout=10).json()
+        px = (r.get("trade") or {}).get("p")
+        if not px:
+            return []
+        return sorted([(k, v) for k, v in lv.items() if (v - px) * direction > 0.03], key=lambda kv: abs(kv[1] - px))
+    except Exception as e:
+        print("major levels failed", e)
+        return []
+
+
+def ema200_side():
+    """+1 when the last closed 5m SPY close is above its 200 EMA, -1 when below (Titi, Nov 2)."""
+    try:
+        start = (dt.datetime.now(ET) - dt.timedelta(days=7)).astimezone(dt.timezone.utc).isoformat()
+        b = requests.get(f"{DATA}/v2/stocks/SPY/bars", headers=H, timeout=10,
+                         params={"timeframe": "5Min", "feed": "iex", "start": start, "limit": 10000}).json().get("bars") or []
+        cl = []
+        for x in b:
+            t = dt.datetime.fromisoformat(x["t"].replace("Z", "+00:00")).astimezone(ET)
+            if dt.time(9, 30) <= t.time() < dt.time(16, 0) and t + dt.timedelta(minutes=5) <= dt.datetime.now(ET):
+                cl.append(x["c"])
+        if len(cl) < 200:
+            return None
+        k, m = 2 / 201, None
+        for v in cl:
+            m = v if m is None else v * k + m * (1 - k)
+        return 1 if cl[-1] > m else -1
+    except Exception as e:
+        print("200 EMA failed", e)
+        return None
+
+
 def irl_broken():
     """Morning runner rule (Oct 30): the 3m IRL. Latest confirmed 3 minute swing on SPY (2 candles each side):
     the swing high for puts, the swing low for calls. Broken = SPY trades through it (a wick counts).
@@ -336,9 +385,16 @@ SIDE_W = "CALLS" if DIR == 1 else "PUTS"
 # then 25% below the best, an opposite alert = out, out at 15:55 ET. SPY keeps the normal trail.
 # Backtest, Window 3 SPX Oct 16 to 30: those 4 trades +$892 held vs +$262 trailed; the other 8 trades stay on the trail.
 REV_HOLD = EOD and not HOLD and SYM.startswith("SPXW") and spy_move_60m() <= -1.00
-# Nov 2 (Titi): Penny's 1 SPX contract tests Pearl's tiered trail: -40% start, half of the best after +100%,
-# 75% of the best after +300%. SPY, the stall hold and the Window 3 reversal hold keep their own rules.
+# Nov 3 (Titi): Penny's 1 SPX contract tests Pearl's exit (78 alerts Oct 19 to Nov 2): -40% safety or a 5m close back
+# across the 200 EMA; at +200% the stop moves to +15%; the trail (half of the best from +100%, 75% from +300%) starts
+# only once SPY tags the first major level ahead (PDH, PDL, PWH, PWL, PW50), or from the start when none is ahead.
+# SPY, the stall hold and the Window 3 reversal hold keep their own rules.
 TIER = SYM.startswith("SPXW") and not HOLD and not REV_HOLD
+LV_AHEAD = major_levels(DIR) if TIER else []
+LV_TAG = None
+EMA_MIN = -1
+if TIER:
+    print("levels ahead:", LV_AHEAD)
 if REV_HOLD:
     print("reversal hold on", SYM)
 draft(f"JUST FILLED IN @ {money(entry)} avg\n@everyone")
@@ -451,13 +507,29 @@ while True:
         if REV_HOLD:
             stop = entry * 0.35 if peak < entry * 3.0 else max(entry * 0.35, peak * 0.75)
         if TIER:
-            stop = entry * 0.60 if peak < entry * 2.0 else max(entry * 0.60, peak * 0.50)
-            if peak >= entry * 4.0:
-                stop = max(stop, peak * 0.75)
-            for lvl, txt in ((2.0, "half"), (4.0, "75%")):
-                if peak >= entry * lvl and f"tier{lvl}" not in said:
-                    said.add(f"tier{lvl}")
-                    post(f"{LABEL} +{(lvl - 1) * 100:.0f}%\n\nSells if it drops to {txt} of its best")
+            if LV_TAG is None and LV_AHEAD:
+                sp_now = spy_price()
+                if sp_now and (sp_now - LV_AHEAD[0][1]) * DIR >= 0:
+                    LV_TAG = LV_AHEAD[0][0]
+                    print(f"{LABEL}: SPY tagged the {LV_TAG} {LV_AHEAD[0][1]:.2f}, trail on")
+            stop = entry * 0.60
+            if peak >= entry * 3.0:
+                stop = max(stop, entry * 1.15)
+            if LV_TAG or not LV_AHEAD:
+                if peak >= entry * 2.0:
+                    stop = max(stop, peak * 0.50)
+                if peak >= entry * 4.0:
+                    stop = max(stop, peak * 0.75)
+                for lvl, txt in ((2.0, "half"), (4.0, "75%")):
+                    if peak >= entry * lvl and f"tier{lvl}" not in said:
+                        said.add(f"tier{lvl}")
+                        post(f"{LABEL} +{(lvl - 1) * 100:.0f}%\n\nSells if it drops to {txt} of its best")
+            m5 = n.hour * 60 + n.minute
+            if m5 % 5 == 0 and m5 != EMA_MIN:   # a 5m candle just closed
+                EMA_MIN = m5
+                if ema200_side() == -DIR:
+                    reason = "200 EMA"
+                    break
         # opposite Belle alert while this trade is open (Titi, Oct 16): no new trade, tighten this one
         if not warned and time.time() - last_chk > 30:
             last_chk = time.time()
