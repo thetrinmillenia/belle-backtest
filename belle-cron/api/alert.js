@@ -203,7 +203,14 @@ export default async function handler(req, res) {
       shadowAdd('SPXW', why);
       shadowAdd('SPY', why);
     }
-  if (pennyWin && !holding && !chopSkip && !eodNoCalls && !rangeSkip) {
+    // Nov 3 (Titi): /lockout from Discord stops Penny until tomorrow (an empty watchlist penny-lock-YYYY-MM-DD); /in lifts it.
+    let locked = false;
+    try {
+      const wl = await (await fetch(`${TRADE}/v2/watchlists`, { headers: H() })).json();
+      locked = (Array.isArray(wl) ? wl : []).some(w => w.name === `penny-lock-${t.y}-${t.m}-${t.d}`);
+    } catch (e) { locked = false; }
+    if (locked) notes.push('locked out today (/lockout)');
+  if (pennyWin && !locked && !holding && !chopSkip && !eodNoCalls && !rangeSkip) {
       const acct = await (await fetch(`${TRADE}/v2/account`, { headers: H() })).json();
       let bp = Number(acct.options_buying_power || acct.buying_power || 0);
       for (const root of order) {
@@ -242,7 +249,7 @@ export default async function handler(req, res) {
           });
         }
       }
-    } else if (!pennyWin) notes.push('no trade, outside the windows');
+    } else if (!pennyWin && !locked) notes.push('no trade, outside the windows');
 
         if (shadowItems.length && process.env.GITHUB_TOKEN) {
       try {
