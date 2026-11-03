@@ -171,6 +171,11 @@ missed = [t for t in trades if t["pct"] is not None and t["pct"] < 40 and (t["af
 L.append("")
 for t in missed:
     L.append(f"- Missed runner: {t['contract']} sold at {t['pct']:+.0f}%, it went to {t['after']:+.0f}% after.")
+spx_h = [t for t in trades if t["sym"].startswith("SPXW") and t["t_out"]]   # Titi, Nov 3: track how long SPX is held
+if spx_h:
+    hm = [(t["t_out"] - t["t_in"]).total_seconds() / 60 for t in spx_h]
+    L.append(f"- SPX hold time today: {len(spx_h)} trade{'s' if len(spx_h) > 1 else ''}, average {sum(hm) / len(hm):.0f} min, longest {max(hm):.0f} min "
+             f"(before the new exit on Nov 3: median 8 min; the 1,000% moves needed 2 to 4.5 hours).")
 L += ["", "## 4. Titi", ""]
 if titi:
     for r in titi:
