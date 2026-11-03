@@ -118,7 +118,7 @@ EXIT_MIN = 959   # out at 15:59 ET, never later, regardless of price (Titi, Oct 
 EOD = "EOD" in LABEL or "SCALP" in LABEL
 # STALL break on SPX (Titi, Oct 21): hold, no trims, patience pays. Belle's SPY stop, a 60% floor, out at the target
 # (50% of the day's swing); after +100% trail 40% below the best. No step stop, breakeven or $50 trail cap.
-HOLD = "STALL" in LABEL and LABEL.startswith("SPX")
+HOLD = "STALL" in LABEL and LABEL.startswith("SPX") and False   # Nov 3 (Titi): every SPX trade uses Pearl's exit (TIER)
 
 
 def opt_ask():
@@ -131,6 +131,26 @@ def buy(q, lim):
                       json={"symbol": SYM, "qty": str(q), "side": "buy", "type": "limit", "limit_price": f"{lim:.2f}",
                             "time_in_force": "day", "client_order_id": f"penny-re-{int(time.time()*1000)}"}).json()
     return o.get("id")
+
+
+def pos_open():
+    """False once the position is gone (Titi closed it with /out or /lockout, Nov 3)."""
+    try:
+        return requests.get(f"{TRADE}/v2/positions/{SYM}", headers=H, timeout=10).status_code != 404
+    except Exception:
+        return True
+
+
+def last_sell_fill():
+    try:
+        od = requests.get(f"{TRADE}/v2/orders", headers=H, timeout=10,
+                          params={"status": "closed", "symbols": SYM, "side": "sell", "direction": "desc", "limit": 10}).json()
+        for x in od if isinstance(od, list) else []:
+            if x.get("filled_avg_price"):
+                return float(x["filled_avg_price"])
+    except Exception:
+        pass
+    return None
 
 
 def get_order(oid):
@@ -384,7 +404,7 @@ SIDE_W = "CALLS" if DIR == 1 else "PUTS"
 # (SPY moved $1.00+ against the trade in the 60 minutes before the fill), SPX is held: 35% floor, no trail until 3x,
 # then 25% below the best, an opposite alert = out, out at 15:55 ET. SPY keeps the normal trail.
 # Backtest, Window 3 SPX Oct 16 to 30: those 4 trades +$892 held vs +$262 trailed; the other 8 trades stay on the trail.
-REV_HOLD = EOD and not HOLD and SYM.startswith("SPXW") and spy_move_60m() <= -1.00
+REV_HOLD = False   # Nov 3 (Titi): the Window 3 reversal hold is replaced by Pearl's exit for every SPX trade (TIER)
 # Nov 3 (Titi): Penny's 1 SPX contract tests Pearl's exit (78 alerts Oct 19 to Nov 2): -40% safety or a 5m close back
 # across the 200 EMA; at +200% the stop moves to +15%; the trail (half of the best from +100%, 75% from +300%) starts
 # only once SPY tags the first major level ahead (PDH, PDL, PWH, PWL, PW50), or from the start when none is ahead.
@@ -405,6 +425,7 @@ banked = []   # (price, qty) already sold
 FILL_AT = o.get("filled_at") or dt.datetime.now(dt.timezone.utc).isoformat()
 warned = False
 last_chk = 0.0
+pos_chk = 0.0
 warn_stop = 0.0
 
 # 2) manage
@@ -530,6 +551,11 @@ while True:
                 if ema200_side() == -DIR:
                     reason = "200 EMA"
                     break
+        if time.time() - pos_chk > 30:   # Nov 3: Titi can close it from Discord with /out
+            pos_chk = time.time()
+            if not pos_open():
+                reason = "/out"
+                break
         # opposite Belle alert while this trade is open (Titi, Oct 16): no new trade, tighten this one
         if not warned and time.time() - last_chk > 30:
             last_chk = time.time()
@@ -559,7 +585,9 @@ while True:
     time.sleep(2 if EOD else 10)   # EOD checks every 2 seconds (Titi, Oct 27)
 
 # 3) exit
-if reason == "EXIT" or STOP_FILL is not None:
+if STOP_FILL is None and (reason == "/out" or not pos_open()):   # closed from Discord with /out or /lockout
+    reason, exitp = "/out", last_sell_fill()
+elif reason == "EXIT" or STOP_FILL is not None:
     exitp = STOP_FILL
     if reason != "EXIT":
         reason = "EXIT"
