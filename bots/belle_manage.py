@@ -249,6 +249,24 @@ def trend_day(direction):
 
 
 def ema200_side():
+    """+1 when the last closed 5m ES close is above its 200 EMA, -1 when below. ES like Titi's chart (Nov 3), SPY as the fallback."""
+    try:
+        r = requests.get("https://query1.finance.yahoo.com/v8/finance/chart/ES=F", params={"interval": "5m", "range": "5d"},
+                         headers={"User-Agent": "Mozilla/5.0"}, timeout=15).json()["chart"]["result"][0]
+        now_s = time.time()
+        vals = [c for t, c in zip(r["timestamp"], r["indicators"]["quote"][0]["close"]) if c is not None and t + 300 <= now_s]
+        if len(vals) < 200:
+            raise ValueError("not enough ES bars")
+        k, m = 2 / 201, None
+        for v in vals:
+            m = v if m is None else v * k + m * (1 - k)
+        return 1 if vals[-1] > m else -1
+    except Exception as e:
+        print("ES 200 EMA failed, using SPY", e)
+        return spy_ema200_side()
+
+
+def spy_ema200_side():
     """+1 when the last closed 5m SPY close is above its 200 EMA, -1 when below (Titi, Nov 2)."""
     try:
         start = (dt.datetime.now(ET) - dt.timedelta(days=7)).astimezone(dt.timezone.utc).isoformat()
@@ -465,7 +483,8 @@ REV_HOLD = False   # Nov 3 (Titi): the Window 3 reversal hold is replaced by Pea
 # SPY, the stall hold and the Window 3 reversal hold keep their own rules.
 TIER = SYM.startswith("SPXW") and not HOLD and not REV_HOLD
 LV_AHEAD = major_levels(DIR) if TIER else []
-TREND = trend_day(DIR) if TIER else False   # Nov 3 (Titi): choppy day (D, 4H, 1H do not agree) = sell at +100%, like Pearl
+TREND = trend_day(DIR) if TIER else False
+EMA_PREV = ema200_side() if TIER else None   # Nov 3: the 200 EMA exit needs a real cross after the entry, not just the wrong side   # Nov 3 (Titi): choppy day (D, 4H, 1H do not agree) = sell at +100%, like Pearl
 LV_TAG = None
 EMA_MIN = -1
 if TIER:
@@ -606,9 +625,12 @@ while True:
             m5 = n.hour * 60 + n.minute
             if m5 % 5 == 0 and m5 != EMA_MIN:   # a 5m candle just closed
                 EMA_MIN = m5
-                if ema200_side() == -DIR:
+                side_now = ema200_side()
+                if side_now == -DIR and EMA_PREV == DIR:   # crossed back after being on the right side (Nov 3 fix)
                     reason = "200 EMA"
                     break
+                if side_now is not None:
+                    EMA_PREV = side_now
         if time.time() - pos_chk > 30:   # Nov 3: Titi can close it from Discord with /out
             pos_chk = time.time()
             if not pos_open():
