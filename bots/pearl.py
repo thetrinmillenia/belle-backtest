@@ -211,6 +211,33 @@ def mss(g):
     return tr
 
 
+def major_levels():
+    """Major SPY levels ahead of the trade (Titi, Nov 2): PDH, PDL, prior week high, low and 50%. Nearest first."""
+    try:
+        today = now().date()
+        days = []
+        for x in spy_bars("1Day", 25):
+            d = dt.datetime.fromisoformat(x["t"].replace("Z", "+00:00")).astimezone(ET).date()
+            if d < today:
+                days.append((d, x))
+        lv = {}
+        if days:
+            lv["PDH"], lv["PDL"] = days[-1][1]["h"], days[-1][1]["l"]
+        wk = today.isocalendar()[:2]
+        prev = [d.isocalendar()[:2] for d, _ in days if d.isocalendar()[:2] < wk]
+        if prev:
+            xs = [x for d, x in days if d.isocalendar()[:2] == max(prev)]
+            hi, lo = max(x["h"] for x in xs), min(x["l"] for x in xs)
+            lv["PWH"], lv["PWL"], lv["PW50"] = hi, lo, (hi + lo) / 2
+        px = spy_last()
+        if not px:
+            return []
+        return sorted([(k, v) for k, v in lv.items() if (v - px) * D > 0.03], key=lambda kv: abs(kv[1] - px))
+    except Exception as e:
+        print("major levels failed", e)
+        return []
+
+
 def trend_day():
     """Trend day when the Daily, 4H and 1H structure all agree with the trade (Titi, Nov 2)."""
     try:
@@ -394,19 +421,31 @@ def sell():
 
 
 # ---------- manage (Titi, Nov 2): -40% or the 200 EMA, then the tiered trail on trend days, +100% on choppy days ----------
+# Nov 3 (Titi): at +200% the stop moves to +15% (the 1,000% days pulled back to +18% to +31% after +200%).
+# The trail starts only once SPY tags the first major level ahead (PDH, PDL, PWH, PWL, PW50), or from the start when none is ahead.
+LV_AHEAD, LV_TAG = major_levels(), None
+print("levels ahead:", LV_AHEAD)
 peak, reason, said100, said300, ema_min, side_now = entry, None, False, False, -1, None
 while reason is None:
     b, a = quote(c["sym"])
     px = (b + a) / 2 if b and a else b
     if px:
         peak = max(peak, px)
+    if LV_TAG is None and LV_AHEAD:
+        s_now = spy_last()
+        if s_now and (s_now - LV_AHEAD[0][1]) * D >= 0:
+            LV_TAG = LV_AHEAD[0][0]
+            say(f"Pearl: SPY tagged the {LV_TAG} {LV_AHEAD[0][1]:.2f}, trail on")
+    trail_on = TREND and (LV_TAG is not None or not LV_AHEAD)
     stop = entry * SAFETY
-    if TREND and peak >= entry * 2.0:
+    if TREND and peak >= entry * 3.0:
+        stop = max(stop, entry * 1.15)
+    if trail_on and peak >= entry * 2.0:
         stop = max(stop, peak * 0.50)
         if not said100:
             post(f"{K} +100%\n\nSells if it drops to half of its best")
             said100 = True
-    if TREND and peak >= entry * 4.0:
+    if trail_on and peak >= entry * 4.0:
         stop = max(stop, peak * 0.75)
         if not said300:
             post(f"{K} +300%\n\nSells if it drops to 75% of its best")
@@ -423,7 +462,7 @@ while reason is None:
     elif not TREND and px and px >= entry * 2.0:
         reason = "+100%"
     elif px and px <= stop:
-        reason = "trail" if peak >= entry * 2.0 and TREND else "stop"
+        reason = "trail" if peak >= entry * 2.0 and stop > entry else "stop"
     elif side_now is not None and side_now != D:
         reason = "200 EMA"
     else:
