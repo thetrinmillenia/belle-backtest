@@ -323,6 +323,40 @@ if os.path.exists("results/shadow_scores.csv"):   # the same level tags for the 
     if lv_sk:
         L += ["", "## By level, skipped alerts (Raven)", "", "| Level | Contracts | Would have made |", "|---|---|---|"]
         L += [f"| {tg[7:]} | {v[0]} | ${v[1]:+,} |" for tg, v in sorted(lv_sk.items())]
+# SPX hold time (Titi, Nov 3): the new exit from Nov 3 is built to hold for hours; the 1,000% moves took 2 to 4.5 hours
+spx_lots, holds = defaultdict(deque), []
+for o in fills:
+    s_ = o["symbol"]
+    if not s_.startswith("SPXW"):
+        continue
+    q_, p_, t_ = float(o["filled_qty"]), float(o["filled_avg_price"]), et(o["filled_at"])
+    if o["side"] == "buy":
+        spx_lots[s_].append([q_, p_, t_])
+        continue
+    while q_ > 0 and spx_lots[s_]:
+        lot = spx_lots[s_][0]
+        m_ = min(q_, lot[0])
+        holds.append(((t_ - lot[2]).total_seconds() / 60, (p_ / lot[1] - 1) * 100, lot[2]))
+        lot[0] -= m_
+        q_ -= m_
+        if lot[0] <= 0:
+            spx_lots[s_].popleft()
+
+
+def hold_row(lab, hs):
+    if not hs:
+        return f"| {lab} | 0 | | | |"
+    ms = sorted(h[0] for h in hs)
+    return f"| {lab} | {len(hs)} | {sum(ms) / len(ms):.0f} min | {ms[len(ms) // 2]:.0f} min | {ms[-1]:.0f} min |"
+
+
+if holds:
+    new_exit = dt.date(2026, 11, 3)
+    L += ["", "## SPX hold time (Penny's SPX contract)", "", "| Group | Trades | Average | Median | Longest |", "|---|---|---|---|---|",
+          hold_row("Before the new exit (to Nov 2)", [h for h in holds if h[2].date() < new_exit]),
+          hold_row("New exit (from Nov 3)", [h for h in holds if h[2].date() >= new_exit]),
+          hold_row("This week", [h for h in holds if h[2].date() >= wk0]),
+          hold_row("This week, winners", [h for h in holds if h[2].date() >= wk0 and h[1] > 0])]
 L += ["", "## Entry timing, all trades since the start", "", "| Tag | Trades | Win rate | P/L |", "|---|---|---|---|"]
 for tg, (n, w, pl) in sorted(stat.items(), key=lambda x: (-x[1][0], x[0])):
     if n >= 3:
