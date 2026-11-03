@@ -539,7 +539,7 @@ while True:
                     break
                 warned = True
                 post(f"{LABEL}: Belle flipped sides, stop tightened to 10% under the current price")
-        if warned:
+        if warned and not TIER:   # Nov 3 (Titi): the SPX test trade rides the full move, an opposite alert does not tighten it
             warn_stop = max(warn_stop, bid * 0.90)   # ratchets up only
             stop = max(stop, warn_stop)
         # keep the broker stop at the floor, only ever moving it up
