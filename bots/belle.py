@@ -101,13 +101,22 @@ def expected_move(now):
     s.append(f"SPX priced move:  {em:,.1f} points  ({pct:.2f}%)")
     s.append(f"Range:  {close - em:,.0f}  to  {close + em:,.0f}")
     s.append(f"Half shelves:  {close - em / 2:,.0f}  and  {close + em / 2:,.0f}")
-    try:   # overnight ES change since the 16:00 ET close, in points
-        es = bars("ES=F", "5m", "5d")
-        prior = es[es.index <= dt.datetime.combine(spx.index[-1], dt.time(16, 0), tzinfo=ET)].close.iloc[-1]
-        used = es.close.iloc[-1] - prior
-        s.append(f"Overnight used:  {used:+,.1f} points  ({abs(used) / em * 100:.0f}% of the move)")
-    except Exception as e:
-        print("overnight failed", e)
+    if now.time() >= dt.time(9, 35):   # after the open: what SPX has used so far today
+        try:
+            r = rth(bars("^GSPC", "5m", "1d"), now.date())
+            rng = r.high.max() - r.low.min()
+            s.append(f"SPX now:  {r.close.iloc[-1]:,.0f}  ({r.close.iloc[-1] - close:+,.1f} points from the close)")
+            s.append(f"Range so far:  {rng:,.1f} points  ({rng / em * 100:.0f}% of the move)  |  left:  {max(em - rng, 0):,.1f} points")
+        except Exception as e:
+            print("used so far failed", e)
+    else:
+        try:   # overnight ES change since the 16:00 ET close, in points
+            es = bars("ES=F", "5m", "5d")
+            prior = es[es.index <= dt.datetime.combine(spx.index[-1], dt.time(16, 0), tzinfo=ET)].close.iloc[-1]
+            used = es.close.iloc[-1] - prior
+            s.append(f"Overnight used:  {used:+,.1f} points  ({abs(used) / em * 100:.0f}% of the move)")
+        except Exception as e:
+            print("overnight failed", e)
     try:   # last 60 sessions: closes inside the range the VIX priced the day before
         d = pd.concat([spx.close.rename("c"), vix.close.rename("v")], axis=1).dropna()
         d["band"] = d.c.shift(1) * d.v.shift(1) / 15.87 / 100
@@ -485,6 +494,10 @@ def afternoon(now):
     later = [ev_line(e) for e in ev if e["t"].date() == now.date() and e["t"].time() > now.time()]
     if later:
         parts.append("**News still ahead today:**\n" + "\n".join(later))
+    try:   # Nov 4 (Titi): live VIX1D expected move after the open
+        parts.append(expected_move(now))
+    except Exception as e:
+        print("expected move failed", e)
     parts.append(f"**Range left today:** a {now.strftime('%A')} averages about {ATR.get(now.weekday(), 80)} SPX pts. "
                  "Mark the 2 PM to 3 PM range at 3 PM: power hour breaks it 88% of days.")
     parts.append("**Targets:** W1 about 12 pts doubles a 10 to 40 OTM contract (typically 25 to 30 min). "
