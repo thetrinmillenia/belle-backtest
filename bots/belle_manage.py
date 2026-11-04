@@ -525,7 +525,7 @@ while True:
         bid, spy = None, None
     if spy:
         spy_best = spy if spy_best is None else (max(spy_best, spy) if DIR == 1 else min(spy_best, spy))
-    if spy and SPY_STOP and (spy - SPY_STOP) * DIR <= 0 and not REV_HOLD:
+    if spy and SPY_STOP and (spy - SPY_STOP) * DIR <= 0 and not REV_HOLD and not TIER:   # Nov 4 (Titi): no SPY stop on SPX
         reason = "stop"
         break
     if FIB and spy:
@@ -610,7 +610,7 @@ while True:
             if not TREND and bid >= entry * 2.0:   # choppy day: take the +100% (Titi, Nov 3)
                 reason = "+100%"
                 break
-            stop = entry * 0.60
+            stop = 0.0   # Nov 4 (Titi): no stop loss on SPX, hold. Only the +100% (choppy) and the profit lock/trail can sell
             if peak >= entry * 3.0:
                 stop = max(stop, entry * 1.15)
             if LV_TAG or not LV_AHEAD:
@@ -626,7 +626,7 @@ while True:
             if m5 % 5 == 0 and m5 != EMA_MIN:   # a 5m candle just closed
                 EMA_MIN = m5
                 side_now = ema200_side()
-                if side_now == -DIR and EMA_PREV == DIR:   # crossed back after being on the right side (Nov 3 fix)
+                if side_now == -DIR and EMA_PREV == DIR and False:   # Nov 4 (Titi): 200 EMA exit off for SPX (no stops)
                     reason = "200 EMA"
                     break
                 if side_now is not None:
