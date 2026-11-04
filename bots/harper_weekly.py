@@ -357,6 +357,14 @@ if holds:
           hold_row("New exit (from Nov 3)", [h for h in holds if h[2].date() >= new_exit]),
           hold_row("This week", [h for h in holds if h[2].date() >= wk0]),
           hold_row("This week, winners", [h for h in holds if h[2].date() >= wk0 and h[1] > 0])]
+if os.path.exists("results/harper/vix_log.csv"):   # Nov 4 (Titi): VIX week
+    with open("results/harper/vix_log.csv") as fh:
+        vw = [r for r in csv.DictReader(fh) if r["date"] >= str(wk0)]
+    if vw:
+        L += ["", "## VIX week", "", "| Day | VIX1D | Priced | Actual | Used | Day type | Right |", "|---|---|---|---|---|---|---|"]
+        for r in vw:
+            d_ = dt.date.fromisoformat(r["date"])
+            L.append(f"| {d_:%a} | {r['vix1d']} | {r['priced_pts']} pts | {r['actual_pts']} pts | {r['used_pct']}% | {r['day_type']} | {r['right']} of {r['alerts']} |")
 L += ["", "## Entry timing, all trades since the start", "", "| Tag | Trades | Win rate | P/L |", "|---|---|---|---|"]
 for tg, (n, w, pl) in sorted(stat.items(), key=lambda x: (-x[1][0], x[0])):
     if n >= 3:
