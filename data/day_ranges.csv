@@ -3,7 +3,7 @@ date,open,high,low,close,range,net,morning_range,lunch_range,afternoon_range,lun
 2026-09-02,7647,7687,7640,7674,47,27,47,21,15,failed sweep of the high,3,7618,7703,85,consolidation,"bullish 7670 (09-02 09:30), flips below 7667",
 2026-09-03,7702,7763,7698,7755,66,53,55,12,13,broke the high,1,7698,7763,66,normal,"bullish 7670 (09-02 09:30), flips below 7667",
 2026-09-04,7744,7752,7713,7725,39,-19,38,23,13,failed sweep of the low,2,7698,7763,66,consolidation,,
-2026-09-08,7714,7720,7675,7684,45,-30,37,15,27,inside the morning range,3,7675,7763,89,consolidation,"bearish 7713 (09-08 09:30), flips above 7728",
+2026-09-08,7714,7720,7675,7684,45,-30,37,15,27,inside the morning range,2,7675,7752,77,consolidation,"bearish 7713 (09-08 09:30), flips above 7728",
 2026-09-09,7664,7667,7633,7647,35,-16,35,20,13,inside the morning range,2,7633,7720,87,consolidation,"bearish 7713 (09-08 09:30), flips above 7728",
 2026-09-10,7603,7623,7589,7601,34,-2,34,27,13,inside the morning range,2,7589,7667,78,consolidation,"bearish 7713 (09-08 09:30), flips above 7657",
 2026-09-11,7668,7686,7659,7664,27,-4,27,15,19,inside the morning range,1,7659,7686,27,consolidation,"bullish 7657 (09-11 09:30), flips below 7596",
@@ -43,3 +43,4 @@ date,open,high,low,close,range,net,morning_range,lunch_range,afternoon_range,lun
 2026-10-29,7711,7731,7689,7718,41,7,29,30,30,failed sweep of the high,3,7675,7756,81,consolidation,"bullish 7657 (10-26 09:30), flips below 7689","bearish 7666 (10-22 09:30), flips above 7756"
 2026-10-30,7637,7637,7526,7580,111,-57,41,39,62,broke the low,1,7526,7637,111,expansion,"bearish 7689 (10-30 09:30), flips above 7719","bearish 7666 (10-22 09:30), flips above 7756"
 2026-11-02,7618,7661,7539,7543,123,-75,51,37,61,broke the low,1,7539,7661,123,expansion,"bearish 7689 (10-30 09:30), flips above 7661","bearish 7666 (10-22 09:30), flips above 7756"
+2026-11-03,7549,7593,7547,7566,46,18,41,26,30,failed sweep of the high,1,7547,7593,46,consolidation,"bearish 7689 (10-30 09:30), flips above 7593","bearish 7666 (10-22 09:30), flips above 7661"
