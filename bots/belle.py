@@ -63,6 +63,62 @@ def prev_rth(df, day):
     return rth(df, days[-1]) if days else None
 
 
+def daily(sym, period="6mo"):
+    import yfinance as yf
+    df = yf.download(sym, period=period, interval="1d", progress=False, auto_adjust=False)
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
+    df = df.rename(columns=str.lower)[["open", "high", "low", "close"]].dropna()
+    df.index = pd.to_datetime(df.index).date
+    return df
+
+
+def expected_move(now):
+    """Nov 4 (Titi): the day's priced SPX move from VIX1D (VIX if VIX1D is missing). Information only."""
+    spx = daily("^GSPC")
+    spx = spx[spx.index < now.date()]
+    close = spx.close.iloc[-1]
+    vol, name = None, "VIX1D"
+    for sym, nm in (("^VIX1D", "VIX1D"), ("^VIX", "VIX")):
+        try:
+            v = bars(sym, "5m", "1d").close
+            vol, name = float(v.iloc[-1]), nm
+            break
+        except Exception as e:
+            print("vol failed", sym, e)
+    if not vol:
+        return "**EXPECTED MOVE**\n\nVIX not available right now."
+    vix = daily("^VIX")
+    vix_now = None
+    try:
+        vix_now = float(bars("^VIX", "5m", "1d").close.iloc[-1])
+    except Exception as e:
+        print("vix failed", e)
+    pct = vol / 15.87
+    em = close * pct / 100
+    s = ["**EXPECTED MOVE**"]
+    s.append(f"{name} {vol:.2f}" + (f"  |  VIX {vix_now:.2f}" if vix_now and name != "VIX" else ""))
+    s.append(f"SPX priced move:  {em:,.1f} points  ({pct:.2f}%)")
+    s.append(f"Range:  {close - em:,.0f}  to  {close + em:,.0f}")
+    s.append(f"Half shelves:  {close - em / 2:,.0f}  and  {close + em / 2:,.0f}")
+    try:   # overnight ES change since the 16:00 ET close, in points
+        es = bars("ES=F", "5m", "5d")
+        prior = es[es.index <= dt.datetime.combine(spx.index[-1], dt.time(16, 0), tzinfo=ET)].close.iloc[-1]
+        used = es.close.iloc[-1] - prior
+        s.append(f"Overnight used:  {used:+,.1f} points  ({abs(used) / em * 100:.0f}% of the move)")
+    except Exception as e:
+        print("overnight failed", e)
+    try:   # last 60 sessions: closes inside the range the VIX priced the day before
+        d = pd.concat([spx.close.rename("c"), vix.close.rename("v")], axis=1).dropna()
+        d["band"] = d.c.shift(1) * d.v.shift(1) / 15.87 / 100
+        d["move"] = (d.c - d.c.shift(1)).abs()
+        d = d.dropna().tail(60)
+        s.append(f"Last {len(d)} days:  {(d.move <= d.band).mean() * 100:.0f}% closed inside the range")
+    except Exception as e:
+        print("base rate failed", e)
+    return "\n\n".join(s)
+
+
 def color(o, c):
     return "green" if c > o else "red"
 
@@ -288,6 +344,10 @@ def morning(now):
         parts.append("**Today (USD news):**\n" + ("\n".join(today) if today else "No medium or high impact USD news today."))
         if ahead:
             parts.append("**Still ahead this week (high impact):**\n" + "\n".join(ahead))
+    try:
+        parts.append(expected_move(now))
+    except Exception as e:
+        print("expected move failed", e)
     parts.append(f"**Day ATR for a {now.strftime('%A')}:** about {ATR.get(now.weekday(), 80)} SPX pts (1 year average).")
     parts.append("**Belle's read:** " + belle_summary(reads, high_today) + mss_note(*shifts.get("ES", (None, None)), (reads.get("ES") or (None,))[0]))
     parts.append(earnings_today(now))
