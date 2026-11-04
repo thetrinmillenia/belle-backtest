@@ -525,7 +525,7 @@ while True:
         bid, spy = None, None
     if spy:
         spy_best = spy if spy_best is None else (max(spy_best, spy) if DIR == 1 else min(spy_best, spy))
-    if spy and SPY_STOP and (spy - SPY_STOP) * DIR <= 0 and not REV_HOLD and not TIER:   # Nov 4 (Titi): no SPY stop on SPX
+    if spy and SPY_STOP and (spy - SPY_STOP) * DIR <= 0 and not REV_HOLD and not WIN1:   # Nov 4 (Titi): morning trades skip Belle's SPY stop (only -50%)
         reason = "stop"
         break
     if FIB and spy:
@@ -575,7 +575,7 @@ while True:
                         msg += f", sold 1 of {QTY} at {px:.2f}, {left} left"
                         draft(f"TRIMMING 🚨\n{QTY - left}/{QTY} SOLD @ {money(px)}. {left} left, the last one rides.\n@everyone")
                 post(f"{LABEL} {msg}")
-        stop = entry * (0.50 if EOD else 0.57)   # starting stop 43% (Oct 20); Window 3 50% (Oct 29 backtest: +$212 vs +$19)
+        stop = entry * (0.50 if EOD or WIN1 else 0.57)   # starting stop 43% (Oct 20); Window 3 50% (Oct 29 backtest: +$212 vs +$19); Nov 4 (Titi): morning -50%
         trail = None
         if EOD and peak >= entry * 1.60 and not HOLD and not REV_HOLD and not TIER:   # Window 3 (unchanged): breakeven at +60%
             stop = max(stop, entry)
@@ -610,7 +610,7 @@ while True:
             if not TREND and bid >= entry * 2.0:   # choppy day: take the +100% (Titi, Nov 3)
                 reason = "+100%"
                 break
-            stop = 0.0   # Nov 4 (Titi): no stop loss on SPX, hold. Only the +100% (choppy) and the profit lock/trail can sell
+            stop = entry * (0.50 if WIN1 else 0.60)   # Nov 4 (Titi): morning SPX stop -50% (dips of -46% and -48% ran to +74% and +122%); later -40%
             if peak >= entry * 3.0:
                 stop = max(stop, entry * 1.15)
             if LV_TAG or not LV_AHEAD:
@@ -626,7 +626,7 @@ while True:
             if m5 % 5 == 0 and m5 != EMA_MIN:   # a 5m candle just closed
                 EMA_MIN = m5
                 side_now = ema200_side()
-                if side_now == -DIR and EMA_PREV == DIR and False:   # Nov 4 (Titi): 200 EMA exit off for SPX (no stops)
+                if side_now == -DIR and EMA_PREV == DIR and not WIN1:   # Nov 4 (Titi): no 200 EMA exit on morning trades
                     reason = "200 EMA"
                     break
                 if side_now is not None:
@@ -645,7 +645,7 @@ while True:
                     break
                 warned = True
                 post(f"{LABEL}: Belle flipped sides, stop tightened to 10% under the current price")
-        if warned and not TIER:   # Nov 3 (Titi): the SPX test trade rides the full move, an opposite alert does not tighten it
+        if warned and not TIER and not WIN1:   # Nov 4 (Titi): morning trades do not tighten on an opposite alert. Nov 3 (Titi): the SPX test trade rides the full move, an opposite alert does not tighten it
             warn_stop = max(warn_stop, bid * 0.90)   # ratchets up only
             stop = max(stop, warn_stop)
         # keep the broker stop at the floor, only ever moving it up
