@@ -27,3 +27,5 @@ date,time_et,side,contract,entry,reason
 2026-11-02,11:55,PUTS,SPXW261102P07610000,4.96,order rejected (SPXW261102P07595000): potential wash trade detected. use complex orders
 2026-11-03,15:30,PUTS,SPY261103P00752000,0.14,"order rejected (SPY261103P00752000): contract ""SPY261103P00752000"" expires soon, unable to open new positions"
 2026-11-04,15:35,CALLS,SPY261104C00770000,0.07,"order rejected (SPY261104C00770000): contract ""SPY261104C00770000"" expires soon, unable to open new positions"
+2026-11-04,15:50,CALLS,SPXW261104C07715000,0.08,no contract under the price cap
+2026-11-04,15:50,CALLS,SPY261104C00769000,0.02,"order rejected (SPY261104C00769000): contract ""SPY261104C00769000"" expires soon, unable to open new positions"
