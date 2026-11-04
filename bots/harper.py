@@ -103,6 +103,19 @@ for tr in trades:
     tr["t_out"] = tr["sells"][-1][2] if tr["sells"] else None
     tr["pl"] = (tr["exit"] - tr["entry"]) * 100 * sold if sold else 0.0
     tr["pct"] = (tr["exit"] / tr["entry"] - 1) * 100 if sold else None
+    # Nov 4 (Titi): best price from entry to 15:58 and the first time it reached +100% (the "right" grade)
+    tr["best"], tr["t100"] = None, None
+    try:
+        bb = requests.get(f"{DATA}/v1beta1/options/bars", headers=H, timeout=15,
+                          params={"symbols": tr["sym"], "timeframe": "1Min", "start": tr["t_in"].isoformat(),
+                                  "end": dt.datetime.combine(day, dt.time(15, 58), ET).isoformat()}).json()
+        bl = (bb.get("bars") or {}).get(tr["sym"], [])
+        if bl:
+            tr["best"] = (max(b["h"] for b in bl) / tr["entry"] - 1) * 100
+            hit = [b for b in bl if b["h"] >= tr["entry"] * 2]
+            tr["t100"] = et_time(hit[0]["t"]) if hit else None
+    except Exception:
+        pass
     # what the contract did after Penny sold it (best price until 15:58)
     tr["after"] = None
     if tr["t_out"]:
@@ -148,17 +161,131 @@ if ctx:
     L.append(f"Source: {name} daily data. Tomorrow's PDC: {f2(c_)}.")
 else:
     L.append("Market data not available today.")
-L += ["", "## 2. Belle alerts", "", "| Time ET | Side | Window | Result |", "|---|---|---|---|"]
-score = {"right": 0, "flat": 0, "wrong": 0}
+# Nov 4 (Titi): an alert is RIGHT only when its contract reached +100% that day
+L += ["", "## 2. Belle alerts (right = the contract reached +100%)", "",
+      "| Time ET | Side | Window | Grade | Best | Hit +100% at ET | Penny |", "|---|---|---|---|---|---|---|"]
+score = {"right": 0, "not right": 0}
 for tm, group in sorted(alerts.items()):
-    best = max(group, key=lambda t: (t["after"] or -100, t["pct"] or -100))
+    best = max(group, key=lambda t: (t["best"] or -100))
+    top = best["best"] if best["best"] is not None else -100
     pct = max((t["pct"] or -100) for t in group)
-    ran = max((t["after"] or -100) for t in group)
-    verdict = "right" if pct >= 20 or ran >= 50 else ("wrong" if pct <= -20 and ran < 20 else "flat")
+    verdict = "right" if top >= 100 else "not right"
     score[verdict] += 1
     side = "Calls" if best["sym"][-9] == "C" else "Puts"
-    L.append(f"| {tm} | {side} | {window(best['t_in'])} | {verdict.title()}: Penny {pct:+.0f}%, best after her exit {ran:+.0f}% |")
-L += ["", f"Score: {score['right']} right, {score['flat']} flat, {score['wrong']} wrong.", ""]
+    hit = f"{best['t100']:%H:%M}" if best["t100"] else ""
+    held = "" if not best["t100"] else (" (out before it)" if best["t_out"] and best["t_out"] < best["t100"] else " (holding)")
+    L.append(f"| {tm} | {side} | {window(best['t_in'])} | {verdict.title()} | {top:+.0f}% | {hit}{held} | {pct:+.0f}% |")
+L += ["", f"Score: {score['right']} right, {score['not right']} not right.", ""]
+# Nov 4 (Titi): VIX check. Priced move from VIX1D at the open vs what SPX actually did
+def ychart(sym, interval, rng):
+    r = requests.get(f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}", params={"interval": interval, "range": rng},
+                     headers={"User-Agent": "Mozilla/5.0"}, timeout=15).json()["chart"]["result"][0]
+    q = r["indicators"]["quote"][0]
+    return [(dt.datetime.fromtimestamp(t, ET), q["open"][i], q["high"][i], q["low"][i], q["close"][i])
+            for i, t in enumerate(r["timestamp"]) if q["close"][i] is not None]
+
+
+def day_type():
+    """Trend day when the Daily, 4H and 1H structure all agree (same check as Penny and Pearl), else choppy."""
+    start = (now - dt.timedelta(days=45)).astimezone(dt.timezone.utc).isoformat()
+    rows, tok = [], None
+    while True:
+        p = {"timeframe": "5Min", "feed": "iex", "start": start, "limit": 10000}
+        if tok:
+            p["page_token"] = tok
+        j = requests.get(f"{DATA}/v2/stocks/SPY/bars", headers=H, timeout=15, params=p).json()
+        for x in j.get("bars") or []:
+            t = et_time(x["t"])
+            if dt.time(9, 30) <= t.time() < dt.time(16, 0):
+                rows.append((t, x["h"], x["l"], x["c"]))
+        tok = j.get("next_page_token")
+        if not tok:
+            break
+
+    def mss(g):
+        sh = sl = tr_ = None
+        for j_ in range(len(g)):
+            i = j_ - 2
+            if i >= 2:
+                if g[i][0] > max(g[i - 2][0], g[i - 1][0], g[i + 1][0], g[i + 2][0]):
+                    sh = g[i][0]
+                if g[i][1] < min(g[i - 2][1], g[i - 1][1], g[i + 1][1], g[i + 2][1]):
+                    sl = g[i][1]
+            if sl is not None and g[j_][2] < sl and tr_ != -1:
+                tr_ = -1
+            elif sh is not None and g[j_][2] > sh and tr_ != 1:
+                tr_ = 1
+        return tr_
+    groups, days = {}, {}
+    for t, h, l, c in rows:
+        for size in (60, 240):
+            k = (size, t.date(), (t.hour * 60 + t.minute - 570) // size)
+            g = groups.get(k)
+            groups[k] = [h, l, c] if g is None else [max(g[0], h), min(g[1], l), c]
+        g = days.get(t.date())
+        days[t.date()] = [h, l, c] if g is None else [max(g[0], h), min(g[1], l), c]
+    tr3 = [mss([days[k] for k in sorted(days)]), mss([v for k, v in sorted(groups.items()) if k[0] == 240]),
+           mss([v for k, v in sorted(groups.items()) if k[0] == 60])]
+    return ("trend" if tr3[0] is not None and tr3.count(tr3[0]) == 3 else "choppy"), tr3
+
+
+L += ["## VIX check", ""]
+vix_row = None
+try:
+    vol, vname = None, "VIX1D"
+    for sym, nm in (("%5EVIX1D", "VIX1D"), ("%5EVIX", "VIX")):
+        try:
+            b_ = [r_ for r_ in ychart(sym, "5m", "1d") if r_[0].date() == day and r_[0].time() >= dt.time(9, 30)]
+            if b_:
+                vol, vname = b_[0][1], nm
+                break
+        except Exception as e:
+            print("vol failed", sym, e)
+    vx = [r_ for r_ in ychart("%5EVIX", "5m", "1d") if r_[0].date() == day and r_[0].time() >= dt.time(9, 30)]
+    vix_open = vx[0][1] if vx else None
+    if vol and ctx:
+        name, pdc, o_, h_, l_, c_ = ctx
+        em = pdc * vol / 15.87 / 100
+        rng = h_ - l_
+        inside = abs(c_ - pdc) <= em
+        g5 = [r_ for r_ in ychart("%5EGSPC", "5m", "1d") if r_[0].date() == day and dt.time(9, 30) <= r_[0].time() < dt.time(11, 30)]
+        am = (max(r_[2] for r_ in g5) - min(r_[3] for r_ in g5)) if g5 else None
+        try:
+            dtype, tr3 = day_type()
+        except Exception as e:
+            print("day type failed", e)
+            dtype, tr3 = "unknown", []
+        n_alerts = score["right"] + score["not right"]
+        L += [f"{vname} {vol:.2f}" + (f"  |  VIX {vix_open:.2f}" if vix_open and vname != "VIX" else "") + "  (at 09:30 ET, 08:30 CT)", "",
+              f"Priced move:  {em:,.1f} points  ({vol / 15.87:.2f}%)", "",
+              f"Actual range:  {rng:,.1f} points  ({rng / em * 100:.0f}% of the priced move)", "",
+              f"Close inside the priced range:  {'yes' if inside else 'no'}", ""]
+        if am is not None:
+            L += [f"Used before 11:30 ET (10:30 CT):  {am:,.1f} points  ({am / em * 100:.0f}%)", ""]
+        L += [f"Day type:  {dtype}" + (f"  (Daily, 4H, 1H: {tr3})" if tr3 else ""), "",
+              f"Right alerts (hit +100%):  {score['right']} of {n_alerts}", ""]
+        vix_row = [str(day), f"{vol:.2f}", f"{vix_open:.2f}" if vix_open else "", f"{em:.1f}", f"{rng:.1f}",
+                   f"{rng / em * 100:.0f}", "yes" if inside else "no", f"{am:.1f}" if am is not None else "", dtype,
+                   score["right"], n_alerts]
+    else:
+        L += ["VIX data not available today.", ""]
+except Exception as e:
+    print("vix check failed", e)
+    L += ["VIX data not available today.", ""]
+if vix_row:   # one row per day for the weekly review and the final review
+    path_v = "results/harper/vix_log.csv"
+    os.makedirs("results/harper", exist_ok=True)
+    old = []
+    if os.path.exists(path_v):
+        with open(path_v) as fh:
+            old = [r_ for r_ in csv.reader(fh)][1:]
+    old = [r_ for r_ in old if r_ and r_[0] != str(day)] + [vix_row]
+    with open(path_v, "w", newline="") as fh:
+        w_ = csv.writer(fh)
+        w_.writerow(["date", "vix1d", "vix", "priced_pts", "actual_pts", "used_pct", "close_inside", "am_pts", "day_type",
+                     "right", "alerts"])
+        w_.writerows(sorted(old))
+
 total = sum(t["pl"] for t in trades)
 L += ["## 3. Penny (paper)", "", f"{len(trades)} trades, **{total:+,.0f} dollars**.", "",
       "| In | Contract | Qty | Entry | Exit | P/L | After she sold |", "|---|---|---|---|---|---|---|"]
@@ -200,7 +327,7 @@ if missed:
     L.append("Runners were sold early. Review the step stop and breakeven timing on these trades before changing anything.")
 elif total < 0 and w3 and sum(t["pl"] for t in w3) < 0:
     L.append("Window 3 lost today. Check whether the entries had 1m, 5m and 15m agreement.")
-elif score["wrong"] > score["right"]:
+elif score["not right"] > score["right"]:
     L.append("More wrong alerts than right. Check the bias filter on today's losing windows.")
 else:
     L.append("No change needed. Keep the rules as they are.")
