@@ -58,12 +58,16 @@ async function pick(root, cp, price, ymd, chartK, maxCost, minCost = 0) {
   const syms = strikes.map(s => occ(root, ymd, cp, s));
   const r = await fetch(`${DATA}/v1beta1/options/quotes/latest?symbols=${syms.join(',')}&feed=indicative`, { headers: H() });
   const q = await r.json();
-  let first = null;
+  let first = null, near = null;
+  // Nov 5 (Titi): "if it's too much it's too much, don't let that make it skip a trade". The quote closest to the
+  // price band is kept and bought when nothing fits inside the band.
+  const keep = (sym, strike, ask, cost, moved) => { const d = cost > maxCost ? cost - maxCost : (cost < minCost ? minCost - cost : 0); if (!near || d < near.d) near = { sym, strike, ask, cost, moved, d }; };
   for (let i = 0; i < syms.length; i++) {
     const x = q.quotes && q.quotes[syms[i]];
     if (!x || !x.ap) continue;
     const cost = x.ap * 100;
     if (i === 0) first = { strike: strikes[0], cost };
+    keep(syms[i], strikes[i], x.ap, cost, i);
     if (cost > maxCost) continue;
     if (cost < minCost) break; // further out only gets cheaper: try closer to the money instead (Nov 5 below)
     return { sym: syms[i], strike: strikes[i], ask: x.ap, cost, moved: i, chart: first };
@@ -77,11 +81,12 @@ async function pick(root, cp, price, ymd, chartK, maxCost, minCost = 0) {
     const x = q2.quotes && q2.quotes[inSyms[i]];
     if (!x || !x.ap) continue;
     const cost = x.ap * 100;
+    keep(inSyms[i], inK[i], x.ap, cost, -(i + 1));
     if (cost < minCost) continue;
     if (cost > maxCost) break;
     return { sym: inSyms[i], strike: inK[i], ask: x.ap, cost, moved: -(i + 1), chart: first };
   }
-  return null;
+  return near ? { sym: near.sym, strike: near.strike, ask: near.ask, cost: near.cost, moved: near.moved, chart: first, outside: true } : null;
 }
 
 // range day guard (Oct 29): Window 1 (10:00 to 12:30 ET) trades in a row that lost today, counted back from the last closed one.
@@ -234,8 +239,9 @@ export default async function handler(req, res) {
         const maxCost = root === 'SPY' ? SPY_MAX : (mins >= 810 ? EOD_MAX : MAX_COST), minCost = root === 'SPY' ? 0 : (mins >= 810 ? EOD_MIN : MIN_COST); // Nov 2: EOD $50 to $170 // per contract: SPX $100 to $250, SPY up to $0.60 (Titi, Oct 19)
         let c = await pick(root, cp, price, ymd, ruleStrike(root, cp, price, mins), maxCost, minCost);
         if (!c) { shadowAdd(root, 'no contract under the price cap'); notes.push(root === 'SPY' ? 'SPY skipped, nothing at $0.60 or less within 10 strikes' : `SPX skipped, nothing between ${minCost} and ${maxCost} within 10 strikes`); continue; }
-        if (c.moved < 0) notes.push(`${label}: Belle's ${c.chart ? c.chart.strike : ''}${cp} was under $${minCost}, so Penny went ${-c.moved} strike${c.moved < -1 ? 's' : ''} closer to the money`);
-        if (c.moved > 0) notes.push(`${label}: Belle's ${c.chart ? c.chart.strike : ''}${cp} was $${c.chart ? Math.round(c.chart.cost * qty) : '?'}${qty > 1 ? ` for ${qty}` : ''}, over $${maxCost}, so Penny went ${c.moved} strike${c.moved > 1 ? 's' : ''} further out`);
+        if (c.outside) notes.push(`${label}: nothing between $${minCost} and $${maxCost}, so Penny took the closest at $${Math.round(c.cost * qty)}`);
+        else if (c.moved < 0) notes.push(`${label}: Belle's ${c.chart ? c.chart.strike : ''}${cp} was under $${minCost}, so Penny went ${-c.moved} strike${c.moved < -1 ? 's' : ''} closer to the money`);
+        else if (c.moved > 0) notes.push(`${label}: Belle's ${c.chart ? c.chart.strike : ''}${cp} was $${c.chart ? Math.round(c.chart.cost * qty) : '?'}${qty > 1 ? ` for ${qty}` : ''}, over $${maxCost}, so Penny went ${c.moved} strike${c.moved > 1 ? 's' : ''} further out`);
         let lim = tick(c.ask, root);
         if (lim * 100 * qty > bp) { notes.push(`${label} skipped, not enough buying power`); shadowAdd(root, 'not enough buying power'); continue; }
         const buy = (cc, lm) => fetch(`${TRADE}/v2/orders`, { method: 'POST', headers: H(), body: JSON.stringify({ symbol: cc.sym, qty: String(qty), side: 'buy', type: 'limit', limit_price: lm.toFixed(2), time_in_force: 'day', client_order_id: `penny-${t.y}-${t.m}-${t.d}-${label}-${Date.now()}` }) }).then(r => r.json());
