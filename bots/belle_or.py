@@ -17,7 +17,7 @@ import time
 from penny_common import (DRY, REPLAY, already_traded, w1_loss_streak, buy, ct, dispatch, hm, holding, market_day, now, pdc_spy,
                           pick, post, spx_ratio, spy_bars, tick)
 
-SPX_MIN, SPX_MAX = 1.50, 2.50
+SPX_MIN, SPX_MAX = 0.70, 2.50   # Nov 5 (Titi): SPX is never skipped. Was 1.50: the 10:30 ET puts jumped from over $2.50 to under $1.50 one strike apart
 SPY_MAX = 0.60
 SPY_QTY = 3
 
