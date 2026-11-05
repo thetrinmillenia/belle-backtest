@@ -123,14 +123,20 @@ def pick(day, root, cp, px, lo, hi, step):
     ks = [base - i * step if cp == "P" else base + i * step for i in range(12)]
     syms = [occ(day, root, cp, k) for k in ks]
     q = quotes(syms)
+    near = None   # Nov 5 (Titi): never skip for price. The quote closest to the band is bought when nothing fits
     for k, s in zip(ks, syms):
         a = (q.get(s) or {}).get("ap")
-        if not a or a > hi:
+        if not a:
+            continue
+        d = a - hi if a > hi else (lo - a if a < lo else 0)
+        if near is None or d < near[0]:
+            near = (d, {"sym": s, "k": k, "ask": a})
+        if a > hi:
             continue
         if a < lo:
-            return None   # further out is only cheaper
+            break   # further out is only cheaper
         return {"sym": s, "k": k, "ask": a}
-    return None
+    return near[1] if near else None
 
 
 def tick(p, root):
