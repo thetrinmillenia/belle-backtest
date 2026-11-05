@@ -65,8 +65,21 @@ async function pick(root, cp, price, ymd, chartK, maxCost, minCost = 0) {
     const cost = x.ap * 100;
     if (i === 0) first = { strike: strikes[0], cost };
     if (cost > maxCost) continue;
-    if (cost < minCost) return null; // walking further out only gets cheaper: never under the floor (Titi, Oct 19)
+    if (cost < minCost) break; // further out only gets cheaper: try closer to the money instead (Nov 5 below)
     return { sym: syms[i], strike: strikes[i], ask: x.ap, cost, moved: i, chart: first };
+  }
+  // Nov 5 (Titi): SPX must never be skipped. When the rule strike is under the floor (fast moves, Nov 5 10:40 ET puts),
+  // walk one strike closer to the money at a time, up to 10, until the price is between the floor and the cap.
+  const inK = []; for (let i = 1; i <= 10; i++) inK.push(start - dir * i * step);
+  const inSyms = inK.map(s => occ(root, ymd, cp, s));
+  const q2 = await (await fetch(`${DATA}/v1beta1/options/quotes/latest?symbols=${inSyms.join(',')}&feed=indicative`, { headers: H() })).json();
+  for (let i = 0; i < inSyms.length; i++) {
+    const x = q2.quotes && q2.quotes[inSyms[i]];
+    if (!x || !x.ap) continue;
+    const cost = x.ap * 100;
+    if (cost < minCost) continue;
+    if (cost > maxCost) break;
+    return { sym: inSyms[i], strike: inK[i], ask: x.ap, cost, moved: -(i + 1), chart: first };
   }
   return null;
 }
@@ -221,6 +234,7 @@ export default async function handler(req, res) {
         const maxCost = root === 'SPY' ? SPY_MAX : (mins >= 810 ? EOD_MAX : MAX_COST), minCost = root === 'SPY' ? 0 : (mins >= 810 ? EOD_MIN : MIN_COST); // Nov 2: EOD $50 to $170 // per contract: SPX $100 to $250, SPY up to $0.60 (Titi, Oct 19)
         let c = await pick(root, cp, price, ymd, ruleStrike(root, cp, price, mins), maxCost, minCost);
         if (!c) { shadowAdd(root, 'no contract under the price cap'); notes.push(root === 'SPY' ? 'SPY skipped, nothing at $0.60 or less within 10 strikes' : `SPX skipped, nothing between ${minCost} and ${maxCost} within 10 strikes`); continue; }
+        if (c.moved < 0) notes.push(`${label}: Belle's ${c.chart ? c.chart.strike : ''}${cp} was under $${minCost}, so Penny went ${-c.moved} strike${c.moved < -1 ? 's' : ''} closer to the money`);
         if (c.moved > 0) notes.push(`${label}: Belle's ${c.chart ? c.chart.strike : ''}${cp} was $${c.chart ? Math.round(c.chart.cost * qty) : '?'}${qty > 1 ? ` for ${qty}` : ''}, over $${maxCost}, so Penny went ${c.moved} strike${c.moved > 1 ? 's' : ''} further out`);
         let lim = tick(c.ask, root);
         if (lim * 100 * qty > bp) { notes.push(`${label} skipped, not enough buying power`); shadowAdd(root, 'not enough buying power'); continue; }
