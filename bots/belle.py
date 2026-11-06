@@ -125,6 +125,12 @@ def expected_move(now):
         s.append(f"Last {len(d)} days:  {(d.move <= d.band).mean() * 100:.0f}% closed inside the range")
     except Exception as e:
         print("base rate failed", e)
+    if name == "VIX1D" and vol < 14 and now.time() < dt.time(9, 35):   # Nov 6 (Titi): low VIX day flag (Nov 5: VIX1D 12.08, SPX fell 335 pts)
+        s += ["**LOW VIX DAY**",
+              f"VIX1D {vol:.2f}" + (f"  |  VIX {vix_now:.2f}" if vix_now else ""),
+              f"Options are priced for a small move ({em:,.0f} pts). Contracts are cheap.",
+              "If the 4H profile confirms a reversal, cheap out of the money contracts can run 1,000%+",
+              "Watch the 06:00 and 10:00 ET 4H candles for the sweep and close back"]
     return "\n\n".join(s)
 
 
