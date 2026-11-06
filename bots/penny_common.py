@@ -136,7 +136,7 @@ def pick(day, root, cp, px, lo, hi, step):
         if a < lo:
             break   # further out is only cheaper
         return {"sym": s, "k": k, "ask": a}
-    return near[1] if near else None
+    return None   # Nov 6 (Titi): stay inside the price band, the outside-band fallback is removed
 
 
 def tick(p, root):
