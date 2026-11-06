@@ -231,14 +231,23 @@ export default async function handler(req, res) {
   if (pennyWin && !locked && !holding && !chopSkip && !eodNoCalls && !rangeSkip) {
       const acct = await (await fetch(`${TRADE}/v2/account`, { headers: H() })).json();
       let bp = Number(acct.options_buying_power || acct.buying_power || 0);
+      // Nov 6 (Titi): low VIX day = VIX1D closed under 14 the day before. Contracts are cheap, so the SPX floor drops to $40
+      // and the cheap rule strike is kept (Nov 5: VIX1D 12.08, the 7515P at $0.90 went +6,022%).
+      let lowVix = false, vix1d = null;
+      try {
+        const vj = await (await fetch('https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX1D?interval=5m&range=1d', { headers: { 'User-Agent': 'Mozilla/5.0' } })).json();
+        const m = vj.chart.result[0].meta; vix1d = Number(m.previousClose || m.chartPreviousClose);   // yesterday's close, fixed for the whole day
+        lowVix = vix1d > 0 && vix1d < 14;
+      } catch (e) { lowVix = false; }
       for (const root of order) {
         const price = root === 'SPY' ? a.spy : a.spx;
         const label = root === 'SPY' ? 'SPY' : 'SPX';
         if (!price) { notes.push(`${label} skipped, no price`); continue; }
         const qty = root === 'SPY' ? SPY_QTY : 1;
-        const maxCost = root === 'SPY' ? SPY_MAX : (mins >= 810 ? EOD_MAX : MAX_COST), minCost = root === 'SPY' ? 0 : (mins >= 810 ? EOD_MIN : MIN_COST); // Nov 2: EOD $50 to $170 // per contract: SPX $100 to $250, SPY up to $0.60 (Titi, Oct 19)
+        const maxCost = root === 'SPY' ? SPY_MAX : (mins >= 810 ? EOD_MAX : MAX_COST), minCost = root === 'SPY' ? 0 : (lowVix ? 40 : (mins >= 810 ? EOD_MIN : MIN_COST)); // Nov 2: EOD $50 to $170 // per contract: SPX $100 to $250, SPY up to $0.60 (Titi, Oct 19)
         let c = await pick(root, cp, price, ymd, ruleStrike(root, cp, price, mins), maxCost, minCost);
         if (!c) { shadowAdd(root, 'no contract under the price cap'); notes.push(root === 'SPY' ? 'SPY skipped, nothing at $0.60 or less within 10 strikes' : `SPX skipped, nothing between ${minCost} and ${maxCost} within 10 strikes`); continue; }
+        if (root !== 'SPY' && lowVix) notes.push(`Low VIX day (VIX1D ${vix1d.toFixed(2)}): cheap strike kept, floor $40`);
         if (c.outside) notes.push(`${label}: nothing between $${minCost} and $${maxCost}, so Penny took the closest at $${Math.round(c.cost * qty)}`);
         else if (c.moved < 0) notes.push(`${label}: Belle's ${c.chart ? c.chart.strike : ''}${cp} was under $${minCost}, so Penny went ${-c.moved} strike${c.moved < -1 ? 's' : ''} closer to the money`);
         else if (c.moved > 0) notes.push(`${label}: Belle's ${c.chart ? c.chart.strike : ''}${cp} was $${c.chart ? Math.round(c.chart.cost * qty) : '?'}${qty > 1 ? ` for ${qty}` : ''}, over $${maxCost}, so Penny went ${c.moved} strike${c.moved > 1 ? 's' : ''} further out`);
