@@ -114,7 +114,7 @@ def opposite_alert_since(t0):
     return False
 
 
-EXIT_MIN = 959   # out at 15:59 ET, never later, regardless of price (Titi, Oct 25)
+EXIT_MIN = 957   # Nov 6 (Titi): out by 15:57 ET (was 15:59, Oct 25). The last spike comes 15:50 to 15:55 and fades by the close
 EOD = "EOD" in LABEL or "SCALP" in LABEL
 # STALL break on SPX (Titi, Oct 21): hold, no trims, patience pays. Belle's SPY stop, a 60% floor, out at the target
 # (50% of the day's swing); after +100% trail 40% below the best. No step stop, breakeven or $50 trail cap.
@@ -510,7 +510,7 @@ spy_best = None   # the move's high (calls) or low (puts) on SPY while in the tr
 while True:
     n = now()
     if n.hour * 60 + n.minute >= EXIT_MIN:
-        reason = "15:59"
+        reason = "15:57"
         break
     if REV_HOLD and n.hour * 60 + n.minute >= 955:
         reason = "hold 15:55"
@@ -648,6 +648,10 @@ while True:
         if warned and not TIER and not WIN1:   # Nov 4 (Titi): morning trades do not tighten on an opposite alert. Nov 3 (Titi): the SPX test trade rides the full move, an opposite alert does not tighten it
             warn_stop = max(warn_stop, bid * 0.90)   # ratchets up only
             stop = max(stop, warn_stop)
+        # Nov 6 (Titi): last ten minutes, sell at peak profit. From 15:50 ET, a trade up 20%+ sells on a 10% pullback from its best
+        # (Nov 6: the 7380P ran from 1.15 to 7.40 between 15:50 and 15:55 ET, then closed at 2.65)
+        if n.hour * 60 + n.minute >= 950 and peak >= entry * 1.2:
+            stop = max(stop, peak * 0.90)
         # keep the broker stop at the floor, only ever moving it up
         sp = tick_dn(stop)
         if STOP_ID is None and left > 0 and sp > 0:
@@ -662,7 +666,7 @@ while True:
         if bid <= stop:
             reason = "flip" if warned and stop == warn_stop else ("trail" if peak >= entry * 1.3 and stop > entry else ("breakeven" if stop >= entry else ("step stop" if stop >= entry * 0.80 - 1e-9 else "43% stop")))
             break
-    time.sleep(2 if EOD else 10)   # EOD checks every 2 seconds (Titi, Oct 27)
+    time.sleep(2 if EOD or n.hour * 60 + n.minute >= 950 else 10)   # EOD and the last ten minutes check every 2 seconds (Titi, Oct 27, Nov 6)
 
 # 3) exit
 if STOP_FILL is None and (reason == "/out" or not pos_open()):   # closed from Discord with /out or /lockout
@@ -682,8 +686,8 @@ if exitp is None:
     post(f"PENNY {LABEL}: exit not confirmed, check Alpaca ({reason})")
 else:
     pct = (exitp / entry - 1) * 100
-    if reason == "15:59":
-        post(f"{LABEL} out 15:59, best {best:+.0f}%, closed {pct:+.0f}%")
+    if reason == "15:57":
+        post(f"{LABEL} out 15:57, best {best:+.0f}%, closed {pct:+.0f}%")
     elif reason == "stop":
         post(f"{LABEL} stopped out, closed {pct:+.0f}%")
     else:
