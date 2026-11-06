@@ -86,7 +86,7 @@ async function pick(root, cp, price, ymd, chartK, maxCost, minCost = 0) {
     if (cost > maxCost) break;
     return { sym: inSyms[i], strike: inK[i], ask: x.ap, cost, moved: -(i + 1), chart: first };
   }
-  return near ? { sym: near.sym, strike: near.strike, ask: near.ask, cost: near.cost, moved: near.moved, chart: first, outside: true } : null;
+  return null;   // Nov 6 (Titi): stay in $70 to $250. The outside-the-band fallback bought a $650 SPX put, removed
 }
 
 // range day guard (Oct 29): Window 1 (10:00 to 12:30 ET) trades in a row that lost today, counted back from the last closed one.
