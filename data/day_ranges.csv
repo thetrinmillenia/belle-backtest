@@ -46,3 +46,4 @@ date,open,high,low,close,range,net,morning_range,lunch_range,afternoon_range,lun
 2026-11-03,7549,7593,7547,7566,46,18,41,26,30,failed sweep of the high,1,7547,7593,46,consolidation,"bearish 7689 (10-30 09:30), flips above 7593","bearish 7666 (10-22 09:30), flips above 7661"
 2026-11-04,7653,7715,7650,7690,65,37,59,51,29,failed sweep of the high,1,7650,7715,65,normal,"bullish 7593 (11-04 09:30), flips below 7558","bullish 7661 (11-04 09:30), flips below 7526"
 2026-11-05,7678,7683,7349,7356,333,-322,289,123,81,broke the low,1,7349,7683,333,expansion,"bearish 7558 (11-05 09:30), flips above 7715","bearish 7526 (11-05 09:30), flips above 7715"
+2026-11-06,7371,7443,7368,7376,75,6,75,59,41,inside the morning range,1,7368,7443,75,normal,"bearish 7558 (11-05 09:30), flips above 7443","bearish 7526 (11-05 09:30), flips above 7715"
