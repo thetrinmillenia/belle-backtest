@@ -1,34 +1,34 @@
 # Belle backtest results
 
-Data: Yahoo Finance, last 60d. Run 2026-11-05.
+Data: Yahoo Finance, last 60d. Run 2026-11-06.
 
 ## 5 minute signals
 
-Signals: 77 (8.2 per week). Entry = the sweep candle's close.
+Signals: 78 (8.3 per week). Entry = the sweep candle's close.
 
 **How far SPX moved after the signal (best point before 15:59), in SPX points: 25th / median / 75th percentile**
 
 | Group | Signals | Move |
 | --- | --- | --- |
-| All | 77 | 2 / 7 / 12 |
-| window = W1 | 41 | 3 / 8 / 17 |
-| window = W2 | 36 | 2 / 6 / 9 |
+| All | 78 | 3 / 7 / 12 |
+| window = W1 | 41 | 3 / 8 / 20 |
+| window = W2 | 37 | 2 / 6 / 9 |
 | direction = calls | 42 | 2 / 6 / 9 |
-| direction = puts | 35 | 4 / 9 / 20 |
+| direction = puts | 36 | 4 / 8 / 22 |
 | W1 calls | 22 | 2 / 8 / 12 |
-| W1 puts | 19 | 6 / 12 / 29 |
+| W1 puts | 19 | 6 / 12 / 33 |
 | W2 calls | 20 | 3 / 5 / 8 |
-| W2 puts | 16 | 2 / 6 / 11 |
+| W2 puts | 17 | 2 / 6 / 11 |
 
 **Strike went in the money by 15:59, by distance out of the money**
 
 | Group | 10 pts | 15 pts | 20 pts | 25 pts |
 | --- | --- | --- | --- | --- |
-| All | 26% | 18% | 10% | 9% |
+| All | 28% | 21% | 12% | 10% |
 | W1 calls | 27% | 14% | 0% | 0% |
-| W1 puts | 47% | 42% | 32% | 26% |
+| W1 puts | 53% | 47% | 37% | 32% |
 | W2 calls | 10% | 0% | 0% | 0% |
-| W2 puts | 19% | 19% | 12% | 12% |
+| W2 puts | 24% | 24% | 12% | 12% |
 
 **Score notes (never block a trade): share reaching ITM at 15 pts**
 
@@ -37,26 +37,26 @@ Signals: 77 (8.2 per week). Entry = the sweep candle's close.
 | pool_swept = 13:30 candle high | 1 | 0% |
 | pool_swept = 13:30 candle low | 6 | 17% |
 | pool_swept = 9:30 open | 3 | 33% |
-| pool_swept = bearish FVG CE | 13 | 38% |
+| pool_swept = bearish FVG CE | 14 | 43% |
 | pool_swept = bearish order block opening | 6 | 17% |
 | pool_swept = bullish FVG CE | 14 | 7% |
 | pool_swept = bullish order block opening | 6 | 0% |
 | pool_swept = equal highs | 2 | 50% |
 | pool_swept = equal lows | 5 | 0% |
-| pool_swept = rejection block | 20 | 20% |
-| pool_swept = swing high | 1 | 0% |
+| pool_swept = rejection block | 19 | 21% |
+| pool_swept = swing high | 2 | 50% |
 | with_4h_bias = False | 30 | 17% |
-| with_4h_bias = True | 47 | 19% |
-| confirmed_next_candle = False | 29 | 10% |
-| confirmed_next_candle = True | 48 | 23% |
-| failed_2 = False | 64 | 19% |
-| failed_2 = True | 13 | 15% |
-| smt = False | 75 | 17% |
+| with_4h_bias = True | 48 | 23% |
+| confirmed_next_candle = False | 30 | 13% |
+| confirmed_next_candle = True | 48 | 25% |
+| failed_2 = False | 65 | 20% |
+| failed_2 = True | 13 | 23% |
+| smt = False | 76 | 20% |
 | smt = True | 2 | 50% |
-| h1 = green | 41 | 10% |
-| h1 = red | 36 | 28% |
-| h4 = green | 35 | 9% |
-| h4 = red | 42 | 26% |
+| h1 = green | 40 | 10% |
+| h1 = red | 38 | 32% |
+| h4 = green | 34 | 9% |
+| h4 = red | 44 | 30% |
 
 **Answer key check**
 
@@ -68,38 +68,38 @@ Signals: 77 (8.2 per week). Entry = the sweep candle's close.
 
 ## 15 minute signals
 
-Signals: 45 (6.1 per week). Entry = the sweep candle's close.
+Signals: 44 (5.9 per week). Entry = the sweep candle's close.
 
 **How far SPX moved after the signal (best point before 15:59), in SPX points: 25th / median / 75th percentile**
 
 | Group | Signals | Move |
 | --- | --- | --- |
-| All | 45 | 4 / 8 / 13 |
-| window = W1 | 26 | 5 / 9 / 15 |
-| window = W2 | 19 | 3 / 7 / 9 |
-| direction = calls | 25 | 5 / 8 / 13 |
-| direction = puts | 20 | 2 / 6 / 20 |
+| All | 44 | 5 / 8 / 13 |
+| window = W1 | 25 | 5 / 8 / 15 |
+| window = W2 | 19 | 3 / 7 / 10 |
+| direction = calls | 24 | 6 / 8 / 13 |
+| direction = puts | 20 | 2 / 6 / 22 |
 | W1 calls | 14 | 6 / 8 / 13 |
-| W1 puts | 12 | 3 / 10 / 22 |
-| W2 calls | 11 | 5 / 8 / 10 |
-| W2 puts | 8 | 2 / 5 / 7 |
+| W1 puts | 11 | 3 / 6 / 23 |
+| W2 calls | 10 | 7 / 8 / 10 |
+| W2 puts | 9 | 2 / 5 / 7 |
 
 **Strike went in the money by 15:59, by distance out of the money**
 
 | Group | 10 pts | 15 pts | 20 pts | 25 pts |
 | --- | --- | --- | --- | --- |
-| All | 24% | 11% | 9% | 4% |
+| All | 27% | 14% | 11% | 7% |
 | W1 calls | 21% | 0% | 0% | 0% |
-| W1 puts | 42% | 33% | 25% | 8% |
-| W2 calls | 18% | 0% | 0% | 0% |
-| W2 puts | 12% | 12% | 12% | 12% |
+| W1 puts | 45% | 36% | 27% | 9% |
+| W2 calls | 20% | 0% | 0% | 0% |
+| W2 puts | 22% | 22% | 22% | 22% |
 
 **Score notes (never block a trade): share reaching ITM at 15 pts**
 
 | Note | Signals | ITM at 15 pts |
 | --- | --- | --- |
-| pool_swept = 13:30 candle high | 9 | 22% |
-| pool_swept = 13:30 candle low | 10 | 0% |
+| pool_swept = 13:30 candle high | 9 | 33% |
+| pool_swept = 13:30 candle low | 9 | 0% |
 | pool_swept = 9:30 open | 3 | 0% |
 | pool_swept = bearish FVG CE | 6 | 33% |
 | pool_swept = bearish order block opening | 3 | 33% |
@@ -107,18 +107,18 @@ Signals: 45 (6.1 per week). Entry = the sweep candle's close.
 | pool_swept = bullish order block opening | 1 | 0% |
 | pool_swept = rejection block | 7 | 0% |
 | pool_swept = swing low | 2 | 0% |
-| with_4h_bias = False | 19 | 0% |
-| with_4h_bias = True | 26 | 19% |
-| confirmed_next_candle = False | 14 | 14% |
-| confirmed_next_candle = True | 31 | 10% |
-| failed_2 = False | 35 | 9% |
-| failed_2 = True | 10 | 20% |
-| smt = False | 43 | 12% |
+| with_4h_bias = False | 18 | 0% |
+| with_4h_bias = True | 26 | 23% |
+| confirmed_next_candle = False | 12 | 17% |
+| confirmed_next_candle = True | 32 | 12% |
+| failed_2 = False | 35 | 11% |
+| failed_2 = True | 9 | 22% |
+| smt = False | 42 | 14% |
 | smt = True | 2 | 0% |
-| h1 = green | 25 | 0% |
-| h1 = red | 20 | 25% |
-| h4 = green | 24 | 0% |
-| h4 = red | 21 | 24% |
+| h1 = green | 23 | 0% |
+| h1 = red | 21 | 29% |
+| h4 = green | 23 | 0% |
+| h4 = red | 21 | 29% |
 
 **Answer key check**
 
