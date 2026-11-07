@@ -1,4 +1,5 @@
 Date,Who,Ticker,Bias,Setup,Tags,P/L,Lesson,Note
+2026-11-06,Titi,SPX,Bearish,"EOD puts: range broke 14:50 ET, inducement up swept the high, puts on the sweep at 15:05 ET","Sweep, Chop, Window 3 EOD, Exit: broker stop",600.0,"Big runner: same setup, same patience. Let the trail work.","SPX 7380P bought 15:05 ET (14:05 CT). Titi: +500%. Entry and exit estimated from the 5m bars (15:05 ET low 1.20, 15:50 to 15:55 ET high 7.40). Day after a 30%+ VIX jump (chop day). Penny bought 7350P 14:05, 7355P 14:30 and 7370P 15:20 ET with no managers running; all expired at 0."
 2026-11-05,Penny,SPY,Bearish,,Window 1,312.0,"Big runner: same setup, same patience. Let the trail work.","Alpaca fill. SPY 737P x3, first entry 10:30 ET, 0.54 to 1.58 (193%)."
 2026-11-05,Penny,SPY,Bearish,,Window 1,198.0,"Repeat it: same window, same setup.","Alpaca fill. SPY 735P x3, first entry 10:40 ET, 0.52 to 1.18 (127%)."
 2026-11-05,Penny,SPY,Bullish,,Window 2,45.0,"Repeat it: same window, same setup.","Alpaca fill. SPY 743C x3, first entry 14:40 ET, 0.58 to 0.73 (26%)."
