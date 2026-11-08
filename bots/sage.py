@@ -5,6 +5,9 @@ The account is small, so every option position gets the same exits, whoever open
   - stop: sell at -50%
   - last ten minutes: from 15:50 ET, a position up 20%+ sells on a 10% pullback from its best
   - out by 15:57 ET, whatever the price
+  - Nov 8 (Titi): at +100%, Sage checks the last closed 1H candle first. If the trend is strong (SPY 1H candle closed
+    in the trade's direction with a body of at least half its range), she keeps the contract with a lock at +50% and
+    a trail 30% below the best. Each new 1H close is checked again; a candle that is not strong anymore sells.
 Runs on GitHub's schedule in two parts (09:20 to 12:45 ET and 12:40 to 16:00 ET), checks every 5 seconds.
 Holding rules (4H direction, last 1H candle) come later.
 """
@@ -73,7 +76,25 @@ def sell(p, why):
     print(f"{now():%H:%M:%S} sold {qty} {sym} ({why}): {r.get('id') or r}")
 
 
-peak = {}
+peak, held, h1_checked = {}, {}, {}
+
+
+def h1_strong(cp):
+    """Last closed SPY 1H candle closed in the trade's direction with a body of at least half its range."""
+    start = (now() - dt.timedelta(hours=6)).astimezone(dt.timezone.utc).isoformat()
+    j = requests.get(f"{DATA}/v2/stocks/SPY/bars", headers=H, timeout=10,
+                     params={"timeframe": "1Hour", "start": start, "feed": "iex", "limit": 20}).json()
+    bars = [b for b in (j.get("bars") or [])
+            if dt.datetime.fromisoformat(b["t"].replace("Z", "+00:00")) + dt.timedelta(hours=1) <= dt.datetime.now(dt.timezone.utc)]
+    if not bars:
+        return False, "no closed 1H candle"
+    b = bars[-1]
+    rng, body = b["h"] - b["l"], b["c"] - b["o"]
+    up = cp == "C"
+    ok = rng > 0 and (body > 0 if up else body < 0) and abs(body) >= 0.5 * rng
+    return ok, f"1H {b['t'][11:16]} UTC o {b['o']:.2f} c {b['c']:.2f} body {abs(body) / rng * 100 if rng else 0:.0f}% of range"
+
+
 print(f"sage {part} running until {END // 60:02d}:{END % 60:02d} ET")
 while mins() < END:
     try:
@@ -86,8 +107,24 @@ while mins() < END:
             peak[sym] = max(peak.get(sym, entry), b)
             if m >= OUT:
                 sell(p, "1557")
+            elif sym in held:
+                hour = now().hour
+                stop = max(entry * 1.5, peak[sym] * 0.70)   # lock +50%, trail 30% below the best
+                if b <= stop:
+                    sell(p, "trail"); held.pop(sym, None)
+                elif h1_checked.get(sym) != hour and now().minute >= 1:   # a new 1H candle closed
+                    h1_checked[sym] = hour
+                    ok, why = h1_strong(sym[-9])
+                    print(f"{now():%H:%M} {sym} 1H check: {'strong, keep' if ok else 'not strong, sell'} ({why})")
+                    if not ok:
+                        sell(p, "1h"); held.pop(sym, None)
             elif b >= entry * TP:
-                sell(p, "tp100")
+                ok, why = h1_strong(sym[-9])
+                print(f"{now():%H:%M} {sym} +100%, 1H check: {'strong, keep' if ok else 'sell'} ({why})")
+                if ok:
+                    held[sym] = True; h1_checked[sym] = now().hour
+                else:
+                    sell(p, "tp100")
             elif b <= entry * SL:
                 sell(p, "sl50")
             elif m >= LAST10 and peak[sym] >= entry * 1.2 and b <= peak[sym] * 0.90:
