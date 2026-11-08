@@ -1,0 +1,36 @@
+name: Sage (seller)
+
+# Sage sells every paper option position at +100%, -50%, the last ten minutes pullback, or 15:57 ET.
+# Two parts a day. Each cron pair covers winter and summer time; the script skips the run that is not its time.
+on:
+  schedule:
+    - cron: "20 13,14 * * 1-5"   # morning part, 09:20 ET
+    - cron: "40 16,17 * * 1-5"   # afternoon part, 12:40 ET
+  workflow_dispatch:
+    inputs:
+      part:
+        description: "am or pm (empty = by the clock)"
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sage
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests
+      - run: python bots/sage.py
+        env:
+          ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          PART: ${{ github.event.inputs.part }}
