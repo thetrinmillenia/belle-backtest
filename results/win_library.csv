@@ -1,4 +1,5 @@
 Date,Who,Ticker,Bias,Setup,Tags,P/L,Lesson,Note
+2026-11-10,Penny,SPY,Bearish,,Window 1,185.0,"Repeat it: same window, same setup.","Alpaca fill. SPY 745P x3, first entry 10:30 ET, 0.53 to 1.15 (116%)."
 2026-11-09,Penny,SPX,Bullish,,Window 1,255.0,"Repeat it: same window, same setup.","Alpaca fill. SPX 7560C x1, first entry 10:30 ET, 2.45 to 5.00 (104%)."
 2026-11-09,Penny,SPX,Bullish,,"Window 1, Lunch 11:30 to 13:45",155.0,"Repeat it: same window, same setup.","Alpaca fill. SPX 7565C x1, first entry 11:45 ET, 1.35 to 2.90 (115%)."
 2026-11-09,Penny,SPY,Bullish,,Window 1,51.0,"Repeat it: same window, same setup.","Alpaca fill. SPY 754C x3, first entry 10:45 ET, 0.25 to 0.42 (68%)."
