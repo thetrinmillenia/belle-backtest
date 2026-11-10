@@ -23,3 +23,9 @@ date,time_et,tf,type,dir,range_x_avg,body_pct,vol_x_avg,close
 2026-11-05,10:00,15m,close outside,down,0.79,75,0.83,7522.78
 2026-11-09,10:00,5m,close outside,up,0.72,77,0.56,7509.19
 2026-11-09,10:00,15m,close outside,up,0.41,68,0.51,7511.35
+2026-11-10,10:00,5m,close outside,up,0.83,78,0.98,7540.11
+2026-11-10,10:00,15m,close outside,up,0.51,24,0.59,7532.79
+2026-11-10,10:15,15m,sweep back inside,down,0.9,84,0.4,7516.24
+2026-11-10,10:50,5m,close outside,down,1.06,20,4.08,7491.96
+2026-11-10,10:45,15m,close outside,down,0.94,38,2.33,7492.26
+2026-11-10,11:00,15m,sweep back inside,up,0.8,40,0.74,7498.08
