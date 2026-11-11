@@ -470,6 +470,9 @@ if not o:
 entry = float(o["filled_avg_price"])
 T_IN = f"{now():%H:%M}"
 WIN1 = now().hour * 60 + now().minute <= 750
+# Nov 10 (Titi): EOD entries from 15:30 ET (the 15:30 and 15:50 entries). -50% stop, no +100% cap, no trims or trails,
+# take +500%, otherwise out at 15:59 ET. Nov 9 7555P: 15:30 entry 0.67, dipped -40%, peaked +646% at 15:59.
+LATE = now().hour * 60 + now().minute >= 930
 DRAFT_ON = WIN1
 SIDE_W = "CALLS" if DIR == 1 else "PUTS"
 # Window 3 reversal hold, SPX only (Titi, Oct 30: "she just needs to know when to hold"). When the EOD alert is a reversal
@@ -509,7 +512,7 @@ reason = ""
 spy_best = None   # the move's high (calls) or low (puts) on SPY while in the trade, for the REENTER rule
 while True:
     n = now()
-    if n.hour * 60 + n.minute >= EXIT_MIN:
+    if n.hour * 60 + n.minute >= (959 if LATE else EXIT_MIN):
         reason = "15:57"
         break
     if REV_HOLD and n.hour * 60 + n.minute >= 955:
@@ -525,10 +528,10 @@ while True:
         bid, spy = None, None
     if spy:
         spy_best = spy if spy_best is None else (max(spy_best, spy) if DIR == 1 else min(spy_best, spy))
-    if spy and SPY_STOP and (spy - SPY_STOP) * DIR <= 0 and not REV_HOLD and not WIN1:   # Nov 4 (Titi): morning trades skip Belle's SPY stop (only -50%)
+    if spy and SPY_STOP and (spy - SPY_STOP) * DIR <= 0 and not REV_HOLD and not WIN1 and not LATE:   # Nov 4 (Titi): morning trades skip Belle's SPY stop (only -50%)
         reason = "stop"
         break
-    if FIB and spy:
+    if FIB and spy and not LATE:
         for key, lv, nm in (("f1", SPY_T1, "Target 1 (-0.27)"), ("f2", SPY_T2, "Target 2 (-0.62)")):
             if key not in said and (spy - lv) * DIR >= 0:
                 said.update({key, "t1"})
@@ -567,7 +570,7 @@ while True:
         for lvl, msg in levels:
             if gain >= lvl and lvl not in said:
                 said.add(lvl)
-                if lvl in ((1.00, 2.00) if EOD else (0.50, 1.00)) and left >= 2 and not FIB:
+                if lvl in ((1.00, 2.00) if EOD else (0.50, 1.00)) and left >= 2 and not FIB and not LATE:
                     px = sell(1)
                     if px:
                         banked.append((px, 1))
@@ -607,7 +610,7 @@ while True:
                 if sp_now and (sp_now - LV_AHEAD[0][1]) * DIR >= 0:
                     LV_TAG = LV_AHEAD[0][0]
                     print(f"{LABEL}: SPY tagged the {LV_TAG} {LV_AHEAD[0][1]:.2f}, trail on")
-            if not TREND and bid >= entry * 2.0:   # choppy day: take the +100% (Titi, Nov 3)
+            if not TREND and not LATE and bid >= entry * 2.0:   # choppy day: take the +100% (Titi, Nov 3)
                 reason = "+100%"
                 break
             stop = entry * (0.50 if WIN1 else 0.60)   # Nov 4 (Titi): morning SPX stop -50% (dips of -46% and -48% ran to +74% and +122%); later -40%
@@ -626,7 +629,7 @@ while True:
             if m5 % 5 == 0 and m5 != EMA_MIN:   # a 5m candle just closed
                 EMA_MIN = m5
                 side_now = ema200_side()
-                if side_now == -DIR and EMA_PREV == DIR and not WIN1:   # Nov 4 (Titi): no 200 EMA exit on morning trades
+                if side_now == -DIR and EMA_PREV == DIR and not WIN1 and not LATE:   # Nov 4 (Titi): no 200 EMA exit on morning trades
                     reason = "200 EMA"
                     break
                 if side_now is not None:
@@ -652,6 +655,11 @@ while True:
         # (Nov 6: the 7380P ran from 1.15 to 7.40 between 15:50 and 15:55 ET, then closed at 2.65)
         if n.hour * 60 + n.minute >= 950 and peak >= entry * 1.2:
             stop = max(stop, peak * 0.90)
+        if LATE:   # Nov 10: EOD entry from 15:30 ET, only -50% and +500% (out at 15:59 above)
+            stop, trail = entry * 0.50, None
+            if bid >= entry * 6.0:
+                reason = "+500%"
+                break
         # keep the broker stop at the floor, only ever moving it up
         sp = tick_dn(stop)
         if STOP_ID is None and left > 0 and sp > 0:
