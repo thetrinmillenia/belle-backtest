@@ -10,6 +10,7 @@ The account is small, so every option position gets the same exits, whoever open
     a trail 30% below the best. Each new 1H close is checked again; a candle that is not strong anymore sells.
 Runs on GitHub's schedule in two parts (09:20 to 12:45 ET and 12:40 to 16:00 ET), checks every 5 seconds.
 Holding rules (4H direction, last 1H candle) come later.
+Nov 10 (Titi): positions bought from 15:30 ET on (the 15:30 and 15:50 EOD entries) only get -50% and +500%, and stay to 15:59 ET.
 """
 import datetime as dt
 import os
@@ -76,7 +77,18 @@ def sell(p, why):
     print(f"{now():%H:%M:%S} sold {qty} {sym} ({why}): {r.get('id') or r}")
 
 
-peak, held, h1_checked = {}, {}, {}
+peak, held, h1_checked, entered = {}, {}, {}, {}
+
+
+def entry_min(sym):
+    """Minute (ET) of the latest buy fill on this contract today."""
+    if sym not in entered:
+        od = requests.get(f"{TRADE}/v2/orders", headers=H, timeout=10,
+                          params={"status": "closed", "symbols": sym, "after": f"{now().date()}T13:00:00Z", "limit": 50}).json()
+        fills = [o["filled_at"] for o in (od if isinstance(od, list) else []) if o.get("side") == "buy" and o.get("filled_at")]
+        t = dt.datetime.fromisoformat(max(fills).replace("Z", "+00:00")).astimezone(ET) if fills else None
+        entered[sym] = t.hour * 60 + t.minute if t else 0
+    return entered[sym]
 
 
 def h1_strong(cp):
@@ -105,6 +117,14 @@ while mins() < END:
             if not b or not entry:
                 continue
             peak[sym] = max(peak.get(sym, entry), b)
+            if entry_min(sym) >= 930:   # EOD entry from 15:30 ET
+                if m >= 959:
+                    sell(p, "1559")
+                elif b >= entry * 6.0:
+                    sell(p, "tp500")
+                elif b <= entry * SL:
+                    sell(p, "sl50")
+                continue
             if m >= OUT:
                 sell(p, "1557")
             elif sym in held:
