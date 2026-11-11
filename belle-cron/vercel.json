@@ -60,6 +60,14 @@
     {
       "path": "/api/kick?job=sage_pm&utc=17",
       "schedule": "40 17 * * 1-5"
+    },
+    {
+      "path": "/api/bellecheck",
+      "schedule": "5 19 * * 1-5"
+    },
+    {
+      "path": "/api/bellecheck",
+      "schedule": "5 20 * * 1-5"
     }
   ]
 }
