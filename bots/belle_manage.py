@@ -472,7 +472,7 @@ T_IN = f"{now():%H:%M}"
 WIN1 = now().hour * 60 + now().minute <= 750
 # Nov 10 (Titi): EOD entries from 15:30 ET (the 15:30 and 15:50 entries). -50% stop, no +100% cap, no trims or trails,
 # take +500%, otherwise out at 15:59 ET. Nov 9 7555P: 15:30 entry 0.67, dipped -40%, peaked +646% at 15:59.
-LATE = now().hour * 60 + now().minute >= 930
+LATE = now().hour * 60 + now().minute >= 900   # Nov 11 (Titi): four windows, Window 4 (EOD) starts on the 15:00 ET candle open
 DRAFT_ON = WIN1
 SIDE_W = "CALLS" if DIR == 1 else "PUTS"
 # Window 3 reversal hold, SPX only (Titi, Oct 30: "she just needs to know when to hold"). When the EOD alert is a reversal
