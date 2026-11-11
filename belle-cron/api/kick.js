@@ -6,7 +6,9 @@ const JOBS = {
   stall: { wf: 'belle-stall.yml', inputs: {} },
   eod: { wf: 'belle-eod.yml', inputs: { force: '0' } },
   nora: { wf: 'nora.yml', inputs: { force: '0' } },
-  harper: { wf: 'harper.yml', inputs: { force: '0' } }
+  harper: { wf: 'harper.yml', inputs: { force: '0' } },
+  sage_am: { wf: 'sage.yml', inputs: { part: 'am' } },   // Nov 10: GitHub's own clock skipped most Sage runs
+  sage_pm: { wf: 'sage.yml', inputs: { part: 'pm' } }
 };
 
 export default async function handler(req, res) {
