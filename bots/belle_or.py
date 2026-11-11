@@ -19,6 +19,7 @@ from penny_common import (DRY, REPLAY, already_traded, w1_loss_streak, buy, ct, 
 
 SPX_MIN, SPX_MAX = 0.70, 2.50   # Nov 5 (Titi): SPX is never skipped. Was 1.50: the 10:30 ET puts jumped from over $2.50 to under $1.50 one strike apart
 SPY_MAX = 0.60
+SPY_MIN = 0.19   # Nov 11 (Titi): SPY no cheaper than $0.19
 SPY_QTY = 3
 
 day = market_day(9, "orb")
@@ -87,7 +88,7 @@ def trade(d, kind, last, orh, orl, stop):
                 dispatch("orb", oid, c["sym"], f"SPX {c['k']:g}{cp} ORB", side, stop / ratio, t1 / ratio, why, t2 / ratio, t3 / ratio)
         else:
             notes.append(f"SPX skipped, nothing between ${SPX_MIN:.2f} and ${SPX_MAX:.2f}")
-        y = pick(day, "SPY", cp, last["c"] / ratio, 0.05, SPY_MAX, 1)
+        y = pick(day, "SPY", cp, last["c"] / ratio, SPY_MIN, SPY_MAX, 1)
         if y:
             lim = tick(y["ask"], "SPY")
             oid = buy("orb", y["sym"], SPY_QTY, lim, "SPY")
