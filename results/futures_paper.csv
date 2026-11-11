@@ -33,3 +33,4 @@ date,time_et,side,source,entry,exit,exit_time_et,reason,points,pl,best_points,he
 2026-11-09,10:30,CALLS,traded,7537.50,7543.50,11:30,opposite alert,6.0,28.5,27.0,0.5
 2026-11-09,11:30,PUTS,traded,7543.50,7551.25,11:45,opposite alert,-7.75,-40.25,5.75,9.0
 2026-11-09,11:45,CALLS,traded,7551.25,7591.25,14:38,target,40.0,198.5,28.75,0.0
+2026-11-10,10:30,PUTS,traded,7540.25,7500.25,12:37,target,40.0,198.5,37.25,9.5
