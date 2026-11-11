@@ -131,7 +131,14 @@ export default async function handler(req, res) {
     let body = req.body;
     if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = { content: body }; } }
     const a = readAlert(body);
-    if (!a) { if (body && body.content) await discord(body.content); return res.status(200).json({ ok: true, traded: false, why: 'not an entry alert' }); }
+    if (!a) {
+      if (body && body.content) await discord(body.content);
+      // Nov 11 (Titi): the EOD READ proves Belle's alert is running today; mark it so the 15:05 ET Belle check stays quiet
+      if (body && /^EOD READ/.test(String(body.content || ''))) {
+        try { const t0 = et(); await fetch(`${TRADE}/v2/watchlists`, { method: 'POST', headers: H(), body: JSON.stringify({ name: `belle-seen-${t0.y}-${t0.m}-${t0.d}`, symbols: [] }) }); } catch (e) { }
+      }
+      return res.status(200).json({ ok: true, traded: false, why: 'not an entry alert' });
+    }
 
     const cp = a.side === 'CALLS' ? 'C' : 'P';
     const t = et();
