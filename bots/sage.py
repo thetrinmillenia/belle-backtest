@@ -117,7 +117,7 @@ while mins() < END:
             if not b or not entry:
                 continue
             peak[sym] = max(peak.get(sym, entry), b)
-            if entry_min(sym) >= 930:   # EOD entry from 15:30 ET
+            if entry_min(sym) >= 900:   # EOD entry from 15:00 ET (Nov 11: Window 4 starts on the 15:00 candle open)
                 if m >= 959:
                     sell(p, "1559")
                 elif b >= entry * 6.0:
