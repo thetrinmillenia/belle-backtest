@@ -116,6 +116,8 @@ while mins() < END:
             b = bid(sym)
             if not b or not entry:
                 continue
+            if sym.startswith("SPXW") and 0 < entry_min(sym) < 900:
+                continue   # Nov 12 (Titi): SPX before 15:00 ET belongs to Penny (no sale at +100%, 30% trail)
             if sym.startswith("SPY") and 0 < entry_min(sym) <= 750:
                 continue   # Nov 12 (Titi): Window 1 SPY belongs to Penny (-40%, 2 out at +100%, the last one runs). Sage sold these runners early
             peak[sym] = max(peak.get(sym, entry), b)
