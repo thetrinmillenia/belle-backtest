@@ -614,21 +614,14 @@ while True:
                 if sp_now and (sp_now - LV_AHEAD[0][1]) * DIR >= 0:
                     LV_TAG = LV_AHEAD[0][0]
                     print(f"{LABEL}: SPY tagged the {LV_TAG} {LV_AHEAD[0][1]:.2f}, trail on")
-            if not TREND and not LATE and bid >= entry * 2.0:   # choppy day: take the +100% (Titi, Nov 3)
-                reason = "+100%"
-                break
             stop = entry * (0.50 if WIN1 else 0.60)   # Nov 4 (Titi): morning SPX stop -50% (dips of -46% and -48% ran to +74% and +122%); later -40%
             if peak >= entry * 3.0:
                 stop = max(stop, entry * 1.15)
-            if LV_TAG or not LV_AHEAD:
-                if peak >= entry * 2.0:
-                    stop = max(stop, peak * 0.50)
-                if peak >= entry * 4.0:
-                    stop = max(stop, peak * 0.75)
-                for lvl, txt in ((2.0, "half"), (4.0, "75%")):
-                    if peak >= entry * lvl and f"tier{lvl}" not in said:
-                        said.add(f"tier{lvl}")
-                        post(f"{LABEL} +{(lvl - 1) * 100:.0f}%\n\nSells if it drops to {txt} of its best")
+            if peak >= entry * 2.0:   # Nov 12 (Titi): no sale at +100%. The stop trails 30% below the best price, never under +40% (87 trade test: +$4,181 vs +$1,976)
+                stop = max(stop, peak * 0.70)
+                if "tier2.0" not in said:
+                    said.add("tier2.0")
+                    post(f"{LABEL} +100%\n\nHolding. Sells if it drops 30% from its best")
             m5 = n.hour * 60 + n.minute
             if m5 % 5 == 0 and m5 != EMA_MIN:   # a 5m candle just closed
                 EMA_MIN = m5
