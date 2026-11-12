@@ -171,7 +171,7 @@ export default async function handler(req, res) {
     }
     // Window 3 = the EOD trade (Titi, Oct 19): the most important trade of the day, never blocked.
     // No 5 minute scalp timer: tight trail, Target 1, out by 15:58. A $100 contract can turn into $1,000.
-    const scalp = mins >= 810;
+    const scalp = mins >= 900;   // Nov 12 (Titi): only Window 4 (15:00 ET on) is the EOD trade. 13:30 to 15:00 uses the normal exits (the old EOD trail sold SPY 757P at +13%)
     // Window 3 calls (Oct 29 rule, from every Window 3 alert Oct 16 to 28): calls only when SPY is above PDC AND above
     // the 2 PM (14:00 ET) candle high. Calls inside the 2 PM candle or below PDC are skipped with no Discord note;
     // Raven scores them. Puts are not touched. If the data cannot be read, the trade is taken.
