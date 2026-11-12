@@ -51,7 +51,7 @@ function readAlert(body) {
 
 // one strike source (Titi, Oct 17): start at the strike the chart shows. If it costs more than the max,
 // walk further out of the money one strike at a time until it fits. Never skip just because the chart strike is pricey.
-async function pick(root, cp, price, ymd, chartK, maxCost, minCost = 0) {
+async function pick(root, cp, price, ymd, chartK, maxCost, minCost = 0, nearCap = 0) {
   const step = root === 'SPY' ? 1 : 5;
   const dir = cp === 'C' ? 1 : -1; // moving OTM
   const start = chartK ? Math.round(chartK / step) * step : Math.round(price / step) * step;
@@ -87,6 +87,8 @@ async function pick(root, cp, price, ymd, chartK, maxCost, minCost = 0) {
     if (cost > maxCost) break;
     return { sym: inSyms[i], strike: inK[i], ask: x.ap, cost, moved: -(i + 1), chart: first };
   }
+  // Nov 12 (Titi): Windows 3 and 4 must never skip. Nothing inside the band -> the closest quote, capped (SPX $250, SPY $100 a contract)
+  if (nearCap && near && near.cost <= nearCap) return { sym: near.sym, strike: near.strike, ask: near.ask, cost: near.cost, moved: near.moved, chart: first, outside: true };
   return null;   // Nov 6 (Titi): stay in $70 to $250. The outside-the-band fallback bought a $650 SPX put, removed
 }
 
@@ -253,7 +255,7 @@ export default async function handler(req, res) {
         if (!price) { notes.push(`${label} skipped, no price`); continue; }
         const qty = root === 'SPY' ? SPY_QTY : 1;
         const maxCost = root === 'SPY' ? SPY_MAX : (mins >= 810 ? EOD_MAX : MAX_COST), minCost = root === 'SPY' ? SPY_MIN : (lowVix ? 40 : (mins >= 810 ? EOD_MIN : MIN_COST)); // Nov 2: EOD $50 to $170 // per contract: SPX $100 to $250, SPY up to $0.60 (Titi, Oct 19)
-        let c = await pick(root, cp, price, ymd, ruleStrike(root, cp, price, mins), maxCost, minCost);
+        let c = await pick(root, cp, price, ymd, ruleStrike(root, cp, price, mins), maxCost, minCost, mins >= 810 ? (root === 'SPY' ? 100 : 250) : 0);
         if (!c) { shadowAdd(root, 'no contract under the price cap'); notes.push(root === 'SPY' ? 'SPY skipped, nothing between $0.19 and $0.60 within 10 strikes' : `SPX skipped, nothing between ${minCost} and ${maxCost} within 10 strikes`); continue; }
         if (root !== 'SPY' && lowVix) notes.push(`Low VIX day (VIX1D ${vix1d.toFixed(2)}): cheap strike kept, floor $40`);
         if (c.outside) notes.push(`${label}: nothing between $${minCost} and $${maxCost}, so Penny took the closest at $${Math.round(c.cost * qty)}`);
@@ -330,6 +332,20 @@ export default async function handler(req, res) {
           [a.why ? `• ${a.why}` : null, `• Stop: SPY ${cp === 'C' ? 'under' : 'over'} ${n2(a.spyStop)}`, `• Target 1: SPY ${n2(a.spyT1)}`].filter(Boolean).join('\n'),
           `Strike lesson:\n• ${ks[0]}${cp} ${ask(0)}: closer, costs more, moves faster\n• ${ks[1]}${cp} ${ask(1)}: my pick\n• ${ks[2]}${cp} ${ask(2)}: cheaper, needs a bigger move`,
           'Plan: 3 contracts. Sell 1 at +50%, 1 at +100%, the last one rides.'
+        ].join('\n\n');
+        await fetch(process.env.STUDENT_WEBHOOK_URL.trim(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: msg.slice(0, 1900), allowed_mentions: { parse: [] } }) });
+      } catch (e) { }
+    }
+    // BELLE DRAFTS, Windows 3 and 4 (Titi, Nov 12): the SPX strike for every alert from 13:30 ET, same private channel and format.
+    if (process.env.STUDENT_WEBHOOK_URL && a.spx && mins >= 810 && mins <= 955) {
+      try {
+        const p = picked.SPX, k = p ? p.strike : ruleStrike('SPX', cp, a.spx, mins);
+        const m = v => '$' + Number(v).toFixed(2).replace(/^0\./, '.');
+        const side = cp === 'C' ? 'CALLS' : 'PUTS';
+        const msg = [
+          `$SPX\n$${k} ${side}\nEXPIRATION ${t.m}/${t.d}/${t.y}\n${p ? m(p.lim) + ' Entry' : 'Entry: check the ask'}\n@everyone`,
+          [a.why ? `• ${a.why}` : null, `• Stop: SPX ${cp === 'C' ? 'under' : 'over'} ${n2(a.spxStop)}`, `• Target 1: SPX ${n2(a.spxT1)}`].filter(Boolean).join('\n'),
+          mins >= 900 ? 'Plan: 1 contract. Stop -50%, take profit +500%, out by 15:59 ET.' : 'Plan: 1 contract. No sale at +100%, then trail 30% below the best.'
         ].join('\n\n');
         await fetch(process.env.STUDENT_WEBHOOK_URL.trim(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: msg.slice(0, 1900), allowed_mentions: { parse: [] } }) });
       } catch (e) { }
