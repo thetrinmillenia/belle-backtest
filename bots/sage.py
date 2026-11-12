@@ -118,8 +118,8 @@ while mins() < END:
                 continue
             if sym.startswith("SPXW") and 0 < entry_min(sym) < 900:
                 continue   # Nov 12 (Titi): SPX before 15:00 ET belongs to Penny (no sale at +100%, 30% trail)
-            if sym.startswith("SPY") and 0 < entry_min(sym) <= 750:
-                continue   # Nov 12 (Titi): Window 1 SPY belongs to Penny (-40%, 2 out at +100%, the last one runs). Sage sold these runners early
+            if sym.startswith("SPY") and 0 < entry_min(sym) < 900:
+                continue   # Nov 12 (Titi): SPY before 15:00 ET belongs to Penny (her scale out and runner). Sage sold these runners early
             peak[sym] = max(peak.get(sym, entry), b)
             if entry_min(sym) >= 900:   # EOD entry from 15:00 ET (Nov 11: Window 4 starts on the 15:00 candle open)
                 if m >= 959:
