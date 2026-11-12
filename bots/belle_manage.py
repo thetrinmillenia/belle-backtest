@@ -73,8 +73,11 @@ DRAFT_MS = (20, 50, 75, 100, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 1
 def draft(text):
     """BELLE DRAFTS (Titi, Oct 21): Window 1 SPY posts in Titi's voice, to her private #belle-drafts channel.
     She copies them into the community. @everyone is in the text but does not ping in the private channel."""
-    if not (DRAFT and DRAFT_ON and LABEL.startswith("SPY")):
+    # Nov 12 (Titi): Windows 3 and 4 post the SPX trade the same way (same words, SPX in place of SPY)
+    if not (DRAFT and DRAFT_ON and ((LABEL.startswith("SPY") and WIN1) or (LABEL.startswith("SPX") and not WIN1))):
         return
+    if LABEL.startswith("SPX"):
+        text = text.replace("SPY", "SPX")
     try:
         requests.post(DRAFT, json={"content": text[:1900], "allowed_mentions": {"parse": []}}, timeout=10)
     except Exception:
@@ -473,7 +476,7 @@ WIN1 = now().hour * 60 + now().minute <= 750
 # Nov 10 (Titi): EOD entries from 15:30 ET (the 15:30 and 15:50 entries). -50% stop, no +100% cap, no trims or trails,
 # take +500%, otherwise out at 15:59 ET. Nov 9 7555P: 15:30 entry 0.67, dipped -40%, peaked +646% at 15:59.
 LATE = now().hour * 60 + now().minute >= 900   # Nov 11 (Titi): four windows, Window 4 (EOD) starts on the 15:00 ET candle open
-DRAFT_ON = WIN1
+DRAFT_ON = True   # Nov 12: SPY in Window 1, SPX in Windows 3 and 4 (checked in draft)
 SIDE_W = "CALLS" if DIR == 1 else "PUTS"
 # Window 3 reversal hold, SPX only (Titi, Oct 30: "she just needs to know when to hold"). When the EOD alert is a reversal
 # (SPY moved $1.00+ against the trade in the 60 minutes before the fill), SPX is held: 35% floor, no trail until 3x,
