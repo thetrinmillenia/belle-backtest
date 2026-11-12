@@ -4,3 +4,4 @@ date,vix1d,vix,priced_pts,actual_pts,used_pct,close_inside,am_pts,day_type,right
 2026-11-09,16.30,23.37,75.8,155.1,205,no,164.4,choppy,4,5
 2026-11-10,15.62,21.33,74.3,73.5,99,yes,61.4,choppy,1,1
 2026-11-11,9.66,18.26,45.8,75.3,165,no,44.1,choppy,8,10
+2026-11-12,13.23,18.87,63.5,101.9,160,yes,101.9,choppy,4,12
