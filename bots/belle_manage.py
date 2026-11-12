@@ -567,18 +567,22 @@ while True:
             levels = ((0.20, "+20%"), (0.50, "+50%"), (1.00, "+100%, take partial, trail now 15% below the best"), (2.00, "+200%, take partial"))
         if REV_HOLD:
             levels = ((0.20, "+20%"), (0.50, "+50%"), (1.00, "+100%"), (2.00, "+200%"))
+        W1_RUN = WIN1 and not EOD   # Nov 12 (Titi): Window 1 SPY keeps all 3 to +100%, sells 2 there, the last one runs
+        if W1_RUN:
+            levels = ((0.20, "+20%"), (0.50, "+50%"), (1.00, "+100%"))
         for lvl, msg in levels:
             if gain >= lvl and lvl not in said:
                 said.add(lvl)
-                if lvl in ((1.00, 2.00) if EOD else (0.50, 1.00)) and left >= 2 and not FIB and not LATE:
-                    px = sell(1)
+                if lvl in ((1.00, 2.00) if EOD else ((1.00,) if W1_RUN else (0.50, 1.00))) and left >= 2 and not FIB and not LATE:
+                    n_sell = left - 1 if W1_RUN else 1
+                    px = sell(n_sell)
                     if px:
-                        banked.append((px, 1))
-                        left -= 1
-                        msg += f", sold 1 of {QTY} at {px:.2f}, {left} left"
+                        banked.append((px, n_sell))
+                        left -= n_sell
+                        msg += f", sold {n_sell} of {QTY} at {px:.2f}, {left} left"
                         draft(f"TRIMMING 🚨\n{QTY - left}/{QTY} SOLD @ {money(px)}. {left} left, the last one rides.\n@everyone")
                 post(f"{LABEL} {msg}")
-        stop = entry * (0.50 if EOD or WIN1 else 0.57)   # starting stop 43% (Oct 20); Window 3 50% (Oct 29 backtest: +$212 vs +$19); Nov 4 (Titi): morning -50%
+        stop = entry * (0.60 if W1_RUN and SYM.startswith("SPY") else 0.50 if EOD or WIN1 else 0.57)   # Nov 12 (Titi): Window 1 SPY stop -40% (87 trade test)   # starting stop 43% (Oct 20); Window 3 50% (Oct 29 backtest: +$212 vs +$19); Nov 4 (Titi): morning -50%
         trail = None
         if EOD and peak >= entry * 1.60 and not HOLD and not REV_HOLD and not TIER:   # Window 3 (unchanged): breakeven at +60%
             stop = max(stop, entry)
@@ -714,33 +718,4 @@ if exitp is not None:
                 f"Not satisfied with setup as max profits were {best:.0f}% only.")
     draft(f"Just a note. I am fully hands off here. No active position remaining in SPY.\n\nI will let markets settle before alerting the next setup.\n\n{tail}\n@everyone")
 
-# 4) re-entry after a breakeven or 43% stop exit (Titi, Oct 19). Example: Oct 19 12:25 puts, out at breakeven,
-# then SPY broke the low of the move and kept going. Window 1: Penny re-enters once by herself. Other windows: REENTER note.
-if (reason in ("breakeven", "step stop", "43% stop") or (reason == "EXIT" and exitp is not None and exitp <= entry * 1.02)) and spy_best is not None and not os.environ.get("REENTERED"):
-    t_end = time.time() + 1800
-    while time.time() < t_end and now().hour * 60 + now().minute < 950:
-        try:
-            spy = spy_price()
-        except Exception:
-            spy = None
-        if spy and SPY_STOP and (spy - SPY_STOP) * DIR <= 0:
-            break   # Belle's stop broke, the idea is dead
-        if spy and (spy - spy_best) * DIR > 0.02:
-            side_w = "calls" if DIR == 1 else "puts"
-            if WIN1 and w1_loss_streak(now().date()) >= 2:
-                print("re-entry skipped: 2 Window 1 losses in a row today (range day)")
-                break
-            if WIN1:
-                ask = opt_ask()
-                if ask and ask * 100 * QTY <= 250:
-                    oid = buy(QTY, round(ask, 2))
-                    if oid:
-                        post(f"PENNY {LABEL}: re-entering {QTY} at {ask:.2f}, SPY broke the move's {'high' if DIR == 1 else 'low'} {spy_best:.2f}. Same stop as Belle (SPY {SPY_STOP})")
-                        # hand the new order to a fresh run of this manager (same job), one re-entry only
-                        os.environ.update({"ORDER_ID": oid, "LABEL": LABEL + " RE", "REENTERED": "1"})
-                        os.execv(sys.executable, [sys.executable] + sys.argv)
-                post(f"REENTER {LABEL} {side_w}: SPY broke the move's {'high' if DIR == 1 else 'low'} {spy_best:.2f}, Belle's stop SPY {SPY_STOP} intact. Penny could not fill, your call")
-            else:
-                post(f"REENTER {LABEL} {side_w}: SPY broke the move's {'high' if DIR == 1 else 'low'} {spy_best:.2f}, Belle's stop SPY {SPY_STOP} intact. Your call, Penny does not re-enter outside Window 1")
-            break
-        time.sleep(15)
+# 4) re-entry removed Nov 12 (Titi): it only fired after the old breakeven and 43% stops, and the 87 trade test lost (2 wins in 18).
