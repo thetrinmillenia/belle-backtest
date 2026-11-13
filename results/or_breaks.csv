@@ -33,3 +33,5 @@ date,time_et,tf,type,dir,range_x_avg,body_pct,vol_x_avg,close
 2026-11-11,10:45,15m,close outside,up,1.05,69,1.04,7608.88
 2026-11-12,10:50,5m,close outside,up,1.51,70,1.24,7614.97
 2026-11-12,10:45,15m,close outside,up,1.75,79,1.35,7629.41
+2026-11-13,10:00,5m,close outside,down,1.47,90,1.05,7543.86
+2026-11-13,10:00,15m,close outside,down,1.48,100,1.21,7511.93
