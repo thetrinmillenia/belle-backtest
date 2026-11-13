@@ -175,7 +175,7 @@ for d, gs in by_day.items():
     for i, g in enumerate(gs):
         m = g["t"].hour * 60 + g["t"].minute
         px = next((x["c"] for mm, x in reversed(bars) if mm + 5 <= m), None)
-        win = "W1 morning" if m <= 750 else ("W3 EOD" if m >= 900 else "midday")
+        win = "W1 morning" if m <= 750 else ("W2 lunch" if m < 810 else ("W3" if m < 900 else "W4 EOD"))   # Nov 12 (Titi): four windows
         side = "calls" if g["cp"] == "C" else "puts"
         tags = [win, f"{win} {side}", f"{m // 15 * 15 // 60:02d}:{m // 15 * 15 % 60:02d} ET entries"]
         if i == 0:
