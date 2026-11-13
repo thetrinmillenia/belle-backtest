@@ -475,7 +475,7 @@ T_IN = f"{now():%H:%M}"
 WIN1 = now().hour * 60 + now().minute <= 750
 # Nov 10 (Titi): EOD entries from 15:30 ET (the 15:30 and 15:50 entries). -50% stop, no +100% cap, no trims or trails,
 # take +500%, otherwise out at 15:59 ET. Nov 9 7555P: 15:30 entry 0.67, dipped -40%, peaked +646% at 15:59.
-LATE = now().hour * 60 + now().minute >= 900   # Nov 11 (Titi): four windows, Window 4 (EOD) starts on the 15:00 ET candle open
+LATE = now().hour * 60 + now().minute >= 810   # Nov 12 (Titi): Windows 3 and 4 (13:30 ET on) share one afternoon exit
 DRAFT_ON = True   # Nov 12: SPY in Window 1, SPX in Windows 3 and 4 (checked in draft)
 SIDE_W = "CALLS" if DIR == 1 else "PUTS"
 # Window 3 reversal hold, SPX only (Titi, Oct 30: "she just needs to know when to hold"). When the EOD alert is a reversal
@@ -573,6 +573,8 @@ while True:
         W1_RUN = WIN1 and not EOD   # Nov 12 (Titi): Window 1 SPY keeps all 3 to +100%, sells 2 there, the last one runs
         if W1_RUN:
             levels = ((0.20, "+20%"), (0.50, "+50%"), (1.00, "+100%"))
+        if LATE:   # Nov 12: afternoon trades never trim, the +100% post is made by the afternoon exit below
+            levels = ((0.20, "+20%"), (0.50, "+50%"))
         for lvl, msg in levels:
             if gain >= lvl and lvl not in said:
                 said.add(lvl)
@@ -587,13 +589,13 @@ while True:
                 post(f"{LABEL} {msg}")
         stop = entry * (0.60 if W1_RUN and SYM.startswith("SPY") else 0.50 if EOD or WIN1 else 0.57)   # Nov 12 (Titi): Window 1 SPY stop -40% (87 trade test)   # starting stop 43% (Oct 20); Window 3 50% (Oct 29 backtest: +$212 vs +$19); Nov 4 (Titi): morning -50%
         trail = None
-        if EOD and peak >= entry * 1.60 and not HOLD and not REV_HOLD and not TIER:   # Window 3 (unchanged): breakeven at +60%
+        if EOD and peak >= entry * 1.60 and not HOLD and not REV_HOLD and not TIER and not LATE:   # Window 3 (unchanged): breakeven at +60%
             stop = max(stop, entry)
             if "be" not in said:
                 said.add("be")
                 post(f"{LABEL} +60%, stop moved to breakeven {entry:.2f}")
                 draft(f"Stop moved to breakeven on SPY {SIDE_W} ({money(entry)}). No risk left on this one.\n@everyone")
-        if not EOD and not HOLD and not TIER and peak >= entry * 2.0:
+        if not EOD and not HOLD and not TIER and not LATE and peak >= entry * 2.0:
             # morning runner rule (Oct 30): from +100% the broker stop holds breakeven plus a third of the best gain.
             # The 30% trail below the best only sells if the 3m IRL is broken (checked below), so pullbacks in a trend are held.
             stop = max(stop, entry, entry + (peak - entry) / 3)
@@ -622,7 +624,7 @@ while True:
                 stop = max(stop, entry * 1.15)
             if peak >= entry * 2.0:   # Nov 12 (Titi): no sale at +100%. The stop trails 30% below the best price, never under +40% (87 trade test: +$4,181 vs +$1,976)
                 stop = max(stop, peak * 0.70)
-                if "tier2.0" not in said:
+                if "tier2.0" not in said and not LATE:
                     said.add("tier2.0")
                     post(f"{LABEL} +100%\n\nHolding. Sells if it drops 30% from its best")
             m5 = n.hour * 60 + n.minute
@@ -655,11 +657,14 @@ while True:
         # (Nov 6: the 7380P ran from 1.15 to 7.40 between 15:50 and 15:55 ET, then closed at 2.65)
         if n.hour * 60 + n.minute >= 950 and peak >= entry * 1.2:
             stop = max(stop, peak * 0.90)
-        if LATE:   # Nov 10: EOD entry from 15:30 ET, only -50% and +500% (out at 15:59 above)
+        if LATE:   # Nov 12 (Titi): afternoon exit, 13:30 ET on. -50% stop until +100%. Past +100% no sale: the stop trails
+            # 20% below the best price (69 afternoon trades: kept +92% on average vs +70% with the 30% trail). Out at 15:59.
             stop, trail = entry * 0.50, None
-            if bid >= entry * 6.0:
-                reason = "+500%"
-                break
+            if peak >= entry * 2.0:
+                stop = max(stop, peak * 0.80)
+                if "aft100" not in said:
+                    said.add("aft100")
+                    post(f"{LABEL} +100%\n\nHolding. Sells if it drops 20% from its best")
         # keep the broker stop at the floor, only ever moving it up
         sp = tick_dn(stop)
         if STOP_ID is None and left > 0 and sp > 0:
