@@ -49,3 +49,4 @@ date,time_et,side,contract,entry,reason
 2026-11-13,14:55,PUTS,SPXW261113P07510000,0.58,order rejected (SPXW261113P07510000): potential wash trade detected. use complex orders
 2026-11-13,14:55,PUTS,SPY261113P00749000,0.12,order rejected (SPY261113P00751000): potential wash trade detected. use complex orders
 2026-11-13,15:30,PUTS,SPY261113P00751000,0.13,order rejected (SPY261113P00752000): potential wash trade detected. use complex orders
+2026-11-13,15:35,PUTS,SPY261113P00751000,0.09,order rejected (SPY261113P00752000): potential wash trade detected. use complex orders
