@@ -47,7 +47,8 @@ def et_time(iso):
 
 def window(t):
     m = t.hour * 60 + t.minute
-    return "W1" if m <= 750 else ("W3 EOD" if m >= 900 else "W2")
+    # Nov 12 (Titi): four windows. W1 10:00-12:30, W2 lunch, W3 13:30-15:00, W4 EOD 15:00-15:55 (ET)
+    return "W1" if m <= 750 else ("W2 lunch" if m < 810 else ("W3" if m < 900 else "W4 EOD"))
 
 
 # 1) market context: Yahoo ^GSPC daily, Alpaca SPY daily as a fallback
@@ -303,6 +304,10 @@ if spx_h:
     hm = [(t["t_out"] - t["t_in"]).total_seconds() / 60 for t in spx_h]
     L.append(f"- SPX hold time today: {len(spx_h)} trade{'s' if len(spx_h) > 1 else ''}, average {sum(hm) / len(hm):.0f} min, longest {max(hm):.0f} min "
              f"(before the new exit on Nov 3: median 8 min; the 1,000% moves needed 2 to 4.5 hours).")
+# Nov 12 (Titi): afternoon exit check. Rule: -50% until +100%, then sell on a 20% drop from the best, out 15:59
+aft = [t for t in trades if window(t["t_in"]) in ("W3", "W4 EOD") and t.get("best") is not None and t["best"] >= 100]
+for t in aft:
+    L.append(f"- Afternoon runner {t['contract']}: best {t['best']:+.0f}%, kept {(t['pct'] if t['pct'] is not None else 0):+.0f}% (20% trail after +100%).")
 L += ["", "## 4. Titi", ""]
 if titi:
     for r in titi:
@@ -322,11 +327,11 @@ if stats:
     L.append("Best: " + " | ".join(f"{s['Pattern']} {s['Win %']}% wins {float(s['P/L']):+,.0f}" for s in s2[::-1][:3]))
     L.append("Costliest: " + " | ".join(f"{s['Pattern']} {s['Win %']}% wins {float(s['P/L']):+,.0f}" for s in s2[:3]))
 L += ["", "## 6. One suggestion (needs Titi's yes, Harper changes nothing)", ""]
-w3 = [t for t in trades if window(t["t_in"]) == "W3 EOD"]
+w3 = [t for t in trades if window(t["t_in"]) in ("W3", "W4 EOD")]   # the afternoon (13:30 ET on)
 if missed:
     L.append("Runners were sold early. Review the step stop and breakeven timing on these trades before changing anything.")
 elif total < 0 and w3 and sum(t["pl"] for t in w3) < 0:
-    L.append("Window 3 lost today. Check whether the entries had 1m, 5m and 15m agreement.")
+    L.append("The afternoon (Windows 3 and 4) lost today. Check whether the entries had the 15m flip (15m candle turned to the trade's side) and 1H/4H bias.")
 elif score["not right"] > score["right"]:
     L.append("More wrong alerts than right. Check the bias filter on today's losing windows.")
 else:
