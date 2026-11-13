@@ -116,16 +116,16 @@ while mins() < END:
             b = bid(sym)
             if not b or not entry:
                 continue
-            if sym.startswith("SPXW") and 0 < entry_min(sym) < 900:
-                continue   # Nov 12 (Titi): SPX before 15:00 ET belongs to Penny (no sale at +100%, 30% trail)
-            if sym.startswith("SPY") and 0 < entry_min(sym) < 900:
-                continue   # Nov 12 (Titi): SPY before 15:00 ET belongs to Penny (her scale out and runner). Sage sold these runners early
+            if sym.startswith("SPXW") and 0 < entry_min(sym) < 810:
+                continue   # Nov 12 (Titi): morning SPX belongs to Penny (no sale at +100%, 30% trail)
+            if sym.startswith("SPY") and 0 < entry_min(sym) < 810:
+                continue   # Nov 12 (Titi): morning SPY belongs to Penny (her scale out and runner). Sage sold these runners early
             peak[sym] = max(peak.get(sym, entry), b)
-            if entry_min(sym) >= 900:   # EOD entry from 15:00 ET (Nov 11: Window 4 starts on the 15:00 candle open)
+            if entry_min(sym) >= 810:   # Nov 12 (Titi): afternoon (13:30 ET on), same exit as Penny. Sage is her backup here
                 if m >= 959:
                     sell(p, "1559")
-                elif b >= entry * 6.0:
-                    sell(p, "tp500")
+                elif peak[sym] >= entry * 2.0 and b <= peak[sym] * 0.80:
+                    sell(p, "trail20")   # past +100%: 20% below the best
                 elif b <= entry * SL:
                     sell(p, "sl50")
                 continue
