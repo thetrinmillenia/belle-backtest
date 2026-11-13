@@ -47,17 +47,24 @@ flowchart LR
 
 ## 📐 The rules in one place
 
-| Rule | Penny (paper) | Pearl (live) |
-|---|---|---|
-| Contract | 1 SPX + 3 SPY | 1 SPX, ask $1.20 or less |
-| Starting stop | 43% of the premium | 30% of the premium |
-| Breakeven | at +60% | at +30% |
-| Morning trail | 30% below the best price after +100% | same |
-| EOD trail | 20% below the best from +30%, 15% from +100%, checked every 2 seconds | same |
-| EOD trims (SPY) | 1 at +100%, 1 at +200%, the last one rides | (1 contract, rides the trail) |
-| Day limits | none | 1 loss and done, done at -$40 or at +$200 |
-| Last entry | 15:55 | 15:55 (EOD) |
-| Everything out | 15:59 | 15:59 |
+Updated Nov 12, 2026. Times are ET (CT is one hour earlier).
+
+| Window | ET | Belle alerts | Penny (paper) exit |
+|---|---|---|---|
+| ORB | 09:30 to 10:00 | Olive's opening range break | same as Window 1 |
+| **1** | 10:00 to 12:30 | :40 to :55 of each hour, with the 1H/4H trend | **SPY:** -40% stop, sell 2 of 3 at +100%, the last one runs. **SPX:** -50% stop, no sale at +100%, then trails 30% below the best |
+| 2 | 12:30 to 13:30 | Lunch, no trades | none |
+| **3** | 13:30 to 15:00 | Any minute, no cooldown, no trend block | **-50% stop. Past +100% no sale, it sells on a 20% drop from the best.** Out 15:59 |
+| **4 (EOD)** | 15:00 to 15:55 | Any minute, plus the 1m break of the afternoon high or low from 15:45 | same as Window 3 |
+
+| Also | Rule |
+|---|---|
+| Contracts | 1 SPX + 3 SPY. SPY $0.19 to $0.60, SPX $70 to $250 ($50 to $170 from 13:30) |
+| Never skipped | From 13:30, if nothing fits the price band Penny takes the closest contract (SPX up to $250, SPY up to $1.00) |
+| Sage | Penny's backup on afternoon trades only (same exit). She leaves morning trades to Penny |
+| Re-entry | Removed Nov 12 (lost in the 87 trade test: 2 wins in 18) |
+| Stopped alert check | 15:05 ET: if Belle's EOD READ never arrived, Discord gets a warning |
+| Pearl (live) | Off. Keeps her own tighter rules |
 
 ---
 
