@@ -307,7 +307,7 @@ export default async function handler(req, res) {
     const ct = (() => { const [h, m] = hm.split(':').map(Number); return `${String((h + 23) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`; })();
     const lines = [
       `**${scalp ? 'EOD ' : ''}${a.side}  ${hm} ET (${ct} CT)**`,
-      scalp ? 'Window 3 EOD trade: tight trail, Target 1, out by 15:58.' : null,
+      mins >= 810 ? `${mins >= 900 ? 'Window 4 EOD' : 'Window 3'}: -50% stop. Past +100% no sale, it sells if it drops 20% from its best. Out by 15:59.` : null,
       `Belle's strike:  SPX ${a.spx ? ruleStrike('SPX', cp, a.spx, mins) : 'n/a'}${cp}  |  SPY ${a.spy ? ruleStrike('SPY', cp, a.spy, mins) : 'n/a'}${cp}`,
       a.spx ? `Why this strike:  ${mins >= 810 ? 'EOD' : (mins < 720 ? 'morning' : 'midday')}, ${Math.round(Math.abs((picked.SPX ? picked.SPX.strike : ruleStrike('SPX', cp, a.spx, mins)) - a.spx))} out${picked.SPX ? `, $${Math.round(picked.SPX.lim * 100)}` : ''} (cap $${mins >= 810 ? EOD_MAX : MAX_COST})` : null,
       a.spxAlt ? `Strike choices:  SPX ${a.spxAlt}  |  SPY ${a.spyAlt}` : null,
@@ -345,7 +345,7 @@ export default async function handler(req, res) {
         const msg = [
           `$SPX\n$${k} ${side}\nEXPIRATION ${t.m}/${t.d}/${t.y}\n${p ? m(p.lim) + ' Entry' : 'Entry: check the ask'}\n@everyone`,
           [a.why ? `• ${a.why}` : null, `• Stop: SPX ${cp === 'C' ? 'under' : 'over'} ${n2(a.spxStop)}`, `• Target 1: SPX ${n2(a.spxT1)}`].filter(Boolean).join('\n'),
-          mins >= 900 ? 'Plan: 1 contract. Stop -50%, take profit +500%, out by 15:59 ET.' : 'Plan: 1 contract. No sale at +100%, then trail 30% below the best.'
+          'Plan: 1 contract. Stop -50%. Past +100% no sale, it sells if it drops 20% from its best. Out by 15:59 ET.'
         ].join('\n\n');
         await fetch(process.env.STUDENT_WEBHOOK_URL.trim(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: msg.slice(0, 1900), allowed_mentions: { parse: [] } }) });
       } catch (e) { }
