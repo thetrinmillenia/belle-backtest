@@ -78,6 +78,7 @@ def sell(p, why):
 
 
 peak, held, h1_checked, entered = {}, {}, {}, {}
+last_entry = {}   # Nov 13 (Titi): entry price of each open position, to spot a new trade on a contract traded earlier
 
 
 def entry_min(sym):
@@ -111,8 +112,16 @@ print(f"sage {part} running until {END // 60:02d}:{END % 60:02d} ET")
 while mins() < END:
     try:
         m = mins()
-        for p in positions():
+        ps = positions()
+        live = {(p["symbol"], float(p["avg_entry_price"])) for p in ps}
+        # Nov 13 (Titi): a contract that closed, or came back at a new entry price, starts fresh. The 7575C bought again at $0.55
+        # was sold 5 seconds later on the 20% trail because Sage still held the best price of the earlier $1.15 trade.
+        for s in [s for s in list(last_entry) if (s, last_entry[s]) not in live]:
+            for d in (peak, held, h1_checked, entered, last_entry):
+                d.pop(s, None)
+        for p in ps:
             sym, entry = p["symbol"], float(p["avg_entry_price"])
+            last_entry[sym] = entry
             b = bid(sym)
             if not b or not entry:
                 continue
