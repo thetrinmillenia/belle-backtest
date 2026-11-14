@@ -59,7 +59,8 @@ Updated Nov 12, 2026. Times are ET (CT is one hour earlier).
 
 | Also | Rule |
 |---|---|
-| Contracts | 1 SPX + 3 SPY. SPY $0.19 to $0.60, SPX $70 to $250 ($50 to $170 from 13:30) |
+| Contracts | 1 SPX + 3 SPY. SPY $0.19 to $0.60, SPX $70 to $250 ($100 to $170 from 13:30, floor raised from $50 on Nov 13) |
+| Windows 3 and 4 limit (Nov 13) | 3 trades in total across both windows, 15 minutes apart |
 | Never skipped | From 13:30, if nothing fits the price band Penny takes the closest contract (SPX up to $250, SPY up to $1.00) |
 | Sage | Penny's backup on afternoon trades only (same exit). She leaves morning trades to Penny |
 | Re-entry | Removed Nov 12 (lost in the 87 trade test: 2 wins in 18) |
