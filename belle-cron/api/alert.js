@@ -12,7 +12,7 @@ const SPY_MAX = 60; // Titi, Oct 19: SPY not much higher than $0.60 per contract
 const SPY_MIN = 19; // Titi, Nov 11: SPY no cheaper than $0.19 (the $0.11 761C was too far out to make money)
 const TARGET_COST = 100; // Titi, Oct 16: loves premiums around $100
 const MAX_COST = 250; // Titi, Oct 17: anything over $250 is too much
-const EOD_MAX = 170, EOD_MIN = 50; // Titi, Nov 2: the EOD trade (13:30 ET on) is $170 at most, $50 floor
+const EOD_MAX = 170, EOD_MIN = 100; // Titi, Nov 13: EOD floor $100 (was $50, Nov 2). $50 was too far out of the money most of the time
 // Strike rule (Titi, Nov 2; test of 91 alerts Oct 19 to Nov 2): distance out of the money by time of day.
 // Before 12:00 ET 35 out, 12:00 to 13:30 ET 10 out, 13:30 to 15:00 ET 35 out (the 7560P), after 15:00 ET 15 out. SPY = SPX / 10.
 function ruleStrike(root, cp, price, mins) {
