@@ -12,8 +12,8 @@ date,open,high,low,close,range,net,morning_range,lunch_range,afternoon_range,lun
 2026-09-16,7617,7639,7519,7563,120,-54,23,24,116,failed sweep of the high,1,7519,7639,120,expansion,"bearish 7588 (09-16 14:30), flips above 7639",bearish 7584 (09-16 13:30)
 2026-09-17,7655,7659,7623,7649,36,-6,34,13,14,inside the morning range,1,7623,7659,36,consolidation,"bullish 7639 (09-17 09:30), flips below 7519",bearish 7584 (09-16 13:30)
 2026-09-18,7636,7643,7603,7639,40,3,30,21,24,failed sweep of the low,2,7603,7659,56,consolidation,,
-2026-09-21,7686,7772,7683,7758,89,72,42,32,22,broke the high,1,7683,7772,89,normal,"bullish 7659 (09-21 09:30), flips below 7603",
-2026-09-22,7764,7774,7749,7758,25,-7,22,11,16,failed sweep of the low,2,7683,7774,91,consolidation,"bullish 7659 (09-21 09:30), flips below 7749",
+2026-09-21,7686,7772,7683,7758,89,72,42,32,22,broke the high,1,7683,7772,89,normal,,
+2026-09-22,7764,7774,7749,7758,25,-7,22,11,16,failed sweep of the low,2,7683,7774,91,consolidation,,
 2026-09-23,7751,7753,7688,7702,65,-49,46,28,25,failed sweep of the low,3,7683,7774,91,consolidation,"bearish 7749 (09-23 09:30), flips above 7773",
 2026-09-24,7664,7712,7655,7696,57,32,32,56,27,failed sweep of the high,1,7655,7712,57,normal,"bearish 7749 (09-23 09:30), flips above 7712",
 2026-09-25,7710,7746,7686,7737,60,27,40,45,21,broke the high,2,7655,7746,90,normal,"bullish 7712 (09-25 11:30), flips below 7686",
@@ -53,3 +53,4 @@ date,open,high,low,close,range,net,morning_range,lunch_range,afternoon_range,lun
 2026-11-12,7562,7653,7560,7594,93,32,93,21,36,inside the morning range,1,7560,7653,93,normal,"bullish 7443 (11-09 09:30), flips below 7560","bullish 7576 (11-11 09:30), flips below 7349"
 2026-11-13,7623,7624,7502,7565,122,-57,122,39,25,inside the morning range,1,7502,7624,122,expansion,"bearish 7560 (11-13 09:30), flips above 7624","bullish 7576 (11-11 09:30), flips below 7349"
 2026-11-16,7519,7520,7403,7423,117,-97,65,81,40,broke the low,1,7403,7520,117,expansion,"bearish 7560 (11-13 09:30), flips above 7571","bullish 7576 (11-11 09:30), flips below 7349"
+2026-11-17,7407,7419,7292,7346,127,-61,127,62,47,inside the morning range,1,7292,7419,127,expansion,"bearish 7560 (11-13 09:30), flips above 7571","bearish 7349 (11-17 13:30), flips above 7653"
