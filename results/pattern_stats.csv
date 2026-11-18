@@ -7,16 +7,16 @@ Exit: breakeven,3,2,67,596.0
 OTE,2,2,100,965.0
 Late hour high/low,2,1,50,1050.0
 Exit: target,2,2,100,1054.0
+Penny SPY,96,41,43,1158.0
 Exit: trail,5,4,80,1169.0
 OB,3,3,100,1375.0
-Penny SPY,88,40,45,1437.0
 ORH/ORL,3,3,100,1497.0
 Reversal,3,3,100,1835.0
-Window 2,32,11,34,1914.0
-Lunch 11:30 to 13:45,34,17,50,2653.0
+Window 2,38,14,37,2470.0
+Lunch 11:30 to 13:45,38,19,50,2693.0
 Exit: broker stop,6,6,100,3191.0
-Penny SPX,85,32,38,3570.0
+Penny SPX,89,34,38,4045.0
 Sweep,11,10,91,4694.0
-Window 3 EOD,47,26,55,6281.0
-Window 1,111,51,46,7998.0
+Window 3 EOD,50,26,52,6140.0
+Window 1,114,51,45,7779.0
 Titi SPX,20,19,95,12660.0

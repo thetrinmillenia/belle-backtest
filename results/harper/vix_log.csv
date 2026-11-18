@@ -8,3 +8,4 @@ date,vix1d,vix,priced_pts,actual_pts,used_pct,close_inside,am_pts,day_type,right
 2026-11-13,11.92,18.32,57.0,122.4,215,yes,122.4,choppy,2,15
 2026-11-16,15.89,20.87,75.7,115.5,152,no,63.8,choppy,7,11
 2026-11-17,16.37,23.02,76.5,127.0,166,yes,127.0,trend,7,13
+2026-11-18,19.07,24.12,88.2,81.9,93,yes,81.9,trend,3,10
