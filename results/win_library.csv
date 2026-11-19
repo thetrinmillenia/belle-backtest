@@ -1,4 +1,7 @@
 Date,Who,Ticker,Bias,Setup,Tags,P/L,Lesson,Note
+2026-11-19,Penny,SPX,Bearish,,Window 2,130.0,"Repeat it: same window, same setup.","Alpaca fill. SPX 7145P x1, first entry 13:45 ET, 2.10 to 3.40 (62%)."
+2026-11-19,Penny,SPX,Bearish,,Window 3 EOD,130.0,"EOD worked: key level failed, trail tight, out by 15:58.","Alpaca fill. SPX 7140P x1, first entry 15:09 ET, 1.70 to 3.00 (76%)."
+2026-11-19,Penny,SPY,Bearish,,Window 3 EOD,114.0,"EOD worked: key level failed, trail tight, out by 15:58.","Alpaca fill. SPY 714P x3, first entry 15:00 ET, 0.52 to 0.90 (73%)."
 2026-11-18,Penny,SPX,Bearish,,Window 2,535.0,"Big runner: same setup, same patience. Let the trail work.","Alpaca fill. SPX 7300P x2, first entry 13:55 ET, 1.42 to 4.10 (188%)."
 2026-11-18,Penny,SPX,Bullish,,"Window 2, Lunch 11:30 to 13:45",85.0,"Repeat it: same window, same setup.","Alpaca fill. SPX 7390C x1, first entry 13:30 ET, 1.40 to 2.25 (61%)."
 2026-11-18,Penny,SPY,Bullish,,"Window 2, Lunch 11:30 to 13:45",54.0,"Repeat it: same window, same setup.","Alpaca fill. SPY 736C x3, first entry 13:30 ET, 0.31 to 0.49 (58%)."

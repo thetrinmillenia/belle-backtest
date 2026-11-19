@@ -1,22 +1,22 @@
 Pattern,Trades,Wins,Win %,P/L
 Strat 2-1-2,2,1,50,-34.0
-2 PM candle,2,1,50,335.0
+2 PM candle,4,1,25,192.0
 5m Strat,2,2,100,361.0
 CISD,2,1,50,510.0
 Exit: breakeven,3,2,67,596.0
+Penny SPY,104,42,40,789.0
 OTE,2,2,100,965.0
 Late hour high/low,2,1,50,1050.0
 Exit: target,2,2,100,1054.0
-Penny SPY,96,41,43,1158.0
 Exit: trail,5,4,80,1169.0
 OB,3,3,100,1375.0
 ORH/ORL,3,3,100,1497.0
 Reversal,3,3,100,1835.0
-Window 2,38,14,37,2470.0
-Lunch 11:30 to 13:45,38,19,50,2693.0
+Window 2,44,15,34,2204.0
+Lunch 11:30 to 13:45,42,19,45,2371.0
 Exit: broker stop,6,6,100,3191.0
-Penny SPX,89,34,38,4045.0
+Penny SPX,94,36,38,4055.0
 Sweep,11,10,91,4694.0
-Window 3 EOD,50,26,52,6140.0
-Window 1,114,51,45,7779.0
+Window 3 EOD,54,28,52,6245.0
+Window 1,117,51,44,7581.0
 Titi SPX,20,19,95,12660.0
