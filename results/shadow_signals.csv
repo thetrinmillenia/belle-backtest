@@ -66,3 +66,5 @@ date,time_et,side,contract,entry,reason
 2026-11-18,11:40,PUTS,SPXW261118P07265000,9.64,no contract under the price cap
 2026-11-18,11:55,PUTS,SPXW261118P07260000,10.46,no contract under the price cap
 2026-11-18,15:15,CALLS,SPXW261118C07340000,2.72,order rejected (SPXW261118C07350000): potential wash trade detected. use complex orders
+2026-11-19,10:00,PUTS,SPY261119P00732000,5.03,no contract under the price cap
+2026-11-19,10:00,PUTS,SPXW261119P07345000,16.46,no contract under the price cap
