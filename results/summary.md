@@ -1,34 +1,34 @@
 # Belle backtest results
 
-Data: Yahoo Finance, last 60d. Run 2026-11-18.
+Data: Yahoo Finance, last 60d. Run 2026-11-19.
 
 ## 5 minute signals
 
-Signals: 71 (7.7 per week). Entry = the sweep candle's close.
+Signals: 70 (7.6 per week). Entry = the sweep candle's close.
 
 **How far SPX moved after the signal (best point before 15:59), in SPX points: 25th / median / 75th percentile**
 
 | Group | Signals | Move |
 | --- | --- | --- |
-| All | 71 | 4 / 7 / 14 |
-| window = W1 | 38 | 5 / 8 / 17 |
-| window = W2 | 33 | 3 / 6 / 10 |
-| direction = calls | 36 | 3 / 7 / 10 |
-| direction = puts | 35 | 6 / 8 / 21 |
-| W1 calls | 20 | 4 / 8 / 16 |
-| W1 puts | 18 | 6 / 9 / 33 |
+| All | 70 | 4 / 7 / 15 |
+| window = W1 | 38 | 6 / 9 / 22 |
+| window = W2 | 32 | 3 / 6 / 10 |
+| direction = calls | 35 | 3 / 7 / 10 |
+| direction = puts | 35 | 6 / 8 / 25 |
+| W1 calls | 19 | 5 / 8 / 16 |
+| W1 puts | 19 | 6 / 12 / 34 |
 | W2 calls | 16 | 3 / 5 / 8 |
-| W2 puts | 17 | 5 / 8 / 11 |
+| W2 puts | 16 | 4 / 7 / 12 |
 
 **Strike went in the money by 15:59, by distance out of the money**
 
 | Group | 10 pts | 15 pts | 20 pts | 25 pts |
 | --- | --- | --- | --- | --- |
-| All | 30% | 20% | 14% | 11% |
-| W1 calls | 30% | 15% | 5% | 0% |
-| W1 puts | 50% | 44% | 39% | 33% |
+| All | 31% | 21% | 16% | 13% |
+| W1 calls | 32% | 16% | 5% | 0% |
+| W1 puts | 53% | 47% | 42% | 37% |
 | W2 calls | 12% | 0% | 0% | 0% |
-| W2 puts | 24% | 18% | 12% | 12% |
+| W2 puts | 25% | 19% | 12% | 12% |
 
 **Score notes (never block a trade): share reaching ITM at 15 pts**
 
@@ -37,26 +37,26 @@ Signals: 71 (7.7 per week). Entry = the sweep candle's close.
 | pool_swept = 13:30 candle high | 1 | 0% |
 | pool_swept = 13:30 candle low | 5 | 0% |
 | pool_swept = 9:30 open | 4 | 25% |
-| pool_swept = bearish FVG CE | 15 | 33% |
-| pool_swept = bearish order block opening | 5 | 0% |
+| pool_swept = bearish FVG CE | 16 | 38% |
+| pool_swept = bearish order block opening | 4 | 0% |
 | pool_swept = bullish FVG CE | 10 | 20% |
-| pool_swept = bullish order block opening | 7 | 0% |
+| pool_swept = bullish order block opening | 6 | 0% |
 | pool_swept = equal highs | 1 | 100% |
 | pool_swept = equal lows | 4 | 0% |
 | pool_swept = rejection block | 18 | 22% |
 | pool_swept = swing high | 1 | 100% |
-| with_4h_bias = False | 28 | 11% |
-| with_4h_bias = True | 43 | 26% |
-| confirmed_next_candle = False | 30 | 10% |
-| confirmed_next_candle = True | 41 | 27% |
-| failed_2 = False | 57 | 21% |
-| failed_2 = True | 14 | 14% |
-| smt = False | 69 | 19% |
+| with_4h_bias = False | 27 | 11% |
+| with_4h_bias = True | 43 | 28% |
+| confirmed_next_candle = False | 28 | 11% |
+| confirmed_next_candle = True | 42 | 29% |
+| failed_2 = False | 57 | 23% |
+| failed_2 = True | 13 | 15% |
+| smt = False | 68 | 21% |
 | smt = True | 2 | 50% |
-| h1 = green | 35 | 9% |
-| h1 = red | 36 | 31% |
-| h4 = green | 30 | 10% |
-| h4 = red | 41 | 27% |
+| h1 = green | 34 | 9% |
+| h1 = red | 36 | 33% |
+| h4 = green | 29 | 10% |
+| h4 = red | 41 | 29% |
 
 **Answer key check**
 
