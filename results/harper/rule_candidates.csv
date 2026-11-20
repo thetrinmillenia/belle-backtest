@@ -1,22 +1,11 @@
 tag,idea,trades,win_rate,rest_win_rate,pl_change_if_skipped,winners_blocked,first_half_gap,second_half_gap,holds,written
-W1 morning,favor W1 morning,82,51%,23%,-3608,42,+23%,+33%,yes,2026-11-13
-W1 morning calls,favor W1 morning calls,43,60%,31%,-3103,26,+4%,+57%,yes,2026-11-13
-level: calls above the prior day 50%,favor level: calls above the prior day 50%,42,64%,29%,-2955,27,+14%,+58%,yes,2026-11-13
-calls above PDC,favor calls above PDC,47,60%,30%,-2555,28,+19%,+38%,yes,2026-11-13
-lunch: failed sweep of the high,skip lunch: failed sweep of the high,36,22%,46%,+2176,8,-23%,-30%,yes,2026-11-13
-calls against the 4H MSS,favor calls against the 4H MSS,58,52%,31%,-2142,30,-4%,+42%,no,2026-11-13
-lunch: broke the high,favor lunch: broke the high,27,67%,33%,-1623,18,+10%,+57%,yes,2026-11-13
-level: puts below the prior day 50%,skip level: puts below the prior day 50%,46,26%,47%,+1213,12,-7%,-24%,yes,2026-11-13
-11:45 ET entries,favor 11:45 ET entries,10,60%,38%,-1174,6,-,+30%,too few trades,2026-11-13
-W3,skip W3,26,19%,45%,+1005,5,-32%,-19%,yes,2026-11-13
-level: calls below the prior day 50%,skip level: calls below the prior day 50%,28,21%,45%,+933,6,-29%,-19%,yes,2026-11-13
-first trade of the day,favor first trade of the day,21,57%,37%,-774,12,+15%,+22%,yes,2026-11-13
-day: election day,skip day: election day,8,0%,42%,+728,0,-,-34%,too few trades,2026-11-13
-day: choppy day,skip day: choppy day,8,0%,42%,+728,0,-,-34%,too few trades,2026-11-13
-W3 calls inside the 2 PM candle,skip W3 calls inside the 2 PM candle,16,19%,43%,+718,3,-13%,-34%,yes,2026-11-13
-after a loss,skip after a loss,68,28%,51%,+655,19,-11%,-29%,yes,2026-11-13
-W3 puts,skip W3 puts,17,18%,43%,+570,3,-23%,-24%,yes,2026-11-13
-level: calls after a PDH sweep (back below),skip level: calls after a PDH sweep (back below),12,17%,42%,+552,2,-34%,-,too few trades,2026-11-13
-calls below PDC,skip calls below PDC,23,22%,43%,+533,5,-42%,-1%,no,2026-11-13
-13:45 ET entries,skip 13:45 ET entries,9,11%,42%,+499,1,-53%,-6%,no,2026-11-13
-15:30 ET entries,skip 15:30 ET entries,9,11%,42%,+335,1,-26%,-33%,yes,2026-11-13
+level: calls above the prior day 50%,favor level: calls above the prior day 50%,43,63%,33%,-2840,27,+22%,+46%,yes,2026-11-20
+10:15 ET entries,favor 10:15 ET entries,10,60%,38%,-2656,6,+28%,+12%,yes,2026-11-20
+calls above PDC,favor calls above PDC,50,56%,34%,-2311,28,+18%,+33%,yes,2026-11-20
+lunch: failed sweep of the high,skip lunch: failed sweep of the high,36,22%,44%,+2176,8,-29%,-,too few trades,2026-11-20
+lunch: broke the high,favor lunch: broke the high,27,67%,35%,-1623,18,+20%,+44%,yes,2026-11-20
+level: calls below the prior day 50%,skip level: calls below the prior day 50%,49,24%,45%,+1549,12,-26%,-15%,yes,2026-11-20
+level: calls after a PDH sweep (back below),skip level: calls after a PDH sweep (back below),16,12%,42%,+1090,2,-22%,-42%,yes,2026-11-20
+day: election day,skip day: election day,8,0%,41%,+728,0,-44%,-,too few trades,2026-11-20
+day: choppy day,skip day: choppy day,8,0%,41%,+728,0,-44%,-,too few trades,2026-11-20
+15:30 ET entries,skip 15:30 ET entries,9,11%,41%,+335,1,-25%,-,too few trades,2026-11-20
