@@ -56,3 +56,4 @@ date,open,high,low,close,range,net,morning_range,lunch_range,afternoon_range,lun
 2026-11-17,7407,7419,7292,7346,127,-61,127,62,47,inside the morning range,1,7292,7419,127,expansion,"bearish 7560 (11-13 09:30), flips above 7571","bearish 7349 (11-17 13:30), flips above 7653"
 2026-11-18,7356,7372,7291,7325,81,-31,81,69,42,inside the morning range,1,7291,7372,81,normal,"bearish 7560 (11-13 09:30), flips above 7362","bearish 7349 (11-17 13:30), flips above 7653"
 2026-11-19,7398,7420,7179,7180,241,-218,141,142,162,broke the low,1,7179,7420,241,expansion,"bearish 7560 (11-13 09:30), flips above 7420","bearish 7349 (11-17 13:30), flips above 7653"
+2026-11-20,7157,7204,6888,6928,316,-229,137,65,172,broke the low,1,6888,7204,316,expansion,"bearish 7560 (11-13 09:30), flips above 7340","bearish 7349 (11-17 13:30), flips above 7420"
