@@ -88,3 +88,4 @@ date,time_et,side,contract,entry,reason
 2026-11-23,10:40,CALLS,SPXW261123C07325000,16.12,no contract under the price cap
 2026-11-23,11:05,PUTS,SPXW261123P07210000,19.11,no contract under the price cap
 2026-11-23,11:40,PUTS,SPXW261123P07195000,17.92,no contract under the price cap
+2026-11-23,12:15,CALLS,SPXW261123C07260000,21.21,no contract under the price cap
