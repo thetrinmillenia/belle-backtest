@@ -90,3 +90,4 @@ date,time_et,side,contract,entry,reason
 2026-11-23,11:40,PUTS,SPXW261123P07195000,17.92,no contract under the price cap
 2026-11-23,12:15,CALLS,SPXW261123C07260000,21.21,no contract under the price cap
 2026-11-23,15:30,CALLS,SPY261123C00727000,0.28,"order rejected (SPY261123C00727000): contract ""SPY261123C00727000"" expires soon, unable to open new positions"
+2026-11-24,10:05,CALLS,SPXW261124C07250000,16.84,no contract under the price cap
