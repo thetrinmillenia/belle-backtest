@@ -53,3 +53,6 @@ date,time_et,tf,type,dir,range_x_avg,body_pct,vol_x_avg,close
 2026-11-23,10:45,15m,sweep back inside,down,0.64,30,0.72,7256.31
 2026-11-24,10:00,5m,close outside,up,0.77,17,0.49,7217.73
 2026-11-24,10:00,15m,sweep back inside,down,0.85,11,0.54,7210.32
+2026-11-25,10:00,5m,close outside,up,0.79,33,0.96,7055.42
+2026-11-25,10:00,15m,sweep back inside,down,0.41,29,0.69,7037.94
+2026-11-25,12:00,15m,close outside,up,2.17,84,1.36,7084.37
