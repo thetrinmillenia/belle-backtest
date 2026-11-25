@@ -162,8 +162,9 @@ export default async function handler(req, res) {
     try { const cj = await (await fetch(`${TRADE}/v2/calendar?start=${t.y}-${t.m}-${t.d}&end=${t.y}-${t.m}-${t.d}`, { headers: H() })).json(); if (Array.isArray(cj) && cj[0] && cj[0].close) { const [ch, cm] = cj[0].close.split(':').map(Number); closeMin = ch * 60 + cm; } } catch (e) { }
     if (closeMin < 960 && mins > closeMin - 30) return res.status(200).json({ ok: true, traded: false, why: 'half day: no alerts in the last 30 minutes or after the close' });
     // morning: SPY first; afternoon: SPX first. Penny buys both when the cash allows.
-    const order = mins < 760 ? ['SPY', 'SPXW'] : ['SPXW', 'SPY'];
+    const order = mins < 760 ? ['SPY', 'SPXW'] : (mins >= 930 ? ['SPXW'] : ['SPXW', 'SPY']);   // Nov 25 (Titi): SPX is the main focus, always first in the afternoon. From 15:30 ET SPX only: Alpaca rejects new same-day SPY ("expires soon", 15:35 SPY 712P)
     const picked = {}, notes = [];
+    if (mins >= 930) notes.push('SPY skipped after 15:30 ET (Alpaca blocks new same-day SPY). SPX only');
     // Nov 25 (Titi): daily trend from SPY daily candles. 2+ closes in a row the same color = the trend. An alert against it is a SCALP:
     // take profit +30%, stop -30% (114 SPX alerts Oct 19 to Nov 19: against-trend trades -$915 normal, -$219 as +30/-30 scalps)
     let dTrend = 0, dCount = 0;
