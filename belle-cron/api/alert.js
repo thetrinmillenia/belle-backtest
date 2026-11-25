@@ -91,7 +91,7 @@ async function pick(root, cp, price, ymd, chartK, maxCost, minCost = 0, nearCap 
     return { sym: inSyms[i], strike: inK[i], ask: x.ap, cost, moved: -(i + 1), chart: first };
   }
   // Nov 12 (Titi): Windows 3 and 4 must never skip. Nothing inside the band -> the closest quote, capped (SPX $250, SPY $100 a contract)
-  if (nearCap && near && near.cost <= nearCap) return { sym: near.sym, strike: near.strike, ask: near.ask, cost: near.cost, moved: near.moved, chart: first, outside: true };
+  if (nearCap && near && near.cost <= nearCap && near.cost >= minCost) return { sym: near.sym, strike: near.strike, ask: near.ask, cost: near.cost, moved: near.moved, chart: first, outside: true };
   return null;   // Nov 6 (Titi): stay in $70 to $250. The outside-the-band fallback bought a $650 SPX put, removed
 }
 
@@ -287,10 +287,9 @@ export default async function handler(req, res) {
         const label = root === 'SPY' ? 'SPY' : 'SPX';
         if (!price) { notes.push(`${label} skipped, no price`); continue; }
         const qty = root === 'SPY' ? SPY_QTY : 1;
-        const maxCost = root === 'SPY' ? SPY_MAX : (mins >= 810 ? EOD_MAX : MAX_COST), minCost = root === 'SPY' ? SPY_MIN : (mins >= 930 ? 60 : (lowVix ? 40 : (mins >= 810 ? EOD_MIN : MIN_COST)));   // Nov 25 (Titi): from 15:30 ET the SPX floor is $60 (cheap late contracts like the $65 7200C ran +500%; under $60 is too far out) // Nov 2: EOD $50 to $170 // per contract: SPX $100 to $250, SPY up to $0.60 (Titi, Oct 19)
+        const maxCost = root === 'SPY' ? SPY_MAX : (mins >= 810 ? EOD_MAX : MAX_COST), minCost = root === 'SPY' ? SPY_MIN : (mins >= 930 ? 60 : (mins >= 810 ? EOD_MIN : MIN_COST));   // Nov 25 (Titi): never under $100 before 15:30 ET, low VIX days included (the $40 low VIX floor is removed)   // Nov 25 (Titi): from 15:30 ET the SPX floor is $60 (cheap late contracts like the $65 7200C ran +500%; under $60 is too far out) // Nov 2: EOD $50 to $170 // per contract: SPX $100 to $250, SPY up to $0.60 (Titi, Oct 19)
         let c = await pick(root, cp, price, ymd, ruleStrike(root, cp, price, mins), maxCost, minCost, mins >= 810 ? (root === 'SPY' ? 100 : 250) : 0, held);
         if (!c) { shadowAdd(root, 'no contract under the price cap'); notes.push(root === 'SPY' ? 'SPY skipped, nothing between $0.19 and $0.60 within 60 strikes' : `SPX skipped, nothing between ${minCost} and ${maxCost} within 60 strikes`); continue; }
-        if (root !== 'SPY' && lowVix) notes.push(`Low VIX day (VIX1D ${vix1d.toFixed(2)}): cheap strike kept, floor $40`);
         if (c.outside) notes.push(`${label}: nothing between $${minCost} and $${maxCost}, so Penny took the closest at $${Math.round(c.cost * qty)}`);
         else if (c.moved < 0) notes.push(`${label}: Belle's ${c.chart ? c.chart.strike : ''}${cp} was under $${minCost}, so Penny went ${-c.moved} strike${c.moved < -1 ? 's' : ''} closer to the money`);
         else if (c.moved > 0) notes.push(`${label}: Belle's ${c.chart ? c.chart.strike : ''}${cp} was $${c.chart ? Math.round(c.chart.cost * qty) : '?'}${qty > 1 ? ` for ${qty}` : ''}, over $${maxCost}, so Penny went ${c.moved} strike${c.moved > 1 ? 's' : ''} further out`);
