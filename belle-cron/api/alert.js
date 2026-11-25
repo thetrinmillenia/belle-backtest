@@ -287,7 +287,7 @@ export default async function handler(req, res) {
         const label = root === 'SPY' ? 'SPY' : 'SPX';
         if (!price) { notes.push(`${label} skipped, no price`); continue; }
         const qty = root === 'SPY' ? SPY_QTY : 1;
-        const maxCost = root === 'SPY' ? SPY_MAX : (mins >= 810 ? EOD_MAX : MAX_COST), minCost = root === 'SPY' ? SPY_MIN : (lowVix ? 40 : (mins >= 810 ? EOD_MIN : MIN_COST)); // Nov 2: EOD $50 to $170 // per contract: SPX $100 to $250, SPY up to $0.60 (Titi, Oct 19)
+        const maxCost = root === 'SPY' ? SPY_MAX : (mins >= 810 ? EOD_MAX : MAX_COST), minCost = root === 'SPY' ? SPY_MIN : (mins >= 930 ? 60 : (lowVix ? 40 : (mins >= 810 ? EOD_MIN : MIN_COST)));   // Nov 25 (Titi): from 15:30 ET the SPX floor is $60 (cheap late contracts like the $65 7200C ran +500%; under $60 is too far out) // Nov 2: EOD $50 to $170 // per contract: SPX $100 to $250, SPY up to $0.60 (Titi, Oct 19)
         let c = await pick(root, cp, price, ymd, ruleStrike(root, cp, price, mins), maxCost, minCost, mins >= 810 ? (root === 'SPY' ? 100 : 250) : 0, held);
         if (!c) { shadowAdd(root, 'no contract under the price cap'); notes.push(root === 'SPY' ? 'SPY skipped, nothing between $0.19 and $0.60 within 60 strikes' : `SPX skipped, nothing between ${minCost} and ${maxCost} within 60 strikes`); continue; }
         if (root !== 'SPY' && lowVix) notes.push(`Low VIX day (VIX1D ${vix1d.toFixed(2)}): cheap strike kept, floor $40`);
