@@ -49,6 +49,10 @@ cal = requests.get(f"{TRADE}/v2/calendar", headers=H, params={"start": str(now()
 if not cal or cal[0].get("date") != str(now().date()):
     print("market closed today")
     sys.exit(0)
+# Nov 25 (Titi): half days. Out 5 minutes before the real close (12:55 ET on a 13:00 close)
+CLOSE = int(cal[0]["close"][:2]) * 60 + int(cal[0]["close"][3:5]) if cal[0].get("close") else 960
+OUT, LAST10 = min(OUT, CLOSE - 5), min(LAST10, CLOSE - 10)
+END = min(END, CLOSE)
 
 
 def positions():
@@ -131,7 +135,7 @@ while mins() < END:
                 continue   # Nov 12 (Titi): morning SPY belongs to Penny (her scale out and runner). Sage sold these runners early
             peak[sym] = max(peak.get(sym, entry), b)
             if entry_min(sym) >= 810:   # Nov 12 (Titi): afternoon (13:30 ET on), same exit as Penny. Sage is her backup here
-                if m >= 959:
+                if m >= min(959, CLOSE - 5):
                     sell(p, "1559")
                 elif peak[sym] >= entry * 2.0 and b <= peak[sym] * 0.80:
                     sell(p, "trail20")   # past +100%: 20% below the best
