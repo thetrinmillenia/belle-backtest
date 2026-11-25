@@ -118,6 +118,18 @@ def opposite_alert_since(t0):
 
 
 EXIT_MIN = 957   # Nov 6 (Titi): out by 15:57 ET (was 15:59, Oct 25). The last spike comes 15:50 to 15:55 and fades by the close
+# Nov 25 (Titi): half days. The close time comes from Alpaca's calendar; everything is out 5 minutes before it (12:55 ET on a 13:00 close)
+CLOSE = 960
+try:
+    _cal = requests.get(f"{TRADE}/v2/calendar", headers=H, timeout=15,
+                        params={"start": str(dt.datetime.now(ZoneInfo("America/New_York")).date()), "end": str(dt.datetime.now(ZoneInfo("America/New_York")).date())}).json()
+    if _cal and _cal[0].get("close"):
+        CLOSE = int(_cal[0]["close"][:2]) * 60 + int(_cal[0]["close"][3:5])
+except Exception:
+    CLOSE = 960
+EXIT_MIN = min(EXIT_MIN, CLOSE - 5)
+LATE_OUT = min(959, CLOSE - 5)
+LAST10 = CLOSE - 10
 EOD = "EOD" in LABEL or "SCALP" in LABEL
 CT = LABEL.endswith(" CT")   # Nov 25 (Titi): against the daily trend = scalp, take profit +30%, stop -30%
 # STALL break on SPX (Titi, Oct 21): hold, no trims, patience pays. Belle's SPY stop, a 60% floor, out at the target
@@ -457,7 +469,7 @@ def wait_fill(oid, quiet=False):
             spy = spy_price()
         except Exception:
             spy = None
-        late = now().hour * 60 + now().minute >= 957
+        late = now().hour * 60 + now().minute >= EXIT_MIN
         broke = spy and SPY_STOP and (spy - SPY_STOP) * DIR <= 0
         if time.time() - start > 600 or broke or late:
             requests.delete(f"{TRADE}/v2/orders/{oid}", headers=H, timeout=10)
@@ -516,10 +528,10 @@ reason = ""
 spy_best = None   # the move's high (calls) or low (puts) on SPY while in the trade, for the REENTER rule
 while True:
     n = now()
-    if n.hour * 60 + n.minute >= (959 if LATE else EXIT_MIN):
+    if n.hour * 60 + n.minute >= (LATE_OUT if LATE else EXIT_MIN):
         reason = "15:57"
         break
-    if REV_HOLD and n.hour * 60 + n.minute >= 955:
+    if REV_HOLD and n.hour * 60 + n.minute >= min(955, CLOSE - 5):
         reason = "hold 15:55"
         break
     if stop_filled():
@@ -656,7 +668,7 @@ while True:
             stop = max(stop, warn_stop)
         # Nov 6 (Titi): last ten minutes, sell at peak profit. From 15:50 ET, a trade up 20%+ sells on a 10% pullback from its best
         # (Nov 6: the 7380P ran from 1.15 to 7.40 between 15:50 and 15:55 ET, then closed at 2.65)
-        if n.hour * 60 + n.minute >= 950 and peak >= entry * 1.2:
+        if n.hour * 60 + n.minute >= LAST10 and peak >= entry * 1.2:
             stop = max(stop, peak * 0.90)
         if LATE:   # Nov 12 (Titi): afternoon exit, 13:30 ET on. -50% stop until +100%. Past +100% no sale: the stop trails
             # 20% below the best price (69 afternoon trades: kept +92% on average vs +70% with the 30% trail). Out at 15:59.
@@ -687,7 +699,7 @@ while True:
         if bid <= stop:
             reason = "flip" if warned and stop == warn_stop else ("trail" if peak >= entry * 1.3 and stop > entry else ("breakeven" if stop >= entry else ("step stop" if stop >= entry * 0.80 - 1e-9 else "43% stop")))
             break
-    time.sleep(2 if EOD or CT or n.hour * 60 + n.minute >= 950 else 10)   # EOD and the last ten minutes check every 2 seconds (Titi, Oct 27, Nov 6)
+    time.sleep(2 if EOD or CT or n.hour * 60 + n.minute >= LAST10 else 10)   # EOD and the last ten minutes check every 2 seconds (Titi, Oct 27, Nov 6)
 
 # 3) exit
 if STOP_FILL is None and (reason == "/out" or not pos_open()):   # closed from Discord with /out or /lockout
