@@ -83,3 +83,7 @@ date,job,status,starts,first_on_time_start_et,window_et
 2026-11-24,ORB,ok,2,09:17,09:00 to 09:59
 2026-11-24,Belle afternoon,ok,1,12:10,12:00 to 13:59
 2026-11-24,Stall,ok,2,13:06,13:00 to 13:59
+2026-11-25,Belle morning,ok,6,05:44,05:00 to 09:29
+2026-11-25,ORB,ok,2,09:17,09:00 to 09:59
+2026-11-25,Belle afternoon,ok,1,12:10,12:00 to 13:59
+2026-11-25,Stall,ok,2,13:06,13:00 to 13:59
