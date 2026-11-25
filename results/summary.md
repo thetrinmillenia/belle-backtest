@@ -4,30 +4,30 @@ Data: Yahoo Finance, last 60d. Run 2026-11-24.
 
 ## 5 minute signals
 
-Signals: 69 (7.7 per week). Entry = the sweep candle's close.
+Signals: 71 (7.7 per week). Entry = the sweep candle's close.
 
 **How far SPX moved after the signal (best point before 15:59), in SPX points: 25th / median / 75th percentile**
 
 | Group | Signals | Move |
 | --- | --- | --- |
-| All | 69 | 4 / 8 / 16 |
-| window = W1 | 37 | 6 / 10 / 22 |
-| window = W2 | 32 | 3 / 6 / 11 |
-| direction = calls | 34 | 4 / 7 / 11 |
-| direction = puts | 35 | 6 / 10 / 29 |
+| All | 71 | 4 / 8 / 16 |
+| window = W1 | 38 | 6 / 10 / 24 |
+| window = W2 | 33 | 3 / 6 / 11 |
+| direction = calls | 35 | 4 / 7 / 12 |
+| direction = puts | 36 | 6 / 10 / 33 |
 | W1 calls | 19 | 5 / 9 / 16 |
-| W1 puts | 18 | 6 / 17 / 35 |
-| W2 calls | 15 | 2 / 4 / 7 |
+| W1 puts | 19 | 6 / 22 / 35 |
+| W2 calls | 16 | 3 / 5 / 8 |
 | W2 puts | 17 | 5 / 10 / 14 |
 
 **Strike went in the money by 15:59, by distance out of the money**
 
 | Group | 10 pts | 15 pts | 20 pts | 25 pts |
 | --- | --- | --- | --- | --- |
-| All | 33% | 22% | 17% | 14% |
+| All | 35% | 23% | 18% | 15% |
 | W1 calls | 32% | 11% | 5% | 0% |
-| W1 puts | 56% | 50% | 44% | 39% |
-| W2 calls | 13% | 0% | 0% | 0% |
+| W1 puts | 58% | 53% | 47% | 42% |
+| W2 calls | 19% | 0% | 0% | 0% |
 | W2 puts | 29% | 24% | 18% | 18% |
 
 **Score notes (never block a trade): share reaching ITM at 15 pts**
@@ -39,21 +39,21 @@ Signals: 69 (7.7 per week). Entry = the sweep candle's close.
 | pool_swept = 9:30 open | 5 | 20% |
 | pool_swept = bearish FVG CE | 15 | 40% |
 | pool_swept = bearish order block opening | 4 | 0% |
-| pool_swept = bullish FVG CE | 9 | 11% |
+| pool_swept = bullish FVG CE | 10 | 10% |
 | pool_swept = bullish order block opening | 6 | 0% |
 | pool_swept = equal lows | 3 | 0% |
-| pool_swept = rejection block | 17 | 24% |
+| pool_swept = rejection block | 18 | 28% |
 | pool_swept = swing high | 2 | 100% |
-| with_4h_bias = False | 27 | 7% |
-| with_4h_bias = True | 42 | 31% |
-| confirmed_next_candle = False | 28 | 11% |
-| confirmed_next_candle = True | 41 | 29% |
-| failed_2 = False | 56 | 21% |
+| with_4h_bias = False | 28 | 7% |
+| with_4h_bias = True | 43 | 33% |
+| confirmed_next_candle = False | 29 | 10% |
+| confirmed_next_candle = True | 42 | 31% |
+| failed_2 = False | 58 | 22% |
 | failed_2 = True | 13 | 23% |
-| smt = False | 69 | 22% |
-| h1 = green | 36 | 8% |
+| smt = False | 71 | 23% |
+| h1 = green | 38 | 11% |
 | h1 = red | 33 | 36% |
-| h4 = green | 31 | 10% |
+| h4 = green | 33 | 12% |
 | h4 = red | 38 | 32% |
 
 **Answer key check**
