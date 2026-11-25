@@ -119,6 +119,7 @@ def opposite_alert_since(t0):
 
 EXIT_MIN = 957   # Nov 6 (Titi): out by 15:57 ET (was 15:59, Oct 25). The last spike comes 15:50 to 15:55 and fades by the close
 EOD = "EOD" in LABEL or "SCALP" in LABEL
+CT = LABEL.endswith(" CT")   # Nov 25 (Titi): against the daily trend = scalp, take profit +30%, stop -30%
 # STALL break on SPX (Titi, Oct 21): hold, no trims, patience pays. Belle's SPY stop, a 60% floor, out at the target
 # (50% of the day's swing); after +100% trail 40% below the best. No step stop, breakeven or $50 trail cap.
 HOLD = "STALL" in LABEL and LABEL.startswith("SPX") and False   # Nov 3 (Titi): every SPX trade uses Pearl's exit (TIER)
@@ -565,7 +566,7 @@ while True:
         if hit:
             said.update(f"d{m}" for m in hit)
             draft(f"{money(bid)} HERE ON SPY {SIDE_W}\nUP +{gain * 100:.0f}% {'☢️' if hit[-1] >= 100 else '🔥'}\n@everyone")
-        levels = ((0.20, "+20%"), (0.50, "+50%, take partial"), (1.00, "+100%"))
+        levels = ((0.20, "+20%"), (0.50, "+50%"), (1.00, "+100%, take partial"))
         if EOD:   # EOD (Titi, Oct 27): take partials at +100% and +200%, the trail is 15% below the best after +100%
             levels = ((0.20, "+20%"), (0.50, "+50%"), (1.00, "+100%, take partial, trail now 15% below the best"), (2.00, "+200%, take partial"))
         if REV_HOLD:
@@ -578,14 +579,14 @@ while True:
         for lvl, msg in levels:
             if gain >= lvl and lvl not in said:
                 said.add(lvl)
-                if lvl in ((1.00, 2.00) if EOD else ((1.00,) if W1_RUN else (0.50, 1.00))) and left >= 2 and not FIB and not LATE:
-                    n_sell = left - 1 if W1_RUN else 1
+                if lvl in ((1.00, 2.00) if EOD else (1.00,)) and left >= 2 and not FIB and not LATE and not CT:
+                    n_sell = 1   # Nov 25 (Titi): SPY sells 1 at +100%, the other 2 ride (10 trades Nov 12 to 25: +$780; the 709C ran +1,967% after 2 were sold at +104%)
                     px = sell(n_sell)
                     if px:
                         banked.append((px, n_sell))
                         left -= n_sell
                         msg += f", sold {n_sell} of {QTY} at {px:.2f}, {left} left"
-                        draft(f"TRIMMING 🚨\n{QTY - left}/{QTY} SOLD @ {money(px)}. {left} left, the last one rides.\n@everyone")
+                        draft(f"TRIMMING 🚨\n{QTY - left}/{QTY} SOLD @ {money(px)}. {left} left, {'they ride' if left > 1 else 'the last one rides'}.\n@everyone")
                 post(f"{LABEL} {msg}")
         stop = entry * (0.60 if W1_RUN and SYM.startswith("SPY") else 0.50 if EOD or WIN1 else 0.57)   # Nov 12 (Titi): Window 1 SPY stop -40% (87 trade test)   # starting stop 43% (Oct 20); Window 3 50% (Oct 29 backtest: +$212 vs +$19); Nov 4 (Titi): morning -50%
         trail = None
@@ -665,6 +666,13 @@ while True:
                 if "aft100" not in said:
                     said.add("aft100")
                     post(f"{LABEL} +100%\n\nHolding. Sells if it drops 20% from its best")
+        if CT:   # Nov 25 (Titi): scalp against the daily trend. -30% stop, all out at +30%
+            stop, trail = entry * 0.70, None
+            if bid >= entry * 1.30:
+                reason = "scalp +30%"
+                break
+        if peak >= entry * 16.0:   # Nov 25 (Titi): past +1,500% the stop never goes under +1,000%
+            stop = max(stop, entry * 11.0)
         # keep the broker stop at the floor, only ever moving it up
         sp = tick_dn(stop)
         if STOP_ID is None and left > 0 and sp > 0:
@@ -679,7 +687,7 @@ while True:
         if bid <= stop:
             reason = "flip" if warned and stop == warn_stop else ("trail" if peak >= entry * 1.3 and stop > entry else ("breakeven" if stop >= entry else ("step stop" if stop >= entry * 0.80 - 1e-9 else "43% stop")))
             break
-    time.sleep(2 if EOD or n.hour * 60 + n.minute >= 950 else 10)   # EOD and the last ten minutes check every 2 seconds (Titi, Oct 27, Nov 6)
+    time.sleep(2 if EOD or CT or n.hour * 60 + n.minute >= 950 else 10)   # EOD and the last ten minutes check every 2 seconds (Titi, Oct 27, Nov 6)
 
 # 3) exit
 if STOP_FILL is None and (reason == "/out" or not pos_open()):   # closed from Discord with /out or /lockout
