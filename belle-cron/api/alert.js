@@ -13,7 +13,7 @@ const SPY_MIN = 19; // Titi, Nov 11: SPY no cheaper than $0.19 (the $0.11 761C w
 const TARGET_COST = 100; // Titi, Oct 16: loves premiums around $100
 const MAX_COST = 250; // Titi, Oct 17: anything over $250 is too much
 const EOD_MAX = 250, EOD_MIN = 100; // Titi, Nov 20: EOD cap $250 (was $170). Nov 20 the $170 cap skipped every SPX put from 13:30 ET; her own $240 put went +1,048%
-const W4_MAX = 2, GAP_MIN = 15; // Titi, Nov 20: Window 4 (15:00 ET on) takes 2 trades at most, 15 minutes apart (Nov 20 took 5). Test Oct 19 to Nov 19: 2 max made +$889 vs +$779 for 3
+const W4_MAX = 3, GAP_MIN = 15; // Titi, Nov 25: 3 trades per window, 15 minutes apart (2 was too few for the EOD window)
 // Strike rule (Titi, Nov 2; test of 91 alerts Oct 19 to Nov 2): distance out of the money by time of day.
 // Before 12:00 ET 35 out, 12:00 to 13:30 ET 10 out, 13:30 to 15:00 ET 35 out (the 7560P), after 15:00 ET 15 out. SPY = SPX / 10.
 function ruleStrike(root, cp, price, mins) {
@@ -157,6 +157,10 @@ export default async function handler(req, res) {
     // The holding rule, the range guard and the lunch chop box no longer block her (Pearl keeps her own rules).
     const PENNY_BLOCKS = false;
     const pennyWin = t.wd !== 'Sat' && t.wd !== 'Sun' && mins >= 570 && mins <= 955;
+    // Nov 25 (Titi): half days (13:00 ET close). No alerts and no trades in the last 30 minutes or after the close.
+    let closeMin = 960;
+    try { const cj = await (await fetch(`${TRADE}/v2/calendar?start=${t.y}-${t.m}-${t.d}&end=${t.y}-${t.m}-${t.d}`, { headers: H() })).json(); if (Array.isArray(cj) && cj[0] && cj[0].close) { const [ch, cm] = cj[0].close.split(':').map(Number); closeMin = ch * 60 + cm; } } catch (e) { }
+    if (closeMin < 960 && mins > closeMin - 30) return res.status(200).json({ ok: true, traded: false, why: 'half day: no alerts in the last 30 minutes or after the close' });
     // morning: SPY first; afternoon: SPX first. Penny buys both when the cash allows.
     const order = mins < 760 ? ['SPY', 'SPXW'] : ['SPXW', 'SPY'];
     const picked = {}, notes = [];
@@ -337,7 +341,7 @@ export default async function handler(req, res) {
       `**${ctr ? 'SCALP · ' : ''}${scalp ? 'EOD ' : ''}${a.side}  ${hm} ET (${ct} CT)**`,
       ctr ? `Against the daily trend (${dCount} ${dTrend < 0 ? 'red' : 'green'} daily candles). Quick trade: take profit +30%, stop -30%.` : (dTrend ? `Daily trend: ${dTrend < 0 ? 'bearish' : 'bullish'} (${dCount} ${dTrend < 0 ? 'red' : 'green'} candles). With the trend.` : null),
       mins >= 810 ? `${mins >= 900 ? 'Window 4 EOD' : 'Window 3'}: -50% stop. Past +100% no sale, it sells if it drops 20% from its best. Out by 15:59.` : null,
-      `Belle's strike:  SPX ${a.spx ? ruleStrike('SPX', cp, a.spx, mins) : 'n/a'}${cp}  |  SPY ${a.spy ? ruleStrike('SPY', cp, a.spy, mins) : 'n/a'}${cp}`,
+      `Belle's strike:  SPX ${picked.SPX ? `${picked.SPX.strike}${cp} $${picked.SPX.lim.toFixed(2)}` : `${a.spx ? ruleStrike('SPX', cp, a.spx, mins) : 'n/a'}${cp}`}  |  SPY ${picked.SPY ? `${picked.SPY.strike}${cp} $${picked.SPY.lim.toFixed(2)}` : `${a.spy ? ruleStrike('SPY', cp, a.spy, mins) : 'n/a'}${cp}`}`,   // Nov 25 (Titi): the strike Penny actually bought, with its price
       a.spx ? `Why this strike:  ${mins >= 810 ? 'EOD' : (mins < 720 ? 'morning' : 'midday')}, ${Math.round(Math.abs((picked.SPX ? picked.SPX.strike : ruleStrike('SPX', cp, a.spx, mins)) - a.spx))} out${picked.SPX ? `, $${Math.round(picked.SPX.lim * 100)}` : ''} (cap $${mins >= 810 ? EOD_MAX : MAX_COST})` : null,
       a.spxAlt ? `Strike choices:  SPX ${a.spxAlt}  |  SPY ${a.spyAlt}` : null,
       `Stop:  SPX ${n2(a.spxStop)}  |  SPY ${n2(a.spyStop)}`,
