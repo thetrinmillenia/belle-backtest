@@ -1,11 +1,14 @@
 tag,idea,trades,win_rate,rest_win_rate,pl_change_if_skipped,winners_blocked,first_half_gap,second_half_gap,holds,written
-level: calls above the prior day 50%,favor level: calls above the prior day 50%,43,63%,33%,-2840,27,+22%,+46%,yes,2026-11-20
-10:15 ET entries,favor 10:15 ET entries,10,60%,38%,-2656,6,+28%,+12%,yes,2026-11-20
-calls above PDC,favor calls above PDC,50,56%,34%,-2311,28,+18%,+33%,yes,2026-11-20
-lunch: failed sweep of the high,skip lunch: failed sweep of the high,36,22%,44%,+2176,8,-29%,-,too few trades,2026-11-20
-lunch: broke the high,favor lunch: broke the high,27,67%,35%,-1623,18,+20%,+44%,yes,2026-11-20
-level: calls below the prior day 50%,skip level: calls below the prior day 50%,49,24%,45%,+1549,12,-26%,-15%,yes,2026-11-20
-level: calls after a PDH sweep (back below),skip level: calls after a PDH sweep (back below),16,12%,42%,+1090,2,-22%,-42%,yes,2026-11-20
-day: election day,skip day: election day,8,0%,41%,+728,0,-44%,-,too few trades,2026-11-20
-day: choppy day,skip day: choppy day,8,0%,41%,+728,0,-44%,-,too few trades,2026-11-20
-15:30 ET entries,skip 15:30 ET entries,9,11%,41%,+335,1,-25%,-,too few trades,2026-11-20
+10:15 ET entries,favor 10:15 ET entries,13,54%,33%,-2589,7,+14%,+26%,yes,2026-11-27
+level: calls with the 1H trend,favor level: calls with the 1H trend,42,52%,30%,-2187,22,+15%,+15%,yes,2026-11-27
+level: calls above the prior day 50%,favor level: calls above the prior day 50%,53,53%,29%,-2028,28,+33%,-11%,no,2026-11-27
+lunch: broke the high,favor lunch: broke the high,38,53%,31%,-1731,20,+30%,-8%,no,2026-11-27
+level: calls after a PDH sweep (back below),skip level: calls after a PDH sweep (back below),16,12%,36%,+1090,2,-26%,-27%,yes,2026-11-27
+day: trend day,favor day: trend day,9,56%,34%,-1045,5,+13%,-,too few trades,2026-11-27
+day: expansion day,favor day: expansion day,9,56%,34%,-1045,5,+13%,-,too few trades,2026-11-27
+day: day after a 1000% day,favor day: day after a 1000% day,9,56%,34%,-1045,5,+13%,-,too few trades,2026-11-27
+14:00 ET entries,skip 14:00 ET entries,8,12%,35%,+776,1,-,-12%,too few trades,2026-11-27
+day: election day,skip day: election day,8,0%,36%,+728,0,-47%,-,too few trades,2026-11-27
+day: choppy day,skip day: choppy day,8,0%,36%,+728,0,-47%,-,too few trades,2026-11-27
+15:30 ET entries,skip 15:30 ET entries,12,8%,36%,+575,1,-29%,-27%,yes,2026-11-27
+level: calls within 5 pts of the 1H continuation level,favor level: calls within 5 pts of the 1H continuation level,9,56%,34%,-270,5,+29%,-,too few trades,2026-11-27
