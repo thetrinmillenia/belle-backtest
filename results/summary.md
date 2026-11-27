@@ -1,6 +1,6 @@
 # Belle backtest results
 
-Data: Yahoo Finance, last 60d. Run 2026-11-25.
+Data: Yahoo Finance, last 60d. Run 2026-11-26.
 
 ## 5 minute signals
 
